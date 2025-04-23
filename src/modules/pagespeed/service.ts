@@ -1,9 +1,11 @@
 import axios from "axios";
 import puppeteer, { Browser } from "puppeteer";
-
+import { PrismaClient } from "@prisma/client";
+import { CreateWebsiteAnalysisDto } from "./schema";
 import { URL } from "url";
 import { BrokenLinkResult } from "../../types/express";
 
+const prisma = new PrismaClient();
 const API_KEY = process.env.PAGESPEED_API_KEY || "YOUR_KEY";
 const API_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 const TIMEOUT_MS = 10000;
@@ -142,3 +144,41 @@ export async function getPageSpeedSummary(url: string) {
     "Time to Interactive": audits["interactive"]?.displayValue || "N/A",
   };
 }
+
+// Create user website entry if it doesn't exist
+export const ensureUserWebsiteExists = async (url: string, user_id: string) => {
+  let website = await prisma.user_websites.findFirst({
+    where: { website_url: url, user_id },
+  });
+
+  if (!website) {
+    website = await prisma.user_websites.create({
+      data: {
+        user_id,
+        website_url: url,
+        website_type: "brand",
+        website_name: new URL(url).hostname,
+      },
+    });
+  }
+
+  return website;
+};
+
+// Save PageSpeed data
+export const savePageSpeedAnalysis = async (website_id: string, summary: Record<string, any>) => {
+  return prisma.brand_website_analysis.create({
+    data: {
+      website_id,
+      performance_score: typeof summary["Performance Score"] === "number" ? summary["Performance Score"] : null,
+      seo_score: typeof summary["SEO Score"] === "number" ? summary["SEO Score"] : null,
+      missing_image_alts: typeof summary["Missing Image Alts"] === "number" ? summary["Missing Image Alts"] : null,
+      first_contentful_paint: summary["First Contentful Paint"] || null,
+      largest_contentful_paint: summary["Largest Contentful Paint"] || null,
+      total_blocking_time: summary["Total Blocking Time"] || null,
+      speed_index: summary["Speed Index"] || null,
+      cumulative_layout_shift: summary["Cumulative Layout Shift"] || null,
+      time_to_interactive: summary["Time to Interactive"] || null,
+    },
+  });
+};
