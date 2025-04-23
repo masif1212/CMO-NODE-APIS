@@ -4,3 +4,14 @@ declare namespace Express {
     userId?: string;
   }
 }
+
+export interface PageSpeedRequest {
+  url: string;
+}
+
+export interface BrokenLinkResult {
+  page: string;
+  link: string;
+  status: number | string;
+  error: string;
+}
