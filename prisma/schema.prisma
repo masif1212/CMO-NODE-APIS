@@ -264,6 +264,5 @@ model competitor_analysis {
   social_media_engagement Json?
   created_at       DateTime @default(now())
   updated_at       DateTime @default(now())
-
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }
