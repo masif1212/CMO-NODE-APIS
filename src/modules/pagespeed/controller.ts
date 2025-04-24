@@ -32,21 +32,21 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     const website = await ensureUserWebsiteExists(url, user_id);
 
     // Step 4: Check if analysis already exists for this website (optional)
-    const existingAnalysis = await prisma.brand_website_analysis.findFirst({
-      where: {
-        website_id: website.website_id,
-      },
-      orderBy: { created_at: "desc" },
-    });
+    // const existingAnalysis = await prisma.brand_website_analysis.findFirst({
+    //   where: {
+    //     website_id: website.website_id,
+    //   },
+    //   orderBy: { created_at: "desc" },
+    // });
 
-    if (existingAnalysis) {
-      return res.status(200).json({
-        message: "PageSpeed summary already exists for this website.",
-        website_id: website.website_id,
-        analysis_id: existingAnalysis.website_analysis_id,
-        data: existingAnalysis,
-      });
-    }
+    // if (existingAnalysis) {
+    //   return res.status(200).json({
+    //     message: "PageSpeed summary already exists for this website.",
+    //     website_id: website.website_id,
+    //     analysis_id: existingAnalysis.website_analysis_id,
+    //     data: existingAnalysis,
+    //   });
+    // }
 
     // Step 5: Save summary to DB
     const saved = await savePageSpeedAnalysis(website.website_id, summary);
