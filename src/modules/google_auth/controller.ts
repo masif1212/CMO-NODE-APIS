@@ -47,7 +47,9 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
       profile: decodedToken,
     };
 
-    return res.redirect("/ga/property");
+    const redirectUri = process.env.NEXT_PUBLIC_BASE_URL + "/brand-audit";
+
+    res.redirect(`${redirectUri}?GoogleAuth=true`);
   } catch (err) {
     console.error("OAuth2 callback error:", err);
     return res.status(500).send("Authentication failed");
@@ -69,8 +71,13 @@ export const logout = (req: Request, res: Response) => {
 };
 
 export const fetchProperties = async (req: Request, res: Response) => {
+  console.log("Session:", req.session); // Log session to check for the presence of `accessToken`
   try {
-    if (!req.session?.user?.accessToken) return res.redirect("/");
+    if (!req.session?.user?.accessToken) {
+      console.log("No access token found");
+      return res.status(401).json({ error: "No access token found" });
+    }
+
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
     const properties = await getUserProperties(oAuth2Client);

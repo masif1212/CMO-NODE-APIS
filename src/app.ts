@@ -14,7 +14,12 @@ const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Frontend URL
+    credentials: true, // Allow cookies to be sent in cross-origin requests
+  })
+);
 // Mount the router on the correct path
 app.use("/api/users", usersRouter);
 
