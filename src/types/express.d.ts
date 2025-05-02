@@ -1,5 +1,4 @@
 import "express-session";
-import { Profile } from "passport";
 
 declare module "express-session" {
   interface SessionData {
