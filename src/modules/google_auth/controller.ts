@@ -91,6 +91,7 @@ export const fetchProperties = async (req: Request, res: Response) => {
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, url, user_id } = req.body;
   const website = await ensureUserWebsiteExists(url, user_id);
+
   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!property_id || !website?.website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
 
@@ -99,9 +100,17 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     const { oAuth2Client } = await import("../../config/googleClient");
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
+    // Fetch the analytics summary
     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
-    const saved = await saveTrafficAnalysis(website?.website_id, summary);
+    console.log("Analytics summary:", summary);
 
+    // Check if the summary is empty or doesn't contain meaningful data
+    if (!summary || Object.keys(summary).length === 0 || !summary.traffic || !summary.country || !summary.bouncePages) {
+      return res.status(404).json({ message: "Analytics summary not found" });
+    }
+
+    // Save the analytics data if it is valid
+    const saved = await saveTrafficAnalysis(website?.website_id, summary);
     return res.status(200).json({ message: "Analytics summary saved", data: saved });
   } catch (error: any) {
     console.error("Analytics save error:", error);
