@@ -100,7 +100,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
-    const saved = await saveTrafficAnalysis(website.website_id, summary);
+    const saved = await saveTrafficAnalysis(website?.website_id, summary);
 
     return res.status(200).json({ message: "Analytics summary saved", data: saved });
   } catch (error: any) {

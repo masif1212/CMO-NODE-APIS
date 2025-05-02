@@ -10,9 +10,9 @@ export const getUserProperties = async (auth: OAuth2Client) => {
 
   summaries?.data?.accountSummaries?.forEach((account) => {
     account?.propertySummaries?.forEach((property) => {
-      properties.push({
-        id: property.property?.split("/")[1] || "",
-        name: property.displayName || "",
+      properties?.push({
+        id: property?.property?.split("/")[1] || "",
+        name: property?.displayName || "",
       });
     });
   });
@@ -25,7 +25,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
 
   const today = new Date();
   const startDate = new Date(today);
-  startDate?.setDate(today.getDate() - 30);
+  startDate?.setDate(today?.getDate() - 30);
   const startDateStr = startDate?.toISOString().split("T")[0];
   const endDateStr = today?.toISOString().split("T")[0];
 
@@ -59,14 +59,14 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
   const start = performance.now();
 
   const [trafficResp, countryResp, bounceResp, totalResp, overallBounceResp] = await Promise.all([
-    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests.traffic }),
-    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests.country }),
-    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests.bounce }),
-    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests.totalUsers }),
-    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests.bounceRate }),
+    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests?.traffic }),
+    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests?.country }),
+    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests?.bounce }),
+    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests?.totalUsers }),
+    analyticsData?.properties?.runReport({ property: `properties/${propertyId}`, requestBody: requests?.bounceRate }),
   ]);
 
-  const duration = ((performance.now() - start) / 1000).toFixed(2);
+  const duration = ((performance?.now() - start) / 1000).toFixed(2);
 
   return {
     traffic: trafficResp?.data?.rows,
@@ -79,7 +79,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
 };
 
 export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
-  const trafficMap = Object?.fromEntries(summary?.traffic?.map((item: any) => [item.dimensionValues[0].value.toLowerCase().replace(/\s/g, "_"), parseInt(item.metricValues[0].value, 10)]));
+  const trafficMap = Object?.fromEntries(summary?.traffic?.map((item: any) => [item?.dimensionValues[0]?.value?.toLowerCase()?.replace(/\s/g, "_"), parseInt(item?.metricValues[0]?.value, 10)]));
 
   const total_visitors = parseInt(summary?.activeUsers, 10) || 0;
   const overall_bounce_rate = parseFloat(summary?.bounceRate) || null;
