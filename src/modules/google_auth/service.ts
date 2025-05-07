@@ -3,17 +3,10 @@ import { OAuth2Client } from "google-auth-library";
 import { PrismaClient, Prisma } from "@prisma/client";
 const prisma = new PrismaClient();
 
-export const getUserProperties = async (auth: OAuth2Client, userId: string) => {
+export const getUserProperties = async (auth: OAuth2Client) => {
   const analyticsAdmin = google.analyticsadmin({ version: 'v1beta', auth });
 
   try {
-    // Fetch user's website URLs from the database
-    const userWebsites = await prisma.user_websites.findMany({
-      where: { user_id: userId },
-      select: { website_url: true },
-    });
-    const userWebsiteUrls = userWebsites.map(website => website.website_url.toLowerCase());
-
     // Fetch account summaries
     const summaries = await analyticsAdmin.accountSummaries.list({});
     const properties: { id: string; name: string; websiteUrl: string | null }[] = [];
@@ -36,20 +29,18 @@ export const getUserProperties = async (auth: OAuth2Client, userId: string) => {
           );
 
           if (webStream && webStream.webStreamData?.defaultUri) {
-            websiteUrl = webStream.webStreamData.defaultUri.toLowerCase();
+            websiteUrl = webStream.webStreamData.defaultUri;
           }
         } catch (error) {
           console.warn(`Error fetching data stream for property ${propertyId}`);
         }
 
-        // Only include properties where the websiteUrl matches one of the user's stored URLs
-        if (websiteUrl && userWebsiteUrls.includes(websiteUrl)) {
-          properties.push({
-            id: propertyId,
-            name: propertyName,
-            websiteUrl: websiteUrl,
-          });
-        }
+        // Push the property with its ID, name, and website URL (if available)
+        properties.push({
+          id: propertyId,
+          name: propertyName,
+          websiteUrl: websiteUrl || null,  // If no website URL, set as null
+        });
       }
     }
 
@@ -59,6 +50,7 @@ export const getUserProperties = async (auth: OAuth2Client, userId: string) => {
     throw error;  // Re-throw to handle higher up if needed
   }
 };
+
 
 export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string) => {
   const analyticsData = google?.analyticsdata({ version: "v1beta", auth });
