@@ -1,3 +1,4 @@
+
 import { Request, Response } from "express";
 import { oAuth2Client } from "../../config/googleClient";
 import { getUserProperties, getAnalyticsSummary } from "./service";
@@ -73,14 +74,14 @@ export const logout = (req: Request, res: Response) => {
 export const fetchProperties = async (req: Request, res: Response) => {
   console.log("Session:", req.session); // Log session to check for the presence of `accessToken`
   try {
-    if (!req.session?.user?.accessToken) {
-      console.log("No access token found");
-      return res.status(401).json({ error: "No access token found" });
+    if (!req.session?.user?.accessToken || !req.session?.user?.userId) {
+      console.log("No access token or userId found");
+      return res.status(401).json({ error: "No access token or userId found" });
     }
 
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
-    const properties = await getUserProperties(oAuth2Client);
+    const properties = await getUserProperties(oAuth2Client, req.session.user.userId);
     return res.status(200).json({ properties });
   } catch (err: any) {
     console.error("Property fetch error:", err);
