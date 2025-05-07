@@ -3,22 +3,73 @@ import { OAuth2Client } from "google-auth-library";
 import { PrismaClient, Prisma } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// export const getUserProperties = async (auth: OAuth2Client) => {
+//   const analyticsAdmin = google?.analyticsadmin({ version: "v1beta", auth });
+//   const summaries = await analyticsAdmin?.accountSummaries?.list({});
+//   const properties: { id: string; name: string }[] = [];
+
+//   summaries?.data?.accountSummaries?.forEach((account) => {
+//     account?.propertySummaries?.forEach((property) => {
+//       properties?.push({
+//         id: property?.property?.split("/")[1] || "",
+//         name: property?.displayName || "",
+//       });
+//     });
+//   });
+
+//   return properties;
+// };
+
+
+// Function to get the user's properties along with the website URL (defaultUri)
 export const getUserProperties = async (auth: OAuth2Client) => {
-  const analyticsAdmin = google?.analyticsadmin({ version: "v1beta", auth });
-  const summaries = await analyticsAdmin?.accountSummaries?.list({});
-  const properties: { id: string; name: string }[] = [];
+  const analyticsAdmin = google.analyticsadmin({ version: 'v1beta', auth });
 
-  summaries?.data?.accountSummaries?.forEach((account) => {
-    account?.propertySummaries?.forEach((property) => {
-      properties?.push({
-        id: property?.property?.split("/")[1] || "",
-        name: property?.displayName || "",
-      });
-    });
-  });
+  try {
+    // Fetch account summaries
+    const summaries = await analyticsAdmin.accountSummaries.list({});
+    const properties: { id: string; name: string; websiteUrl: string | null }[] = [];
 
-  return properties;
+    for (const account of summaries?.data?.accountSummaries || []) {
+      for (const property of account.propertySummaries || []) {
+        const propertyId = property?.property?.split("/")[1] || "";
+        const propertyName = property?.displayName || "";
+        let websiteUrl = null;
+
+        try {
+          // Fetch data streams for each property
+          const streamResp = await analyticsAdmin.properties.dataStreams.list({
+            parent: `properties/${propertyId}`,
+          });
+
+          // Look for the web data stream and get the defaultUri (website URL)
+          const webStream = streamResp.data.dataStreams?.find(
+            (stream) => stream.type === 'WEB_DATA_STREAM'
+          );
+
+          if (webStream && webStream.webStreamData?.defaultUri) {
+            websiteUrl = webStream.webStreamData.defaultUri;
+          }
+        } catch (error) {
+          console.warn(`Error fetching data stream for property ${propertyId}`);
+        }
+
+        // Push the property with its ID, name, and website URL (if available)
+        properties.push({
+          id: propertyId,
+          name: propertyName,
+          websiteUrl: websiteUrl || null,  // If no website URL, set as null
+        });
+      }
+    }
+
+    return properties;
+  } catch (error) {
+    console.error('Error fetching account summaries or data streams:');
+    throw error;  // Re-throw to handle higher up if needed
+  }
 };
+
 
 export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string) => {
   const analyticsData = google?.analyticsdata({ version: "v1beta", auth });
