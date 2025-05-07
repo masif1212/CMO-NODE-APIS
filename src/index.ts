@@ -1,17 +1,19 @@
-import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+import app from "./app"; // Import the app from app.ts
 import { PrismaClient } from "@prisma/client";
 
-const app = express();
 const prisma = new PrismaClient();
+const PORT = process.env.PORT || 3001;
 
-app.use(express.json());
-
+// Optional: Keep the /users route if needed
 app.get("/users", async (req, res) => {
   const users = await prisma.api_keys.findMany();
   console.log(users, "USER ");
   res.json(users);
 });
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

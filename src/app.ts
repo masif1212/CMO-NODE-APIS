@@ -1,49 +1,48 @@
-import express from "express";
-import usersRouter from "./modules/users/router";
-import { errorHandler } from "./middleware/errorHandler";
-import pageSpeedRouter from "./modules/pagespeed/router";
-import session from "express-session";
 import dotenv from "dotenv";
-import authRouter from "./modules/google_auth/router";
-import googleRouter from "./modules/google_auth/router";
-const cors = require("cors");
-
 dotenv.config();
+import express from "express";
+import cors from "cors";
+import session from "express-session";
+import usersRouter from "./modules/users/router";
+import pageSpeedRouter from "./modules/pagespeed/router";
+import authRouter from "./modules/google_auth/router";
+import youtubeRouter from "./modules/youtube/router";
+import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: process.env.NEXT_PUBLIC_BASE_URL, // Frontend URL
-    credentials: true, // Allow cookies to be sent in cross-origin requests
+    credentials: true, // Allow cookies for cross-origin requests
   })
 );
-// Mount the router on the correct path
-app.use("/api/users", usersRouter);
 
-// Global error handler
-app.use(errorHandler);
-
-app.use("/api/pagespeed", pageSpeedRouter);
-
-//GOOGLE AUTHENTICATION
-
-// 🔐 Session setup (required for storing tokens)
+// Session setup for Google auth
 app.use(
   session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // set to true if using HTTPS
+      secure: process.env.NODE_ENV === "production", // Secure cookies in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
   })
 );
+
+// Routes
+app.use("/api/youtube", youtubeRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/pagespeed", pageSpeedRouter);
 app.use("/api/auth", authRouter);
-app.use("/ga", googleRouter);
+app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
+
+// Global error handler
+app.use(errorHandler);
 
 export default app;

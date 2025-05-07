@@ -1,0 +1,30 @@
+Created user: {
+  user_id: 'df985588-2705-48cf-bc87-90b1f9f5b0f3',
+  email: 'dummyuser@example.com',
+  first_name: 'John',
+  last_name: 'Doe',
+  is_email_verified: true,
+  is_mfa_enabled: false,
+  account_status: 'active',
+  created_at: 2025-05-06T12:14:07.283Z,
+  updated_at: 2025-05-06T12:14:07.283Z,
+  last_login: null,
+  deletion_requested_at: null
+}
+Created website: {
+  website_id: '07bcd6cd-b987-4449-ba51-82d1fe5c713d',
+  user_id: 'df985588-2705-48cf-bc87-90b1f9f5b0f3',
+  website_url: 'https://aiattorney.com.pk/',
+  website_type: 'corporate',
+  website_name: 'AI Attorney',
+  created_at: 2025-05-06T12:14:07.391Z,
+  updated_at: 2025-05-06T12:14:07.391Z
+}
+(base) PS D:\CMO-NODE-APIS> 
+
+
+ npx tsc --noEmit
+
+
+
+{"country": "US", "description": "Subscribe to join a community of creative developers and learn the latest in Google technology — from AI and cloud, to mobile and web.\n\nExplore more at developers.google.com\n\n", "channelTitle": "Google for Developers", "mostLikedVideo": {"likes": 6956, "title": "Introducing Agent Development Kit", "views": 226332, "videoId": "zgrOwow_uTQ", "comments": 334, "thumbnail": "https://i.ytimg.com/vi/zgrOwow_uTQ/default.jpg", "description": "Building complex, production-ready AI agents, especially multi-modal or multi-agent systems, can be challenging. Introducing the Agent Development Kit (ADK), a new open-source project from Google designed to simplify this process based on Google's internal experience. ADK provides a powerful, open foundation (model-agnostic, deployment-agnostic, interoperable) that makes agent development feel like software development, complete with native multi-modal streaming and easy local debugging via a built-in UI.\n\nWatch Product Manager Anand Iyer, Tech Lead Bo Yang, and Developer Advocate, Ivan Nardini introduce ADK and demo building a multi-agent, multi-modal travel planner quickly using the SDK. Learn about the core design principles and see how you can get started building your own sophisticated AI agents today.\n\nResources: \nGet Started → https://google.github.io/adk-docs\nSample Agents → https://goo.gle/3Rbdo4s \n\nSubscribe to Google for Developers → https://goo.gle/developers \n\nSpeaker: Anand Iyer, Bo Yang, Ivan Nardini \nProducts mentioned: Agent Development Kit", "publishedAt": "2025-04-10T19:59:09Z"}, "mostCommentedVideo": {"likes": 6956, "title": "Introducing Agent Development Kit", "views": 226332, "videoId": "zgrOwow_uTQ", "comments": 334, "thumbnail": "https://i.ytimg.com/vi/zgrOwow_uTQ/default.jpg", "description": "Building complex, production-ready AI agents, especially multi-modal or multi-agent systems, can be challenging. Introducing the Agent Development Kit (ADK), a new open-source project from Google designed to simplify this process based on Google's internal experience. ADK provides a powerful, open foundation (model-agnostic, deployment-agnostic, interoperable) that makes agent development feel like software development, complete with native multi-modal streaming and easy local debugging via a built-in UI.\n\nWatch Product Manager Anand Iyer, Tech Lead Bo Yang, and Developer Advocate, Ivan Nardini introduce ADK and demo building a multi-agent, multi-modal travel planner quickly using the SDK. Learn about the core design principles and see how you can get started building your own sophisticated AI agents today.\n\nResources: \nGet Started → https://google.github.io/adk-docs\nSample Agents → https://goo.gle/3Rbdo4s \n\nSubscribe to Google for Developers → https://goo.gle/developers \n\nSpeaker: Anand Iyer, Bo Yang, Ivan Nardini \nProducts mentioned: Agent Development Kit", "publishedAt": "2025-04-10T19:59:09Z"}}
