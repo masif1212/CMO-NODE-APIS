@@ -6,7 +6,6 @@ import session from "express-session";
 import usersRouter from "./modules/users/router";
 import pageSpeedRouter from "./modules/pagespeed/router";
 import authRouter from "./modules/google_auth/router";
-import youtubeRouter from "./modules/youtube/router";
 import { errorHandler } from "./middleware/errorHandler";
 import scrapedDataRouter from "./modules/scraped_data/router";
 
@@ -36,8 +35,7 @@ app.use(
   })
 );
 
-// Routes
-app.use("/api/youtube", youtubeRouter);
+
 app.use("/api/users", usersRouter);
 app.use("/api/pagespeed", pageSpeedRouter);
 app.use("/api/auth", authRouter);
