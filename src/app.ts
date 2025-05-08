@@ -8,6 +8,7 @@ import pageSpeedRouter from "./modules/pagespeed/router";
 import authRouter from "./modules/google_auth/router";
 import youtubeRouter from "./modules/youtube/router";
 import { errorHandler } from "./middleware/errorHandler";
+import scrapedDataRouter from "./modules/scraped_data/router";
 
 const app = express();
 
@@ -41,6 +42,9 @@ app.use("/api/users", usersRouter);
 app.use("/api/pagespeed", pageSpeedRouter);
 app.use("/api/auth", authRouter);
 app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
+
+// Existing routes...
+app.use("/api/scraped-data", scrapedDataRouter); // <-- Add this line
 
 // Global error handler
 app.use(errorHandler);

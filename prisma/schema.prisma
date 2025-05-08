@@ -41,12 +41,14 @@ model user_websites {
   created_at   DateTime @default(now())
   updated_at   DateTime @default(now())
 
-  users                      users   @relation(fields: [user_id], references: [user_id])
-  brand_website_analysis     brand_website_analysis[]
-  brand_traffic_analysis     brand_traffic_analysis[]
-  brand_social_media_analysis brand_social_media_analysis[]
-  competitor_analysis        competitor_analysis[]
+  users                        users   @relation(fields: [user_id], references: [user_id])
+  brand_website_analysis       brand_website_analysis[]
+  brand_traffic_analysis       brand_traffic_analysis[]
+  brand_social_media_analysis  brand_social_media_analysis[]
+  competitor_analysis          competitor_analysis[]
+  website_scraped_data         website_scraped_data[] // ✅ This line fixes the error
 }
+
 
 model authentication_methods {
   auth_id                String   @id @default(uuid())
@@ -265,4 +267,30 @@ model competitor_analysis {
   created_at       DateTime @default(now())
   updated_at       DateTime @default(now())
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
+}
+
+
+model website_scraped_data {
+  scraped_data_id String   @id @default(uuid())
+  website_id      String
+  website_url     String
+
+  page_title       String?
+  meta_description String?
+  meta_keywords    String?
+  og_title         String?
+  og_description   String?
+  og_image         String?
+  twitter_handle   String?
+  facebook_handle  String?
+  instagram_handle String?
+  linkedin_handle  String?
+  youtube_handle   String?
+  tiktok_handle    String?
+  other_links      Json?
+  raw_html         String?   @db.LongText
+
+  scraped_at       DateTime @default(now())
+
+  user_website user_websites @relation(fields: [website_id], references: [website_id])
 }
