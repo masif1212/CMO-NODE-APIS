@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { handleWebsiteDataWithUpsert } from "./service";
 
+
+
 export async function scrapeWebsiteHandler(req: Request, res: Response) {
   const { user_id, website_url } = req.body;
 
@@ -11,15 +13,16 @@ export async function scrapeWebsiteHandler(req: Request, res: Response) {
   }
 
   try {
-    const data = await handleWebsiteDataWithUpsert(website_url, user_id);
+    const { youtubeAnalytics } = await handleWebsiteDataWithUpsert(website_url, user_id);
+    console.log("youtubeAnalytics",youtubeAnalytics)
     return res.status(200).json({
-      message: "Website scraped successfully",
-      data,
+      message: "YouTube data fetched successfully",
+      data: youtubeAnalytics,
     });
   } catch (error) {
     console.error("Scrape handler error:", error);
     return res.status(500).json({
-      error: "An error occurred while scraping the website",
+      error: "An error occurred while scraping YouTube data",
     });
   }
 }
