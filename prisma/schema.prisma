@@ -276,10 +276,10 @@ model website_scraped_data {
   website_url     String
 
   page_title       String?
-  meta_description String?
-  meta_keywords    String?
-  og_title         String?
-  og_description   String?
+  meta_description String? @db.LongText
+  meta_keywords    String? @db.LongText
+  og_title         String? @db.LongText
+  og_description   String? @db.LongText
   og_image         String?
   twitter_handle   String?
   facebook_handle  String?
@@ -287,7 +287,7 @@ model website_scraped_data {
   linkedin_handle  String?
   youtube_handle   String?
   tiktok_handle    String?
-  other_links      Json?
+  other_links      Json?    
   raw_html         String?   @db.LongText
 
   scraped_at       DateTime @default(now())
