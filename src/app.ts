@@ -8,6 +8,8 @@ import pageSpeedRouter from "./modules/pagespeed/router";
 import authRouter from "./modules/google_auth/router";
 import { errorHandler } from "./middleware/errorHandler";
 import scrapedDataRouter from "./modules/scraped_data/router";
+import { competitorRouter } from "./modules/competitor_analysis/routes/competitor.routes";
+
 
 const app = express();
 
@@ -43,6 +45,9 @@ app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this i
 
 // Existing routes...
 app.use("/api/scraped-data", scrapedDataRouter); // <-- Add this line
+app.use('/competitors', competitorRouter); // Competitor analysis route
+
+
 
 // Global error handler
 app.use(errorHandler);
