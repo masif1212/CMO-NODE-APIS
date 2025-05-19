@@ -124,28 +124,37 @@ export async function getPageSpeedSummary(url: string) {
     strategy: "desktop",
     cacheBust: Date.now().toString(),
   });
-  ["performance", "seo", "accessibility"].forEach((c) => params.append("category", c));
+
+  ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) =>
+    params.append("category", c)
+  );
 
   const response = await axios.get(`${API_URL}?${params}`);
   const data = response.data;
 
   const audits = data.lighthouseResult?.audits || {};
-  const categories = data.lighthouseResult?.categories || {};
+  const detailedAuditResults = Object.keys(audits).map((key) => {
+    const audit = audits[key];
+    return {
+      id: key,
+      title: audit.title,
+      description: audit.description,
+      score: audit.score,
+      displayValue: audit.displayValue || null,
+      details: audit.details || null,
+      scoreDisplayMode: audit.scoreDisplayMode || null,
+    };
+  });
 
   return {
-    "Performance Score": categories.performance?.score * 100 || "N/A",
-    "SEO Score": categories.seo?.score * 100 || "N/A",
-    "Missing Image Alts": audits["image-alt"]?.details?.items?.length || 0,
-    "First Contentful Paint": audits["first-contentful-paint"]?.displayValue || "N/A",
-    "Largest Contentful Paint": audits["largest-contentful-paint"]?.displayValue || "N/A",
-    "Total Blocking Time": audits["total-blocking-time"]?.displayValue || "N/A",
-    "Speed Index": audits["speed-index"]?.displayValue || "N/A",
-    "Cumulative Layout Shift": audits["cumulative-layout-shift"]?.displayValue || "N/A",
-    "Time to Interactive": audits["interactive"]?.displayValue || "N/A",
+    url: data.lighthouseResult?.finalUrl,
+    fetchedAt: new Date().toISOString(),
+    categories: data.lighthouseResult?.categories,
+    audits: detailedAuditResults,
   };
 }
 
-// Create user website entry if it doesn't exist
+
 export const ensureUserWebsiteExists = async (url: string, user_id: string) => {
   let website = await prisma.user_websites.findFirst({
     where: { website_url: url, user_id },
@@ -165,20 +174,85 @@ export const ensureUserWebsiteExists = async (url: string, user_id: string) => {
   return website;
 };
 
-// Save PageSpeed data
-export const savePageSpeedAnalysis = async (website_id: string, summary: Record<string, any>) => {
-  return prisma.brand_website_analysis.create({
+
+
+// export async function savePageSpeedAnalysis(website_id: string, url: string) {
+//   const summary = await getPageSpeedSummary(url);
+
+//   const analysis = await prisma.brand_website_analysis.create({
+//     data: {
+//       website_id,
+//       performance_score: summary.categories?.performance?.score != null ? summary.categories.performance.score * 100 : null,
+//       seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
+//       accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
+//       best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
+//       pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
+//       created_at: new Date(),
+//       updated_at: new Date(),
+//     },
+//     select: {
+//       website_analysis_id: true,  // <-- get the real primary key
+//     }
+//   });
+
+//   await prisma.pagespeed_audit.createMany({
+//     data: summary.audits.map((audit) => ({
+//       website_id: website_id,
+//       website_analysis_id: analysis.website_analysis_id,  // <-- use the correct id here
+//       audit_key: audit.id,
+//       title: audit.title,
+//       description: audit.description,
+//       score: typeof audit.score === "number" ? audit.score : null,
+//       display_value: audit.displayValue,
+//       details: audit.details,
+//       created_at: new Date(),
+//       updated_at: new Date(),
+//     })),
+//   });
+
+
+
+//   return analysis;
+// }
+
+
+export async function savePageSpeedAnalysis(website_id: string, url: string) {
+  // 1. Get the summary from Google PageSpeed API
+  const summary = await getPageSpeedSummary(url);
+
+  // 2. Create the brand_website_analysis record and return the generated primary key
+  const analysis = await prisma.brand_website_analysis.create({
     data: {
       website_id,
-      performance_score: typeof summary["Performance Score"] === "number" ? summary["Performance Score"] : null,
-      seo_score: typeof summary["SEO Score"] === "number" ? summary["SEO Score"] : null,
-      missing_image_alts: typeof summary["Missing Image Alts"] === "number" ? summary["Missing Image Alts"] : null,
-      first_contentful_paint: summary["First Contentful Paint"] || null,
-      largest_contentful_paint: summary["Largest Contentful Paint"] || null,
-      total_blocking_time: summary["Total Blocking Time"] || null,
-      speed_index: summary["Speed Index"] || null,
-      cumulative_layout_shift: summary["Cumulative Layout Shift"] || null,
-      time_to_interactive: summary["Time to Interactive"] || null,
+      performance_score: summary.categories?.performance?.score != null ? summary.categories.performance.score * 100 : null,
+      seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
+      accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
+      best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
+      pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+    select: {
+      website_analysis_id: true,  // Make sure to return this field
     },
   });
-};
+
+  // 3. Insert all audit details using the generated website_analysis_id
+  await prisma.pagespeed_audit.createMany({
+    data: summary.audits.map((audit) => ({
+      website_id,
+      website_analysis_id: analysis.website_analysis_id, // link audits to analysis record
+      audit_key: audit.id,
+      title: audit.title,
+      description: audit.description,
+      score: typeof audit.score === "number" ? audit.score : null,
+      display_value: audit.displayValue,
+      details: audit.details,
+      created_at: new Date(),
+      updated_at: new Date(),
+    })),
+  });
+
+  // 4. Return the created analysis record (with id)
+  return analysis;
+}

@@ -5,6 +5,84 @@ import { PrismaClient } from "@prisma/client";
 import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 
 const prisma = new PrismaClient();
+
+// export const handlePageSpeed = async (req: Request, res: Response) => {
+//   const { url, user_id } = req.body;
+
+//   if (!url || !user_id) {
+//     return res.status(400).json({
+//       success: false,
+//       error: "Both 'url' and 'user_id' are required.",
+//     });
+//   }
+
+//   try {
+//     // Step 1: Get summary from Google PageSpeed API
+//     const summary = await getPageSpeedSummary(url);
+
+//     // Step 2: Validate summary
+//     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
+//       return res.status(502).json({
+//         success: false,
+//         error: "Invalid or empty response from PageSpeed Insights API.",
+//         detail: summary,
+//       });
+//     }
+
+//     // Step 3: Create or fetch website record
+//     const website = await ensureUserWebsiteExists(url, user_id);
+
+//     // Step 4: Save the summary and audit data
+//     const saved = await savePageSpeedAnalysis(website.website_id, url);
+
+//     // Step 5: Fetch selected audit metrics for response
+//     const auditKeysToInclude = [
+//       "first-contentful-paint",
+//       "largest-contentful-paint",
+//       "total-blocking-time",
+//       "speed-index",
+//       "cumulative-layout-shift",
+//       "interactive",
+//     ];
+
+//     const audits = await prisma.pagespeed_audit.findMany({
+//       where: {
+//         website_analysis_id: saved.website_analysis_id, 
+//         audit_key: { in: auditKeysToInclude },
+//       },
+//       select: {
+//         audit_key: true,
+//         display_value: true,
+//         score: true,
+//       },
+//     });
+
+//     const auditMap: Record<string, any> = {};
+//     for (const audit of audits) {
+//       auditMap[audit.audit_key] = {
+//         display_value: audit.display_value,
+//         score: audit.score,
+//       };
+//     }
+
+//     return res.status(201).json({
+//       message: "PageSpeed summary saved successfully.",
+//       website_id: website.website_id,
+//       analysis_id: saved.website_analysis_id,
+//       data: saved,
+//       audits: auditMap,
+//     });
+//   } catch (err: any) {
+//     console.error("❌ handlePageSpeed error:", err);
+
+//     return res.status(500).json({
+//       success: false,
+//       error: "Failed to process PageSpeed.",
+//       detail: err?.message || "Internal server error",
+//     });
+//   }
+// };
+
 export const handlePageSpeed = async (req: Request, res: Response) => {
   const { url, user_id } = req.body;
 
@@ -16,11 +94,9 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   }
 
   try {
-    // Step 1: Get summary from Google PageSpeed API
     const summary = await getPageSpeedSummary(url);
 
-    // Step 2: Validate summary
-    if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0 || !summary["Performance Score"]) {
+    if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
       return res.status(502).json({
         success: false,
         error: "Invalid or empty response from PageSpeed Insights API.",
@@ -28,34 +104,91 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       });
     }
 
-    // Step 3: Create or fetch website record
     const website = await ensureUserWebsiteExists(url, user_id);
+    const saved = await savePageSpeedAnalysis(website.website_id, url);
 
-    // Step 4: Check if analysis already exists for this website (optional)
-    // const existingAnalysis = await prisma.brand_website_analysis.findFirst({
+    const auditKeysToInclude = [
+      "first-contentful-paint",
+      "largest-contentful-paint",
+      "total-blocking-time",
+      "speed-index",
+      "cumulative-layout-shift",
+      "interactive",
+    ];
+
+    // const audits = await prisma.pagespeed_audit.findMany({
     //   where: {
-    //     website_id: website.website_id,
+    //     website_analysis_id: saved.website_analysis_id, 
+    //     audit_key: { in: auditKeysToInclude },
     //   },
-    //   orderBy: { created_at: "desc" },
+    //   select: {
+    //     audit_key: true,
+    //     display_value: true,
+    //     score: true,
+    //   },
     // });
 
-    // if (existingAnalysis) {
-    //   return res.status(200).json({
-    //     message: "PageSpeed summary already exists for this website.",
-    //     website_id: website.website_id,
-    //     analysis_id: existingAnalysis.website_analysis_id,
-    //     data: existingAnalysis,
-    //   });
+   
+
+    // const auditMap: Record<string, any> = {};
+    // for (const audit of audits) {
+    //   auditMap[audit.audit_key] = {
+    //     display_value: audit.display_value,
+    //     score: audit.score,
+    //   };
     // }
 
-    // Step 5: Save summary to DB
-    const saved = await savePageSpeedAnalysis(website.website_id, summary);
+
+      // Full audit details
+const allAuditDetails = await prisma.pagespeed_audit.findMany({
+  where: {
+    website_analysis_id: saved.website_analysis_id,
+  },
+  select: {
+    audit_key: true,
+    title: true,
+    description: true,
+    score: true,
+    display_value: true,
+  },
+});
+
+// Keep existing simplified map for core metrics
+
+
+const auditMap: Record<string, any> = {};
+for (const audit of allAuditDetails) {
+  if (auditKeysToInclude.includes(audit.audit_key)) {
+    auditMap[audit.audit_key] = {
+      display_value: audit.display_value,
+      score: audit.score,
+    };
+  }
+}
+
+
+    // Add category scores (SEO, Accessibility, Mobile Friendly, etc)
+    const categories = summary.categories || {};
+    const categoryScores = {
+      performance: categories.performance?.score != null ? categories.performance.score * 100 : null,
+      seo: categories.seo?.score != null ? categories.seo.score * 100 : null,
+      accessibility: categories.accessibility?.score != null ? categories.accessibility.score * 100 : null,
+      "best-practices": categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
+      // pwa: categories.pwa?.score != null ? categories.pwa.score * 100 : null,
+      // Mobile Friendly isn't a separate category in PageSpeed API v5; it is often part of SEO or mobile strategy.
+      // But if you want mobile strategy you can add it as well:
+      // mobile_friendly: categories["mobile-friendly"]?.score != null ? categories["mobile-friendly"].score * 100 : null,
+    };
 
     return res.status(201).json({
       message: "PageSpeed summary saved successfully.",
       website_id: website.website_id,
       analysis_id: saved.website_analysis_id,
       data: saved,
+      categories: categoryScores,
+      audits: auditMap,
+      
+      audit_details: allAuditDetails,   // <- return categories here
     });
   } catch (err: any) {
     console.error("❌ handlePageSpeed error:", err);
@@ -67,6 +200,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 export const handleBrokenLinks = async (req: Request, res: Response) => {
   const { url, user_id, maxDepth = 1 } = req.body;
@@ -102,3 +236,6 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+
