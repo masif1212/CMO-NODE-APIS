@@ -6,82 +6,6 @@ import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 
 const prisma = new PrismaClient();
 
-// export const handlePageSpeed = async (req: Request, res: Response) => {
-//   const { url, user_id } = req.body;
-
-//   if (!url || !user_id) {
-//     return res.status(400).json({
-//       success: false,
-//       error: "Both 'url' and 'user_id' are required.",
-//     });
-//   }
-
-//   try {
-//     // Step 1: Get summary from Google PageSpeed API
-//     const summary = await getPageSpeedSummary(url);
-
-//     // Step 2: Validate summary
-//     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
-//       return res.status(502).json({
-//         success: false,
-//         error: "Invalid or empty response from PageSpeed Insights API.",
-//         detail: summary,
-//       });
-//     }
-
-//     // Step 3: Create or fetch website record
-//     const website = await ensureUserWebsiteExists(url, user_id);
-
-//     // Step 4: Save the summary and audit data
-//     const saved = await savePageSpeedAnalysis(website.website_id, url);
-
-//     // Step 5: Fetch selected audit metrics for response
-//     const auditKeysToInclude = [
-//       "first-contentful-paint",
-//       "largest-contentful-paint",
-//       "total-blocking-time",
-//       "speed-index",
-//       "cumulative-layout-shift",
-//       "interactive",
-//     ];
-
-//     const audits = await prisma.pagespeed_audit.findMany({
-//       where: {
-//         website_analysis_id: saved.website_analysis_id, 
-//         audit_key: { in: auditKeysToInclude },
-//       },
-//       select: {
-//         audit_key: true,
-//         display_value: true,
-//         score: true,
-//       },
-//     });
-
-//     const auditMap: Record<string, any> = {};
-//     for (const audit of audits) {
-//       auditMap[audit.audit_key] = {
-//         display_value: audit.display_value,
-//         score: audit.score,
-//       };
-//     }
-
-//     return res.status(201).json({
-//       message: "PageSpeed summary saved successfully.",
-//       website_id: website.website_id,
-//       analysis_id: saved.website_analysis_id,
-//       data: saved,
-//       audits: auditMap,
-//     });
-//   } catch (err: any) {
-//     console.error("❌ handlePageSpeed error:", err);
-
-//     return res.status(500).json({
-//       success: false,
-//       error: "Failed to process PageSpeed.",
-//       detail: err?.message || "Internal server error",
-//     });
-//   }
-// };
 
 export const handlePageSpeed = async (req: Request, res: Response) => {
   const { url, user_id } = req.body;
@@ -116,30 +40,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       "interactive",
     ];
 
-    // const audits = await prisma.pagespeed_audit.findMany({
-    //   where: {
-    //     website_analysis_id: saved.website_analysis_id, 
-    //     audit_key: { in: auditKeysToInclude },
-    //   },
-    //   select: {
-    //     audit_key: true,
-    //     display_value: true,
-    //     score: true,
-    //   },
-    // });
 
-   
-
-    // const auditMap: Record<string, any> = {};
-    // for (const audit of audits) {
-    //   auditMap[audit.audit_key] = {
-    //     display_value: audit.display_value,
-    //     score: audit.score,
-    //   };
-    // }
-
-
-      // Full audit details
 const allAuditDetails = await prisma.pagespeed_audit.findMany({
   where: {
     website_analysis_id: saved.website_analysis_id,
@@ -184,7 +85,7 @@ for (const audit of allAuditDetails) {
       message: "PageSpeed summary saved successfully.",
       website_id: website.website_id,
       analysis_id: saved.website_analysis_id,
-      data: saved,
+      // data: saved,
       categories: categoryScores,
       audits: auditMap,
       

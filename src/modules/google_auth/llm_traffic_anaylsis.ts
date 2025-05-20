@@ -1,0 +1,123 @@
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+import { OpenAI } from "openai";
+
+const prisma = new PrismaClient();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export const generateLLMTrafficReport = async (req: Request, res: Response) => {
+  const { website_id } = req.body;
+
+  if (!website_id) {
+    return res.status(400).json({
+      success: false,
+      error: "'website_id' is required.",
+    });
+  }
+
+  try {
+    // 1. Fetch traffic data for the given website_id
+    const trafficData = await prisma.brand_traffic_analysis.findFirst({
+      where: { website_id },
+      select: {
+        traffic_analysis_id: true,
+        total_visitors: true,
+        organic_search: true,
+        direct: true,
+        referral: true,
+        organic_social: true,
+        unassigned: true,
+        high_bounce_pages: true,
+        top_countries: true,
+        overall_bounce_rate: true,
+        actionable_fix: true,
+      },
+    });
+
+    if (!trafficData) {
+      return res.status(404).json({
+        success: false,
+        error: "No traffic analysis found for the provided website_id.",
+      });
+    }
+
+    const {
+      traffic_analysis_id,
+      total_visitors,
+      organic_search,
+      direct,
+      referral,
+      organic_social,
+      unassigned,
+      high_bounce_pages,
+      top_countries,
+      overall_bounce_rate,
+      actionable_fix,
+    } = trafficData;
+
+    // 2. Build the prompt
+    const prompt = `
+You are a digital marketing analyst. A website traffic audit was conducted and the following data was collected:
+
+Traffic Sources:
+- Total Visitors: ${total_visitors}
+- Organic Search: ${organic_search}
+- Direct: ${direct}
+- Referral: ${referral}
+- Organic Social: ${organic_social}
+- Unassigned: ${unassigned}
+
+Top Countries:
+${JSON.stringify(top_countries, null, 2)}
+
+High Bounce Pages:
+${JSON.stringify(high_bounce_pages, null, 2)}
+
+Overall Bounce Rate: ${overall_bounce_rate}%
+
+Existing Fix Summary (if any): ${actionable_fix ?? "N/A"}
+
+Using the above data, provide a traffic analysis report that includes:
+1. Summary of the current traffic distribution and visitor behavior.
+2. Insights from bounce rate and suggestions for reducing it.
+3. Key geographic insights and how to optimize based on location-based engagement.
+4. Review of high bounce pages with clear technical and content-based recommendations.
+5. General SEO, marketing, or UX strategies to improve traffic retention and conversion.
+
+Make the tone professional and technically actionable. Prioritize changes that yield the biggest improvements.
+`;
+
+    // 3. Call OpenAI
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.6,
+    });
+
+    const llmOutput = response.choices?.[0]?.message?.content;
+    await prisma.llm_audit_reports.upsert({
+        where: { website_id },
+        update: {
+            traffic_report: llmOutput,
+        },
+        create: {
+            website_id,
+            traffic_report: llmOutput,
+        },
+        });
+    return res.status(200).json({
+      success: true,
+      website_id,
+      traffic_analysis_id,
+      report: llmOutput,
+    });
+  } catch (err: any) {
+    console.error("❌ Traffic Audit Error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to generate LLM traffic audit report.",
+      detail: err?.message || "Internal server error",
+    });
+    
+  }
+};

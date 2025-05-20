@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import { scrapeWebsiteHandler } from "./controller";
+import { scrapeWebsitehandle } from "./controller";
 
 const router = Router();
 
-router.post("/scrape", asyncHandler(scrapeWebsiteHandler));
+router.post("/scrape", asyncHandler(scrapeWebsitehandle));
 
 export default router;

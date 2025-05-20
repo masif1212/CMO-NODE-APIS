@@ -55,8 +55,7 @@ model user_websites {
   website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite") // 1‑to‑1
   competitor_scraped_data     competitor_scraped_data[]
 
-  pagespeed_audit   pagespeed_audit[]
-  llm_audit_reports llm_audit_reports?
+  pagespeed_audit             pagespeed_audit[]
 }
 
 model authentication_methods {
@@ -216,6 +215,9 @@ model data_retention_policies {
   updated_at            DateTime @default(now()) @updatedAt
 }
 
+
+
+
 model brand_website_analysis {
   website_analysis_id      String   @id @default(uuid())
   website_id               String
@@ -226,7 +228,7 @@ model brand_website_analysis {
   largest_contentful_paint String?
   accessibility_score      Float?
   best_practices_score     Float?
-  pwa_score                Float? // <-- Add this
+  pwa_score                Float?   // <-- Add this
   total_blocking_time      String?
   speed_index              String?
   cumulative_layout_shift  String?
@@ -239,21 +241,6 @@ model brand_website_analysis {
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }
 
-model pagespeed_audit {
-  id                  String   @id @default(uuid())
-  website_id          String
-  website_analysis_id String // 
-  audit_key           String
-  title               String   @db.LongText
-  description         String?  @db.LongText
-  score               Float?
-  display_value       String?  @db.LongText
-  details             Json?
-  created_at          DateTime @default(now())
-  updated_at          DateTime @default(now()) @updatedAt
-
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
-}
 
 model brand_traffic_analysis {
   traffic_analysis_id String   @id @default(uuid())
@@ -383,17 +370,23 @@ model competitor_scraped_data {
   user_websites      user_websites      @relation(fields: [website_id], references: [website_id])
 }
 
-model llm_audit_reports {
-  id                    String   @id @default(uuid())
-  website_id            String   @unique
-  pagespeed_report      String?  @db.LongText
-  traffic_report        String?  @db.LongText
-  broken_links_report   String?  @db.LongText
-  social_media_report   String?  @db.LongText
-  brand_audit           String?  @db.LongText
-  best_practices_report String?  @db.LongText
-  created_at            DateTime @default(now())
-  updated_at            DateTime @default(now()) @updatedAt
+
+
+model pagespeed_audit {
+  id            String   @id @default(uuid())
+  website_id    String
+  website_analysis_id String   // 
+  audit_key     String 
+  title         String  @db.LongText
+  description   String? @db.LongText
+  score         Float?
+  display_value String? @db.LongText
+  details       Json?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
 
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }
+
+
+
