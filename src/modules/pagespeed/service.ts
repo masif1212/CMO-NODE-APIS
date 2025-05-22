@@ -284,7 +284,7 @@ export async function getPageSpeedSummary(website_id: string) {
     cacheBust: Date.now().toString(),
   });
 
-  ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) =>
+  ["performance", "seo", "accessibility", "best_practices", "pwa"].forEach((c) =>
     params.append("category", c)
   );
 

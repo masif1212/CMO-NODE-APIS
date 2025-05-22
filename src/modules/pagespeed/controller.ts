@@ -31,14 +31,24 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     
     const saved = await savePageSpeedAnalysis(website_id, summary);
 
+    // const auditKeysToInclude = [
+    //   "first_contentful_paint",
+    //   "largest_contentful_paint",
+    //   "total_blocking_time",
+    //   "speed_index",
+    //   "cumulative_layout_shift",
+    //   "interactive",
+    // ];
+
     const auditKeysToInclude = [
-      "first-contentful-paint",
-      "largest-contentful-paint",
-      "total-blocking-time",
-      "speed-index",
-      "cumulative-layout-shift",
-      "interactive",
-    ];
+  "first-contentful-paint",
+  "largest-contentful-paint",
+  "total-blocking-time",
+  "speed-index",
+  "cumulative-layout-shift",
+  "interactive",
+];
+
 
 
 const allAuditDetails = await prisma.pagespeed_audit.findMany({
@@ -55,10 +65,22 @@ const allAuditDetails = await prisma.pagespeed_audit.findMany({
 });
 
 
+// const auditMap: Record<string, any> = {};
+// for (const audit of allAuditDetails) {
+//   if (auditKeysToInclude.includes(audit.audit_key)) {
+//     auditMap[audit.audit_key] = {
+//       display_value: audit.display_value,
+//       score: audit.score,
+//     };
+//   }
+// }
+
+
 const auditMap: Record<string, any> = {};
 for (const audit of allAuditDetails) {
   if (auditKeysToInclude.includes(audit.audit_key)) {
-    auditMap[audit.audit_key] = {
+    const normalizedKey = audit.audit_key.replace(/-/g, "_"); // convert to underscore
+    auditMap[normalizedKey] = {
       display_value: audit.display_value,
       score: audit.score,
     };
@@ -72,7 +94,7 @@ for (const audit of allAuditDetails) {
       performance: categories.performance?.score != null ? categories.performance.score * 100 : null,
       seo: categories.seo?.score != null ? categories.seo.score * 100 : null,
       accessibility: categories.accessibility?.score != null ? categories.accessibility.score * 100 : null,
-      "best-practices": categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
+      "best_practices": categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
       // pwa: categories.pwa?.score != null ? categories.pwa.score * 100 : null,
       // Mobile Friendly isn't a separate category in PageSpeed API v5; it is often part of SEO or mobile strategy.
       // But if you want mobile strategy you can add it as well:
