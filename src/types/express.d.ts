@@ -28,4 +28,6 @@ export interface BrokenLinkResult {
   link: string;
   status: number | string;
   error: string;
+  quickFix: string;
 }
+

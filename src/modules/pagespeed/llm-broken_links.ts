@@ -1,12 +1,14 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
-
+import * as cheerio from "cheerio"; 
 const prisma = new PrismaClient();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = process.env.OPENAI_MODEL || "gpt-4.1";
+const max_tokens = Number(process.env.MAX_TOKENS) || 3000; 
 export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Response) => {
-  const { website_id } = req.body;
+  const { website_id, user_id }= req.body;
 
   if (!website_id) {
     return res.status(400).json({
@@ -16,6 +18,31 @@ export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Re
   }
 
   try {
+         const scrapedData = await prisma.website_scraped_data.findUnique({
+           where: { website_id },
+           select: {
+             page_title: true,
+             meta_description: true,
+             meta_keywords: true,
+             og_title: true,
+             og_description: true,
+             raw_html: true,
+           },
+         });
+     
+         if (!scrapedData) {
+           return res.status(404).json({
+             success: false,
+             error: "No scraped metadata found for the provided website_id.",
+           });
+         }
+     
+         // Extract <h1> from HTML
+         let h1Text = "Not Found";
+         if (scrapedData.raw_html) {
+           const $ = cheerio.load(scrapedData.raw_html);
+           h1Text = $("h1").first().text().trim() || "Not Found";
+         }
     // 1. Get the analysis record
     const analysisRecord = await prisma.brand_website_analysis.findFirst({
       where: { website_id },
@@ -47,9 +74,23 @@ export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Re
     // 2. Build prompt with broken links
     const prompt = `
 You are a website quality auditor. A recent crawl of the website revealed ${total_broken_links} broken links.
+ 
+
+### Website Metadata Overview:
+- Page Title: ${scrapedData.page_title || "N/A"}
+- Meta Description: ${scrapedData.meta_description || "N/A"}
+- Meta Keywords: ${scrapedData.meta_keywords || "N/A"}
+
+- First H1 Tag: ${h1Text}
 
 Here is the list of broken links in JSON format:
 ${JSON.stringify(broken_links, null, 2)}
+
+
+
+1. **Introduction**  
+   - Briefly introduce the brand/website and summarize the purpose of brand.  
+
 
 Please analyze this list and provide:
 1. A summary of the most affected pages or patterns you notice.
@@ -60,9 +101,10 @@ Be specific, concise, and professional in your tone.
 
     // 3. Call OpenAI
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.5,
+      max_tokens: max_tokens
     });
 
     const llmOutput = response.choices?.[0]?.message?.content;
@@ -76,6 +118,7 @@ Be specific, concise, and professional in your tone.
             broken_links_report: llmOutput,
           },
         });
+    console.log("LLM Response:", response);    
     return res.status(200).json({
       success: true,
       website_id,

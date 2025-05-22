@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { getPageSpeedSummary, checkBrokenLinks } from "./service";
-import { ensureUserWebsiteExists, savePageSpeedAnalysis } from "./service";
+import { savePageSpeedAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
 import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 
@@ -8,17 +8,17 @@ const prisma = new PrismaClient();
 
 
 export const handlePageSpeed = async (req: Request, res: Response) => {
-  const { url, user_id } = req.body;
+  const { website_id, user_id } = req.body;
 
-  if (!url || !user_id) {
+  if (!website_id || !user_id) {
     return res.status(400).json({
       success: false,
-      error: "Both 'url' and 'user_id' are required.",
+      error: "Both 'website_id' and 'user_id' are required.",
     });
   }
 
   try {
-    const summary = await getPageSpeedSummary(url);
+    const summary = await getPageSpeedSummary(website_id);
 
     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
       return res.status(502).json({
@@ -28,8 +28,8 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       });
     }
 
-    const website = await ensureUserWebsiteExists(url, user_id);
-    const saved = await savePageSpeedAnalysis(website.website_id, url);
+    
+    const saved = await savePageSpeedAnalysis(website_id, summary);
 
     const auditKeysToInclude = [
       "first-contentful-paint",
@@ -53,8 +53,6 @@ const allAuditDetails = await prisma.pagespeed_audit.findMany({
     display_value: true,
   },
 });
-
-// Keep existing simplified map for core metrics
 
 
 const auditMap: Record<string, any> = {};
@@ -83,7 +81,7 @@ for (const audit of allAuditDetails) {
 
     return res.status(201).json({
       message: "PageSpeed summary saved successfully.",
-      website_id: website.website_id,
+      website_id: website_id,
       analysis_id: saved.website_analysis_id,
       // data: saved,
       categories: categoryScores,
@@ -104,27 +102,27 @@ for (const audit of allAuditDetails) {
 
 
 export const handleBrokenLinks = async (req: Request, res: Response) => {
-  const { url, user_id, maxDepth = 1 } = req.body;
+  const { website_id, user_id, maxDepth = 1 } = req.body;
 
-  if (!url || !user_id) {
+  if (!website_id || !user_id) {
     return res.status(400).json({ error: "Both 'url' and 'user_id' are required." });
   }
 
   try {
     // Step 1: Ensure website is tracked
-    const website = await ensureUserWebsiteExists(url, user_id);
+   
 
     // Step 2: Run the broken link crawler
-    const brokenLinksResult = await checkBrokenLinks(url, maxDepth);
+    const brokenLinksResult = await checkBrokenLinks(website_id, maxDepth);
 
     const totalBroken = brokenLinksResult.length;
 
     // Step 3: Save analysis to DB
-    const saved = await saveBrokenLinkAnalysis(website.website_id, brokenLinksResult, totalBroken);
+    const saved = await saveBrokenLinkAnalysis(website_id, brokenLinksResult, totalBroken);
 
     return res.status(201).json({
       message: totalBroken ? "Broken links found and saved." : "No broken links found. Data recorded.",
-      website_id: website.website_id,
+      website_id: website_id,
       analysis_id: saved.website_analysis_id,
       totalBroken,
       brokenLinks: brokenLinksResult,

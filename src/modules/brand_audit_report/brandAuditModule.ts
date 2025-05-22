@@ -1,163 +1,228 @@
-// import { PrismaClient } from "@prisma/client";
-// import OpenAI from "openai"; // ✅ Correct for openai v4+
-// import { scrapeWebsite } from '../scraped_data/service';
-// const openai = new OpenAI({
-//   apiKey: process.env.OPENAI_API_KEY,
+import { PrismaClient } from "@prisma/client";
+import OpenAI from "openai";
 
-// });
-// const prisma = new PrismaClient();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// export const createBrandAudit = async (websiteUrl: string, userId: string) => {
-//   try {
-//     const userWebsite = await prisma.user_websites.findFirst({
-//       where: {
-//         website_url: websiteUrl,
-//         user_id: userId,
-//       },
-//       include: {
-//         brand_traffic_analysis: true,
-//         brand_website_analysis: true,
-//         brand_social_media_analysis: true,
-//         website_scraped_data: true,
-//       },
-//     });
+const model = process.env.OPENAI_MODEL || "gpt-4.1";
+const prisma = new PrismaClient();
 
-//     if (!userWebsite) {
-//       throw new Error("Website not found for this user.");
-//     }
-//     const websiteId = userWebsite.website_id;
-//     // if (!userWebsite.website_scraped_data || userWebsite.website_scraped_data.length === 0) {
-//     //   const { record, youtubeUrl } = await scrapeWebsite(websiteUrl, websiteId);
-//     //       console.log("data scraped", record);
-//     // }
+export const createBrandAudit = async (websiteId: string, user_id : string,) => {
+  try {
+  
+    const userWebsite = await prisma.user_websites.findFirst({
+        where: {
+            user_id: user_id, 
+            website_id: websiteId,
+        },
+        include: {
+            llm_audit_reports: true,
+        },
+        });
 
-//     if (!userWebsite.website_scraped_data || userWebsite.website_scraped_data.length === 0) {
-//       const { record, youtubeUrl } = await scrapeWebsite(websiteId);
-//       console.log("data scraped", record);
+        if (!userWebsite) {
+        throw new Error("Website not found");
+        }
 
-//       // Re-fetch the updated userWebsite with new scraped data
-//       const updatedWebsite = await prisma.user_websites.findUnique({
-//         where: {
-//           website_id: websiteId,
-//         },
-//         include: {
-//           website_scraped_data: true,
-//         },
-//       });
+        const websiteUrl = userWebsite.website_url;
 
-//       userWebsite.website_scraped_data = updatedWebsite?.website_scraped_data || [];
-//     }
+    if (!userWebsite || !userWebsite.llm_audit_reports) {
+      throw new Error("Audit reports not found for this website.");
+    }
 
-//     const trafficAnalysis = userWebsite.brand_traffic_analysis[0] || {};
-//     const websiteAnalysis = userWebsite.brand_website_analysis[0] || {};
-//     const socialMediaAnalysis = userWebsite.brand_social_media_analysis[0] || {};
-//     const scrapedData = userWebsite.website_scraped_data[0] || {};
+    const {
+      pagespeed_report,
+      traffic_report,
+      broken_links_report,
+      social_media_report,
+    } = userWebsite.llm_audit_reports;
 
-//     const auditData = {
-//       websiteUrl,
-//       userId,
-//       date: new Date(),
-//       trafficAnalysis: {
-//         totalVisitors: trafficAnalysis.total_visitors || 0,
-//         organicSearch: trafficAnalysis.organic_search || 0,
-//         direct: trafficAnalysis.direct || 0,
-//         referral: trafficAnalysis.referral || 0,
-//         organicSocial: trafficAnalysis.organic_social || 0,
-//         unassigned: trafficAnalysis.unassigned || 0,
-//         bounceRate: trafficAnalysis.overall_bounce_rate || 0,
-//         actionableFix: trafficAnalysis.actionable_fix || "",
-//         topCountries: trafficAnalysis.top_countries || [],
-//       },
-//       websiteAnalysis: {
-//         performanceScore: websiteAnalysis.performance_score || 0,
-//         seoScore: websiteAnalysis.seo_score || 0,
-//         brokenLinks: websiteAnalysis.total_broken_links || 0,
-//         brokenLinksDetails: websiteAnalysis.broken_links || [],
-//         speedIndex: websiteAnalysis.speed_index || "",
-//         timeToInteractive: websiteAnalysis.time_to_interactive || "",
-//       },
-//       socialMediaAnalysis: {
-//         platform: socialMediaAnalysis.platform_name || "",
-//         followers: socialMediaAnalysis.followers || 0,
-//         likes: socialMediaAnalysis.likes || 0,
-//         comments: socialMediaAnalysis.comments || 0,
-//         shares: socialMediaAnalysis.shares || 0,
-//         videosCount: socialMediaAnalysis.videos_count || 0,
-//         postsCount: socialMediaAnalysis.posts_count || 0,
-//         engagementRate: socialMediaAnalysis.engagement_rate || 0,
-//       },
-//       scrapedData: {
-//         pageTitle: scrapedData.page_title || "",
-//         metaDescription: scrapedData.meta_description || "",
-//         metaKeywords: scrapedData.meta_keywords || "",
-//         ogTitle: scrapedData.og_title || "",
-//         ogDescription: scrapedData.og_description || "",
-//         ogImage: scrapedData.og_image || "",
-//         twitterHandle: scrapedData.twitter_handle || "",
-//         facebookHandle: scrapedData.facebook_handle || "",
-//         instagramHandle: scrapedData.instagram_handle || "",
-//         linkedinHandle: scrapedData.linkedin_handle || "",
-//         youtubeHandle: scrapedData.youtube_handle || "",
-//         tiktokHandle: scrapedData.tiktok_handle || "",
-//       },
-//     };
+    if (!pagespeed_report && !traffic_report && !broken_links_report && !social_media_report) {
+      throw new Error("No separate audit reports found to generate combined report.");
+    }
 
-//     // Prepare the prompt for the LLM
-//     const systemPrompt = `You are a marketing and branding expert creating detailed brand audit summaries.`;
-//     const userPrompt = `
-// Here's a brand audit data for the website: ${websiteUrl}.
 
-// Traffic:
-// - Total Visitors: ${auditData.trafficAnalysis.totalVisitors}
-// - Organic Search: ${auditData.trafficAnalysis.organicSearch}
-// - Direct: ${auditData.trafficAnalysis.direct}
-// - Referral: ${auditData.trafficAnalysis.referral}
-// - Organic Social: ${auditData.trafficAnalysis.organicSocial}
-// - Bounce Rate: ${auditData.trafficAnalysis.bounceRate}
-// - Actionable Fix: ${auditData.trafficAnalysis.actionableFix}
-// - Top Countries: ${(Array.isArray(auditData.trafficAnalysis.topCountries)
-//   ? auditData.trafficAnalysis.topCountries.join(", ")
-//   : "")}
+//     const systemPrompt = `You are a senior marketing strategist and web performance expert with a strong understanding of SEO, analytics, UX, content strategy, and technical audits.
 
-// Website:
-// - Performance Score: ${auditData.websiteAnalysis.performanceScore}
-// - SEO Score: ${auditData.websiteAnalysis.seoScore}
-// - Broken Links: ${auditData.websiteAnalysis.brokenLinks}
-// - Speed Index: ${auditData.websiteAnalysis.speedIndex}
-// - Time To Interactive: ${auditData.websiteAnalysis.timeToInteractive}
+// Your job is to take multiple types of audit data and synthesize them into one in-depth, unified brand audit. Your report should be detailed, long, and professional — suitable for presentation to stakeholders.
 
-// Social Media:
-// - Platform: ${auditData.socialMediaAnalysis.platform}
-// - Followers: ${auditData.socialMediaAnalysis.followers}
-// - Engagement Rate: ${auditData.socialMediaAnalysis.engagementRate}
+// You must cover insights, key findings, specific metrics, strengths, weaknesses, and give actionable, prioritized recommendations. Format the response into sections with clear headings and bullet points if appropriate.
 
-// Scraped Metadata:
-// - Page Title: ${auditData.scrapedData.pageTitle}
-// - Meta Description: ${auditData.scrapedData.metaDescription}
-
-// Please write a clear and concise brand audit summary with insights and suggestions.
+// Generate a comprehensive Brand Audit & Competitor Analysis Report" in the following structured format if the document
+// The report should be detailed, professional, and tailored for a  business owner, with actionable recommendations in the Recommendations Summary section.
 // `;
 
-//     const gptResponse = await openai.chat.completions.create({
-//       model: "gpt-4-turbo",
-//       messages: [
-//         { role: "system", content: systemPrompt },
-//         { role: "user", content: userPrompt },
-//       ],
-//       temperature: 0.7,
-//     });
+// const userPrompt = `
+// You are provided with several audit report components for the following website: **${websiteUrl}**
 
-//     // const brandAuditSummary = gptResponse.data.choices[0].message?.content;
-//     const brandAuditSummary = gptResponse.choices[0].message?.content;
+// Use **all the data provided below**, and **do not omit or summarize prematurely**. The goal is to generate a **comprehensive, unified brand audit report** that reflects the full scope of the data.
+
+// ---
+
+// 🔹 **Traffic Report**
+// ${traffic_report || "No traffic report available."}
+
+// ---
+
+// 🔹 **PageSpeed Report**
+// ${pagespeed_report || "No pagespeed report available."}
+
+// ---
+
+// 🔹 **Broken Links Report**
+// ${broken_links_report || "No broken links report available."}
+
+// ---
+
+// 🔹 **Social Media Report**
+// ${social_media_report || "No social media report available."}
+
+// ---
+
+// Please:
+
+// Ensure all metrics are presented in a table format with Description and 
+// Significance, followed by a concise analysis paragraph for each section. 
+// Each section must include:
+
+// A metrics table with the following columns:
+
+// | Metric | Description | Significance | Identified Issue | Specific Fix |
+
+// A diagnostic analysis paragraph summarizing:
+
+// Key performance issues
+
+// Patterns across metrics or sections
+
+// Prioritization where applicable
+// The Recommendations Summary should combine insights from all sections into 
+// actionable steps, and the Competitor Analysis should compare the brand to its 
+// competitors, highlighting strategic fixes to close the competitive gap.
+// for now you can add these place holders.
+//  Recommendations Summary
+// This should be a table or checklist that consolidates the most important findings from all sections. Use the following columns:
+
+// | Area | Problem | Specific Fix | Priority (High/Med/Low) | Suggested Owner (e.g., Marketing, Dev, Founder) |
+
+// Make sure recommendations are clear, specific, and immediately actionable by a small business owner or small team. Avoid generic advice.
+// `;
+const systemPrompt = `You are a senior marketing strategist and web performance analyst with deep expertise in SEO, technical audits, content strategy, UX, analytics, and branding.
+
+Your task is to synthesize multiple types of audit data into a single, comprehensive **Brand Audit & Competitor Analysis Report**.
+
+The report should be:
+- Professional and presentation-ready
+- Detailed and structured
+- Written for business owners, founders, or decision-makers
+
+### Report Structure:
+
+1. **Brand Overview**
+   Begin with a brief summary of the brand based on available data. Include:
+   - Brand Name
+   - Industry
+   - Core Offerings
+   - Target Audience
+   - Overall Digital Footprint Summary  
+   If data is limited, infer reasonably — do not fabricate.
+
+2. **Audit Sections** (Traffic, PageSpeed, Social Media, Broken Links, etc.)
+   For each section:
+   - Include a metrics table:
+     | Metric | Description | Significance | Identified Issue | Specific Fix |
+   - Follow with a diagnostic analysis paragraph that:
+     - Identifies key issues
+     - Highlights patterns or recurring problems
+     - Prioritizes what matters most
+
+3. **Recommendations Summary**
+3. **Recommendations Summary**  
+   Begin this section with a brief introductory paragraph summarizing the main recommendations. Use concise bullet points to highlight the top priorities and strategic actions.
+
+   Create a final table that consolidates actionable fixes:
+   | Area | Problem | Specific Fix | Priority (High/Med/Low) | Suggested Owner (e.g., Marketing, Dev, Founder) |
 
 
-//     return {
-//       ...auditData,
-//       summary: brandAuditSummary,
-//     };
-//   } catch (error) {
-//     console.error("Error generating brand audit:", error);
-//     throw new Error("Failed to generate brand audit");
-//   }
-// };
+### Important Guidelines:
+- Be specific, not generic.
+- Avoid filler language or vague suggestions.
+- Write in a confident, expert tone.
+- Tailor recommendations to be practical and understandable for small business teams.
 
+Prioritize clarity, depth, and real-world value in every section.
+`;
+
+const userPrompt = `
+You are provided with multiple audit components for the website: **${websiteUrl}**. Your task is to generate a **comprehensive Brand Audit Report** based on the following data.
+
+Use **ALL** the information below. Do not omit or summarize prematurely. Ensure every section follows the required structure, and all findings are actionable, specific, and business-relevant.
+
+---
+
+🔹 **Traffic Report**
+${traffic_report || "No traffic report available."}
+
+---
+
+🔹 **PageSpeed Report**
+${pagespeed_report || "No pagespeed report available."}
+
+---
+
+🔹 **Broken Links Report**
+${broken_links_report || "No broken links report available."}
+
+---
+
+🔹 **Social Media Report**
+${social_media_report || "No social media report available."}
+
+if the data for any of the reports is not available skips that section and more to next for report.
+
+---
+
+
+
+
+
+
+`;
+
+
+    const gptResponse = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+    }); 
+    console.log("LLM Response:", gptResponse);
+
+    const combinedAudit = gptResponse.choices[0].message?.content?.trim();
+    
+    if (!combinedAudit) {
+      throw new Error("LLM did not return a valid brand audit.");
+    }
+
+    await prisma.llm_audit_reports.update({
+      where: {
+        website_id: userWebsite.website_id,
+      },
+      data: {
+        brand_audit: combinedAudit,
+      },
+    });
+
+    return {
+      websiteId,
+      brandAudit: combinedAudit,
+    };
+
+  } catch (error) {
+    console.error("Error generating combined brand audit:", error);
+    throw new Error("Failed to generate combined brand audit.");
+  }
+};

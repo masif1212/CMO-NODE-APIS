@@ -117,7 +117,7 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
   const total_visitors = parseInt(summary?.activeUsers, 10) || 0;
   const overall_bounce_rate = parseFloat(summary?.bounceRate) || null;
 
-  const actionable_fix = (trafficMap["organic_search"] || 0) / total_visitors > 0.2 ? "✅ Organic traffic looks healthy." : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
+  const actionable_fix = (trafficMap["organic_search"] || 0) / total_visitors > 0.5 ? "✅ Organic traffic looks healthy." : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
 
   return prisma.brand_traffic_analysis.create({
     data: {
