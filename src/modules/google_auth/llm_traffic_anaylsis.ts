@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
+import * as cheerio from "cheerio"; 
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -17,6 +18,33 @@ export const generateLLMTrafficReport = async (req: Request, res: Response) => {
 
   try {
     // 1. Fetch traffic data for the given website_id
+  
+             const scrapedData = await prisma.website_scraped_data.findUnique({
+               where: { website_id },
+               select: {
+                 page_title: true,
+                 meta_description: true,
+                 meta_keywords: true,
+                 og_title: true,
+                 og_description: true,
+                 raw_html: true,
+               },
+             });
+         
+             if (!scrapedData) {
+               return res.status(404).json({
+                 success: false,
+                 error: "No scraped metadata found for the provided website_id.",
+               });
+             }
+         
+             // Extract <h1> from HTML
+             let h1Text = "Not Found";
+             if (scrapedData.raw_html) {
+               const $ = cheerio.load(scrapedData.raw_html);
+               h1Text = $("h1").first().text().trim() || "Not Found";
+             }
+
     const trafficData = await prisma.brand_traffic_analysis.findFirst({
       where: { website_id },
       select: {
@@ -59,6 +87,14 @@ export const generateLLMTrafficReport = async (req: Request, res: Response) => {
     const prompt = `
 You are a digital marketing analyst. A website traffic audit was conducted and the following data was collected:
 
+
+### Website Metadata Overview:
+- Page Title: ${scrapedData.page_title || "N/A"}
+- Meta Description: ${scrapedData.meta_description || "N/A"}
+- Meta Keywords: ${scrapedData.meta_keywords || "N/A"}
+
+- First H1 Tag: ${h1Text}
+
 Traffic Sources:
 - Total Visitors: ${total_visitors}
 - Organic Search: ${organic_search}
@@ -93,7 +129,7 @@ Make the tone professional and technically actionable. Prioritize changes that y
       messages: [{ role: "user", content: prompt }],
       temperature: 0.6,
     });
-
+    console.log("LLM Response:", response);
     const llmOutput = response.choices?.[0]?.message?.content;
     await prisma.llm_audit_reports.upsert({
         where: { website_id },

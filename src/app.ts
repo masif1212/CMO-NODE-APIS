@@ -8,10 +8,14 @@ import pageSpeedRouter from "./modules/pagespeed/router";
 import authRouter from "./modules/google_auth/router";
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
-// import { competitorRouter } from "./modules/competitor_analysis/routes/competitor.routes";
-
-// import routes from ".modules/scraped_data/routes";
+import youtubeRouter from "./modules/social_media/router";
+import { competitorRouter } from "./modules/competitor_analysis/routes/competitor.routes";
+import brandAuditRouter from "./modules/brand_audit_report/router";
 const app = express();
+
+
+
+
 
 // Middleware
 app.use(express.json());
@@ -45,11 +49,10 @@ app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this i
 
 // Existing routes...
 app.use("/api/scrape", routes); // <-- Add this line
-// app.use('competitors', competitorRouter); // Competitor analysis route
-// app.use('/api/competitors', competitorRouter);
+app.use('/api/competitors', competitorRouter);
+app.use("/api/brand-audit", brandAuditRouter);
 
-
-
+app.use("/api/social_media/youtube", youtubeRouter);
 // Global error handler
 app.use(errorHandler);
 

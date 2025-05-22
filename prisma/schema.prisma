@@ -338,14 +338,14 @@ model website_scraped_data {
 
 model competitor_details {
   competitor_id    String   @id @default(uuid())
-  website_id       String
+  website_id       String  
   name             String
   website_url      String   @unique
-  industry         String?
-  region           String?
-  target_audience  String?
-  primary_offering String?
-  usp              String?
+  industry         String? @db.LongText
+  region           String? @db.LongText
+  target_audience  String? @db.LongText
+  primary_offering String? @db.LongText
+  usp              String? @db.LongText
   created_at       DateTime @default(now())
   updated_at       DateTime @default(now()) @updatedAt
 
@@ -360,12 +360,12 @@ model competitor_scraped_data {
   website_id            String // User's website this competitor is related to
 
   website_url      String
-  page_title       String?
+  page_title       String? @db.LongText
   meta_description String? @db.LongText
   meta_keywords    String? @db.LongText
   og_title         String? @db.LongText
   og_description   String? @db.LongText
-  og_image         String?
+  og_image         String? @db.LongText
   twitter_handle   String?
   facebook_handle  String?
   instagram_handle String?
