@@ -47,12 +47,21 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
       profile: decodedToken,
     };
 
-    const redirectUri = process.env.NEXT_PUBLIC_BASE_URL + "/brand-audit";
-
-    res.redirect(`${redirectUri}?GoogleAuth=true`);
+    // Send HTML response that will close the popup and notify the parent window
+    res.send(`
+      <script>
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
+        window.close();
+      </script>
+    `);
   } catch (err) {
     console.error("OAuth2 callback error:", err);
-    return res.status(500).send("Authentication failed");
+    res.send(`
+      <script>
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
+        window.close();
+      </script>
+    `);
   }
 };
 

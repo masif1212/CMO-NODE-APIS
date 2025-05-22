@@ -1,169 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `accessibility_score` on the `brand_website_analysis` table. All the data in the column will be lost.
-  - You are about to drop the column `best_practices_score` on the `brand_website_analysis` table. All the data in the column will be lost.
-  - You are about to drop the column `pwa_score` on the `brand_website_analysis` table. All the data in the column will be lost.
-  - You are about to drop the `api_key` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `audit_log` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `authentication_method` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `competitor_detail` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `data_retention_policy` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `email_verification` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `login_attempt` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `magic_link` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `mfa_method` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `pagespeed_audit` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `permission` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `role` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `role_permission` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `session` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `system_setting` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `user` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `user_role` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `user_website` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropForeignKey
-ALTER TABLE `api_key` DROP FOREIGN KEY `api_key_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `audit_log` DROP FOREIGN KEY `audit_log_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `authentication_method` DROP FOREIGN KEY `authentication_method_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `brand_social_media_analysis` DROP FOREIGN KEY `brand_social_media_analysis_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `brand_traffic_analysis` DROP FOREIGN KEY `brand_traffic_analysis_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `brand_website_analysis` DROP FOREIGN KEY `brand_website_analysis_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `competitor_analysis` DROP FOREIGN KEY `competitor_analysis_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `competitor_detail` DROP FOREIGN KEY `competitor_detail_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `competitor_scraped_data` DROP FOREIGN KEY `competitor_scraped_data_competitor_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `competitor_scraped_data` DROP FOREIGN KEY `competitor_scraped_data_website_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `email_verification` DROP FOREIGN KEY `email_verification_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `login_attempt` DROP FOREIGN KEY `login_attempt_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `magic_link` DROP FOREIGN KEY `magic_link_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `mfa_method` DROP FOREIGN KEY `mfa_method_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `pagespeed_audit` DROP FOREIGN KEY `pagespeed_audit_summary_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `role_permission` DROP FOREIGN KEY `role_permission_permission_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `role_permission` DROP FOREIGN KEY `role_permission_role_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `session` DROP FOREIGN KEY `session_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `user_role` DROP FOREIGN KEY `user_role_role_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `user_role` DROP FOREIGN KEY `user_role_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `user_website` DROP FOREIGN KEY `user_website_user_id_fkey`;
-
--- DropForeignKey
-ALTER TABLE `website_scraped_data` DROP FOREIGN KEY `website_scraped_data_website_id_fkey`;
-
--- DropIndex
-DROP INDEX `brand_social_media_analysis_website_id_fkey` ON `brand_social_media_analysis`;
-
--- DropIndex
-DROP INDEX `brand_traffic_analysis_website_id_fkey` ON `brand_traffic_analysis`;
-
--- DropIndex
-DROP INDEX `brand_website_analysis_website_id_fkey` ON `brand_website_analysis`;
-
--- DropIndex
-DROP INDEX `competitor_analysis_website_id_fkey` ON `competitor_analysis`;
-
--- DropIndex
-DROP INDEX `competitor_scraped_data_website_id_fkey` ON `competitor_scraped_data`;
-
--- AlterTable
-ALTER TABLE `brand_website_analysis` DROP COLUMN `accessibility_score`,
-    DROP COLUMN `best_practices_score`,
-    DROP COLUMN `pwa_score`;
-
--- DropTable
-DROP TABLE `api_key`;
-
--- DropTable
-DROP TABLE `audit_log`;
-
--- DropTable
-DROP TABLE `authentication_method`;
-
--- DropTable
-DROP TABLE `competitor_detail`;
-
--- DropTable
-DROP TABLE `data_retention_policy`;
-
--- DropTable
-DROP TABLE `email_verification`;
-
--- DropTable
-DROP TABLE `login_attempt`;
-
--- DropTable
-DROP TABLE `magic_link`;
-
--- DropTable
-DROP TABLE `mfa_method`;
-
--- DropTable
-DROP TABLE `pagespeed_audit`;
-
--- DropTable
-DROP TABLE `permission`;
-
--- DropTable
-DROP TABLE `role`;
-
--- DropTable
-DROP TABLE `role_permission`;
-
--- DropTable
-DROP TABLE `session`;
-
--- DropTable
-DROP TABLE `system_setting`;
-
--- DropTable
-DROP TABLE `user`;
-
--- DropTable
-DROP TABLE `user_role`;
-
--- DropTable
-DROP TABLE `user_website`;
-
 -- CreateTable
 CREATE TABLE `users` (
     `user_id` VARCHAR(191) NOT NULL,
@@ -367,6 +201,111 @@ CREATE TABLE `data_retention_policies` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `brand_website_analysis` (
+    `website_analysis_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `performance_score` DOUBLE NULL,
+    `seo_score` DOUBLE NULL,
+    `missing_image_alts` INTEGER NULL,
+    `first_contentful_paint` VARCHAR(191) NULL,
+    `largest_contentful_paint` VARCHAR(191) NULL,
+    `accessibility_score` DOUBLE NULL,
+    `best_practices_score` DOUBLE NULL,
+    `pwa_score` DOUBLE NULL,
+    `total_blocking_time` VARCHAR(191) NULL,
+    `speed_index` VARCHAR(191) NULL,
+    `cumulative_layout_shift` VARCHAR(191) NULL,
+    `time_to_interactive` VARCHAR(191) NULL,
+    `total_broken_links` INTEGER NULL,
+    `broken_links` JSON NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`website_analysis_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `brand_traffic_analysis` (
+    `traffic_analysis_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `total_visitors` INTEGER NULL,
+    `organic_search` INTEGER NULL,
+    `direct` INTEGER NULL,
+    `referral` INTEGER NULL,
+    `organic_social` INTEGER NULL,
+    `unassigned` INTEGER NULL,
+    `high_bounce_pages` JSON NULL,
+    `top_countries` JSON NULL,
+    `overall_bounce_rate` DOUBLE NULL,
+    `actionable_fix` VARCHAR(191) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`traffic_analysis_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `brand_social_media_analysis` (
+    `social_media_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `platform_name` VARCHAR(191) NOT NULL,
+    `followers` INTEGER NULL,
+    `likes` INTEGER NULL,
+    `comments` INTEGER NULL,
+    `shares` INTEGER NULL,
+    `videos_count` INTEGER NULL,
+    `posts_count` INTEGER NULL,
+    `engagement_rate` DOUBLE NULL,
+    `data` JSON NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`social_media_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `competitor_analysis` (
+    `competitor_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `domain_authority` INTEGER NULL,
+    `organic_traffic` INTEGER NULL,
+    `top_keywords` JSON NULL,
+    `backlink_profile` JSON NULL,
+    `social_media_engagement` JSON NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`competitor_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `website_scraped_data` (
+    `scraped_data_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `website_url` VARCHAR(191) NOT NULL,
+    `page_title` VARCHAR(191) NULL,
+    `meta_description` LONGTEXT NULL,
+    `meta_keywords` LONGTEXT NULL,
+    `og_title` LONGTEXT NULL,
+    `og_description` LONGTEXT NULL,
+    `og_image` VARCHAR(191) NULL,
+    `twitter_handle` VARCHAR(191) NULL,
+    `facebook_handle` VARCHAR(191) NULL,
+    `instagram_handle` VARCHAR(191) NULL,
+    `linkedin_handle` VARCHAR(191) NULL,
+    `youtube_handle` VARCHAR(191) NULL,
+    `tiktok_handle` VARCHAR(191) NULL,
+    `other_links` JSON NULL,
+    `raw_html` LONGTEXT NULL,
+    `ai_response` LONGTEXT NULL,
+    `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `website_scraped_data_website_id_key`(`website_id`),
+    PRIMARY KEY (`scraped_data_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `competitor_details` (
     `competitor_id` VARCHAR(191) NOT NULL,
     `website_id` VARCHAR(191) NOT NULL,
@@ -382,6 +321,50 @@ CREATE TABLE `competitor_details` (
 
     UNIQUE INDEX `competitor_details_website_url_key`(`website_url`),
     PRIMARY KEY (`competitor_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `competitor_scraped_data` (
+    `competitor_scraped_id` VARCHAR(191) NOT NULL,
+    `competitor_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `website_url` VARCHAR(191) NOT NULL,
+    `page_title` VARCHAR(191) NULL,
+    `meta_description` LONGTEXT NULL,
+    `meta_keywords` LONGTEXT NULL,
+    `og_title` LONGTEXT NULL,
+    `og_description` LONGTEXT NULL,
+    `og_image` VARCHAR(191) NULL,
+    `twitter_handle` VARCHAR(191) NULL,
+    `facebook_handle` VARCHAR(191) NULL,
+    `instagram_handle` VARCHAR(191) NULL,
+    `linkedin_handle` VARCHAR(191) NULL,
+    `youtube_handle` VARCHAR(191) NULL,
+    `tiktok_handle` VARCHAR(191) NULL,
+    `other_links` JSON NULL,
+    `raw_html` LONGTEXT NULL,
+    `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `competitor_scraped_data_competitor_id_key`(`competitor_id`),
+    PRIMARY KEY (`competitor_scraped_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `pagespeed_audit` (
+    `id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `website_analysis_id` VARCHAR(191) NOT NULL,
+    `audit_key` VARCHAR(191) NOT NULL,
+    `title` LONGTEXT NOT NULL,
+    `description` LONGTEXT NULL,
+    `score` DOUBLE NULL,
+    `display_value` LONGTEXT NULL,
+    `details` JSON NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
@@ -446,3 +429,6 @@ ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_co
 
 -- AddForeignKey
 ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `pagespeed_audit` ADD CONSTRAINT `pagespeed_audit_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
