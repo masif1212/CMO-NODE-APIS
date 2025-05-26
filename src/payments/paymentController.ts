@@ -31,7 +31,7 @@ export const Subscription = async (req: Request, res: Response): Promise<void> =
                metadata: { user_id, plan_id },
           });
 
-              if ((payment as any).status === 'Authorized' || (payment as any).status === 'Captured') {
+          if ((payment as any).status === 'Authorized' || (payment as any).status === 'Captured') {
                // Create subscription
                const subscription = await prisma.subscriptions.create({
                     data: {
