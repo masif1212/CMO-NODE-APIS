@@ -1,8 +1,9 @@
 import { Checkout } from 'checkout-sdk-node';
 
-const checkout = new Checkout(process.env.CHECKOUT_SECRET_KEY || '', {
-     client: 'your-client-name', // Replace with your client id
-     environment: 'sandbox', // Switch to 'live' for production
+const checkout = new Checkout('your api secret here', {
+     client: 'ack_XXXXXXXX',
+     scope: ['gateway'], // or whatever scope required
+     environment: 'sandbox', // or 'production'
 });
 
 export default checkout;
