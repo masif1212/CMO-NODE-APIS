@@ -3,10 +3,10 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function analyzeYouTubeDataByWebsiteId(websiteId: string) {
+export async function analyzeYouTubeDataByWebsiteId(website_id: string) {
   // Step 1: Get YouTube handle from DB
   const scrapedData = await prisma.website_scraped_data.findUnique({
-    where: { website_id: websiteId },
+    where: { website_id: website_id },
   });
 
   if (!scrapedData || !scrapedData.youtube_handle) {
@@ -36,7 +36,7 @@ export async function analyzeYouTubeDataByWebsiteId(websiteId: string) {
 
   const existing = await prisma.brand_social_media_analysis.findFirst({
     where: {
-      website_id: websiteId,
+      website_id: website_id,
       platform_name: "YouTube",
     },
   });
@@ -57,7 +57,7 @@ export async function analyzeYouTubeDataByWebsiteId(websiteId: string) {
   } else {
     await prisma.brand_social_media_analysis.create({
       data: {
-        website_id: websiteId,
+        website_id: website_id,
         platform_name: "YouTube",
         followers,
         comments,

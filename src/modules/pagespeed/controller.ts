@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { getPageSpeedSummary, checkBrokenLinks } from "./service";
 import { savePageSpeedAnalysis } from "./service";
-import { PrismaClient } from "@prisma/client";
-import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 
+import { saveBrokenLinkAnalysis } from "./brokenLink.service";
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 
@@ -31,14 +31,6 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     
     const saved = await savePageSpeedAnalysis(website_id, summary);
 
-    // const auditKeysToInclude = [
-    //   "first_contentful_paint",
-    //   "largest_contentful_paint",
-    //   "total_blocking_time",
-    //   "speed_index",
-    //   "cumulative_layout_shift",
-    //   "interactive",
-    // ];
 
     const auditKeysToInclude = [
   "first-contentful-paint",
@@ -65,17 +57,6 @@ const allAuditDetails = await prisma.pagespeed_audit.findMany({
 });
 
 
-// const auditMap: Record<string, any> = {};
-// for (const audit of allAuditDetails) {
-//   if (auditKeysToInclude.includes(audit.audit_key)) {
-//     auditMap[audit.audit_key] = {
-//       display_value: audit.display_value,
-//       score: audit.score,
-//     };
-//   }
-// }
-
-
 const auditMap: Record<string, any> = {};
 for (const audit of allAuditDetails) {
   if (auditKeysToInclude.includes(audit.audit_key)) {
@@ -95,12 +76,24 @@ for (const audit of allAuditDetails) {
       seo: categories.seo?.score != null ? categories.seo.score * 100 : null,
       accessibility: categories.accessibility?.score != null ? categories.accessibility.score * 100 : null,
       "best_practices": categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
-      // pwa: categories.pwa?.score != null ? categories.pwa.score * 100 : null,
-      // Mobile Friendly isn't a separate category in PageSpeed API v5; it is often part of SEO or mobile strategy.
-      // But if you want mobile strategy you can add it as well:
-      // mobile_friendly: categories["mobile-friendly"]?.score != null ? categories["mobile-friendly"].score * 100 : null,
+   
     };
-
+      await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id: website_id,
+        },
+      },
+      update: {
+        pagespeed_analysis: true,
+      },
+      create: {
+        user_id,
+        website_id: website_id,
+        pagespeed_analysis: true,
+      },
+    });
     return res.status(201).json({
       message: "PageSpeed summary saved successfully.",
       website_id: website_id,
@@ -113,7 +106,7 @@ for (const audit of allAuditDetails) {
     });
   } catch (err: any) {
     console.error("❌ handlePageSpeed error:", err);
-
+   
     return res.status(500).json({
       success: false,
       error: "Failed to process PageSpeed.",
@@ -141,7 +134,25 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
 
     // Step 3: Save analysis to DB
     const saved = await saveBrokenLinkAnalysis(website_id, brokenLinksResult, totalBroken);
+   
 
+    // Step 2: Mark brand audit as complete in analysis_status
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id: website_id,
+        },
+      },
+      update: {
+        broken_links: true,
+      },
+      create: {
+        user_id,
+        website_id: website_id,
+        broken_links: true,
+      },
+    });
     return res.status(201).json({
       message: totalBroken ? "Broken links found and saved." : "No broken links found. Data recorded.",
       website_id: website_id,

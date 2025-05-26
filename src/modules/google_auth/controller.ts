@@ -2,8 +2,11 @@ import { Request, Response } from "express";
 import { oAuth2Client } from "../../config/googleClient";
 import { getUserProperties, getAnalyticsSummary } from "./service";
 import jwt from "jsonwebtoken";
-import { SaveTrafficSummarySchema } from "./schema";
+import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export const startGoogleAuth = (req: Request, res: Response) => {
   const scopes = [
@@ -95,30 +98,83 @@ export const fetchProperties = async (req: Request, res: Response) => {
     return res.status(500).json({ error: err.message });
   }
 };
+  
+// export const fetchAnalyticsReport = async (req: Request, res: Response) => {
+//   const { property_id, website_id, user_id } = req.body;
+
+//   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
+//   if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
+
+//   try {
+//     const { getAnalyticsSummary } = await import("./service");
+//     const { oAuth2Client } = await import("../../config/googleClient");
+//     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
+
+//     // Fetch the analytics summary
+//     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
+//     console.log("Analytics summary:", summary);
+
+//     // Check if the summary is empty or doesn't contain meaningful data
+//     if (!summary || Object.keys(summary).length === 0 || !summary.traffic || !summary.country || !summary.bouncePages) {
+//       return res.status(404).json({ message: "Analytics summary not found" });
+//     }
+
+//     // Save the analytics data if it is valid
+//     const saved = await saveTrafficAnalysis(website_id, summary);
+//     return res.status(200).json({ message: "Analytics summary saved", data: saved });
+//   } catch (error: any)
+//    {
+//     console.error("Analytics save error:", error);
+//     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
+//   }
+// };
+
 
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
 
   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
-  if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
+  if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
 
   try {
-    const { getAnalyticsSummary } = await import("./service");
-    const { oAuth2Client } = await import("../../config/googleClient");
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
-    // Fetch the analytics summary
     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
-    console.log("Analytics summary:", summary);
 
-    // Check if the summary is empty or doesn't contain meaningful data
-    if (!summary || Object.keys(summary).length === 0 || !summary.traffic || !summary.country || !summary.bouncePages) {
+    if (!summary || !summary.traffic || !summary.country || !summary.bouncePages) {
       return res.status(404).json({ message: "Analytics summary not found" });
     }
 
-    // Save the analytics data if it is valid
-    const saved = await saveTrafficAnalysis(website_id?.website_id, summary);
-    return res.status(200).json({ message: "Analytics summary saved", data: saved });
+    // Save analytics summary
+    const savedSummary = await saveTrafficAnalysis(website_id, summary);
+
+    // Save user requirement inline here
+    await saveUserRequirement({
+      user_id,
+      website_id,
+      property_id,
+      access_token: req.session.user.accessToken,
+      profile: req.session.user.profile,
+    });
+    
+        // Step 2: Mark brand audit as complete in analysis_status
+        await prisma.analysis_status.upsert({
+          where: {
+            user_id_website_id: {
+              user_id,
+              website_id: website_id,
+            },
+          },
+          update: {
+            traffic_analysis: true,
+          },
+          create: {
+            user_id,
+            website_id: website_id,
+            traffic_analysis: true,
+          },
+        });
+    return res.status(200).json({ message: "Analytics summary and user requirement saved", data: savedSummary });
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

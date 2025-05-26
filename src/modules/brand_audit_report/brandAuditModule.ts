@@ -43,71 +43,7 @@ export const createBrandAudit = async (websiteId: string, user_id : string,) => 
     }
 
 
-//     const systemPrompt = `You are a senior marketing strategist and web performance expert with a strong understanding of SEO, analytics, UX, content strategy, and technical audits.
 
-// Your job is to take multiple types of audit data and synthesize them into one in-depth, unified brand audit. Your report should be detailed, long, and professional — suitable for presentation to stakeholders.
-
-// You must cover insights, key findings, specific metrics, strengths, weaknesses, and give actionable, prioritized recommendations. Format the response into sections with clear headings and bullet points if appropriate.
-
-// Generate a comprehensive Brand Audit & Competitor Analysis Report" in the following structured format if the document
-// The report should be detailed, professional, and tailored for a  business owner, with actionable recommendations in the Recommendations Summary section.
-// `;
-
-// const userPrompt = `
-// You are provided with several audit report components for the following website: **${websiteUrl}**
-
-// Use **all the data provided below**, and **do not omit or summarize prematurely**. The goal is to generate a **comprehensive, unified brand audit report** that reflects the full scope of the data.
-
-// ---
-
-// 🔹 **Traffic Report**
-// ${traffic_report || "No traffic report available."}
-
-// ---
-
-// 🔹 **PageSpeed Report**
-// ${pagespeed_report || "No pagespeed report available."}
-
-// ---
-
-// 🔹 **Broken Links Report**
-// ${broken_links_report || "No broken links report available."}
-
-// ---
-
-// 🔹 **Social Media Report**
-// ${social_media_report || "No social media report available."}
-
-// ---
-
-// Please:
-
-// Ensure all metrics are presented in a table format with Description and 
-// Significance, followed by a concise analysis paragraph for each section. 
-// Each section must include:
-
-// A metrics table with the following columns:
-
-// | Metric | Description | Significance | Identified Issue | Specific Fix |
-
-// A diagnostic analysis paragraph summarizing:
-
-// Key performance issues
-
-// Patterns across metrics or sections
-
-// Prioritization where applicable
-// The Recommendations Summary should combine insights from all sections into 
-// actionable steps, and the Competitor Analysis should compare the brand to its 
-// competitors, highlighting strategic fixes to close the competitive gap.
-// for now you can add these place holders.
-//  Recommendations Summary
-// This should be a table or checklist that consolidates the most important findings from all sections. Use the following columns:
-
-// | Area | Problem | Specific Fix | Priority (High/Med/Low) | Suggested Owner (e.g., Marketing, Dev, Founder) |
-
-// Make sure recommendations are clear, specific, and immediately actionable by a small business owner or small team. Avoid generic advice.
-// `;
 const systemPrompt = `You are a senior marketing strategist and web performance analyst with deep expertise in SEO, technical audits, content strategy, UX, analytics, and branding.
 
 Your task is to synthesize multiple types of audit data into a single, comprehensive **Brand Audit & Competitor Analysis Report**.
@@ -137,7 +73,6 @@ The report should be:
      - Highlights patterns or recurring problems
      - Prioritizes what matters most
 
-3. **Recommendations Summary**
 3. **Recommendations Summary**  
    Begin this section with a brief introductory paragraph summarizing the main recommendations. Use concise bullet points to highlight the top priorities and strategic actions.
 
@@ -176,10 +111,9 @@ ${broken_links_report || "No broken links report available."}
 
 ---
 
-🔹 **Social Media Report**
-${social_media_report || "No social media report available."}
 
-if the data for any of the reports is not available skips that section and more to next for report.
+
+if the data for any of the reports is not available skips that section (dont mention that section on report)and move to next for report.
 
 ---
 

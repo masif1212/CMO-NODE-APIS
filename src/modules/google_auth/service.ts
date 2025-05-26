@@ -3,6 +3,19 @@ import { OAuth2Client } from "google-auth-library";
 import { PrismaClient, Prisma } from "@prisma/client";
 const prisma = new PrismaClient();
 
+
+export const saveUserRequirement = async (data: {
+  user_id: string;
+  website_id: string;
+  property_id: string;
+  access_token: string;
+  profile?: any;
+}) => {
+  return prisma.user_requirements.create({
+    data,
+  });
+};
+
 // Function to get the user's properties along with the website URL (defaultUri)
 export const getUserProperties = async (auth: OAuth2Client) => {
   const analyticsAdmin = google.analyticsadmin({ version: 'v1beta', auth });
@@ -51,6 +64,7 @@ export const getUserProperties = async (auth: OAuth2Client) => {
     throw error;  // Re-throw to handle higher up if needed
   }
 };
+
 
 
 export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string) => {
@@ -133,5 +147,6 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
       overall_bounce_rate,
       actionable_fix,
     },
+    
   });
 };

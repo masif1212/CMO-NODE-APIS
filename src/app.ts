@@ -9,7 +9,7 @@ import authRouter from "./modules/google_auth/router";
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/social_media/router";
-import { competitorRouter } from "./modules/competitor_analysis/routes/competitor.routes";
+import { competitorRouter } from "./modules/competitor_analysis/competitor.routes";
 import brandAuditRouter from "./modules/brand_audit_report/router";
 const app = express();
 
@@ -48,7 +48,7 @@ app.use("/api/auth", authRouter);
 app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
 
 // Existing routes...
-app.use("/api/scrape", routes); // <-- Add this line
+app.use("/api/scrape", routes); 
 app.use('/api/competitors', competitorRouter);
 app.use("/api/brand-audit", brandAuditRouter);
 
