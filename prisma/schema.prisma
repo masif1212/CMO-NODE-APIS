@@ -35,6 +35,8 @@ model users {
   mfa_methods            mfa_methods[]
   email_verifications    email_verifications[]
   api_keys               api_keys[]
+  subscriptions          subscriptions[]
+  payments               payments[]
 }
 
 model user_websites {
@@ -57,6 +59,7 @@ model user_websites {
 
   pagespeed_audit   pagespeed_audit[]
   llm_audit_reports llm_audit_reports?
+  payments          payments[]
 }
 
 model authentication_methods {
@@ -338,14 +341,14 @@ model website_scraped_data {
 
 model competitor_details {
   competitor_id    String   @id @default(uuid())
-  website_id       String  
+  website_id       String
   name             String
   website_url      String   @unique
-  industry         String? @db.LongText
-  region           String? @db.LongText
-  target_audience  String? @db.LongText
-  primary_offering String? @db.LongText
-  usp              String? @db.LongText
+  industry         String?  @db.LongText
+  region           String?  @db.LongText
+  target_audience  String?  @db.LongText
+  primary_offering String?  @db.LongText
+  usp              String?  @db.LongText
   created_at       DateTime @default(now())
   updated_at       DateTime @default(now()) @updatedAt
 
@@ -396,4 +399,48 @@ model llm_audit_reports {
   updated_at            DateTime @default(now()) @updatedAt
 
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
+}
+
+model plans {
+  plan_id       String          @id @default(uuid())
+  plan_name     String
+  price         Decimal
+  currency      String
+  features      Json?
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @default(now()) @updatedAt
+  subscriptions subscriptions[]
+}
+
+model subscriptions {
+  subscription_id String     @id @default(uuid())
+  user_id         String
+  plan_id         String
+  start_date      DateTime
+  end_date        DateTime?
+  status          String
+  payment_status  String
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @default(now()) @updatedAt
+  users           users      @relation(fields: [user_id], references: [user_id])
+  plans           plans      @relation(fields: [plan_id], references: [plan_id])
+  payments        payments[]
+}
+
+model payments {
+  payment_id      String         @id @default(uuid())
+  user_id         String
+  amount          Decimal
+  currency        String
+  payment_method  String
+  payment_status  String
+  transaction_id  String?
+  subscription_id String?
+  website_id      String?
+  analysis_type   String?
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @default(now()) @updatedAt
+  users           users          @relation(fields: [user_id], references: [user_id])
+  subscriptions   subscriptions? @relation(fields: [subscription_id], references: [subscription_id])
+  user_websites   user_websites? @relation(fields: [website_id], references: [website_id])
 }
