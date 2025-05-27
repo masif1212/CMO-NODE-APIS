@@ -126,6 +126,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
 };
 
 export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
+  console.log(website_id,"websiteID")
   const trafficMap = Object?.fromEntries(summary?.traffic?.map((item: any) => [item?.dimensionValues[0]?.value?.toLowerCase()?.replace(/\s/g, "_"), parseInt(item?.metricValues[0]?.value, 10)]));
 
   const total_visitors = parseInt(summary?.activeUsers, 10) || 0;

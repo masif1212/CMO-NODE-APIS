@@ -136,6 +136,8 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
 
+  if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
+console.log(website_id,"website id ")
   try {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
@@ -175,6 +177,9 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
           },
         });
     return res.status(200).json({ message: "Analytics summary and user requirement saved", data: savedSummary });
+    // Save the analytics data if it is valid
+    const saved = await saveTrafficAnalysis(website_id, summary);
+    return res.status(200).json({ message: "Analytics summary saved", data: saved });
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
