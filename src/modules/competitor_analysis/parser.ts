@@ -69,3 +69,4 @@ function normalizeCompetitorArray(raw: any[]): ReturnType<typeof parseCompetitor
         usp: comp.usp?.toString().trim() || ''
     }));
 }
+

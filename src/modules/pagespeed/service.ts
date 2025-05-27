@@ -115,99 +115,6 @@ function getErrorMessage(status: number, url: string): { error: string; quickFix
   }
 }
 
-
-// export async function checkBrokenLinks(website_id: string, maxDepth = 1): Promise<BrokenLinkResult[]> {
-//   const browser = await puppeteer.launch({ headless: "new" as any });
-//   const brokenLinks: BrokenLinkResult[] = [];
-
-//   async function crawl(pageUrl: string, depth: number) {
-//     if (visited.has(pageUrl) || depth > maxDepth) return;
-//     visited.add(pageUrl);
-
-//     let links: string[];
-//     try {
-//       links = await extractLinks(pageUrl, browser);
-//     } catch (e: any) {
-//       console.error(`Error rendering ${pageUrl}: ${e.message}`);
-//       return;
-//     }
-
-//     const internalLinks: string[] = [];
-//     for (const link of links) {
-//       const normalized = link.split("#")[0];
-//       if (isExcluded(normalized) || checkedLinks.has(normalized)) continue;
-
-//       checkedLinks.add(normalized);
-    
-
-//       const result = await fetchWithTimeout(normalized);
-//       if (!result.ok) {
-//         const { error, quickFix } = getErrorMessage(Number(result.status), normalized);
-
-//         brokenLinks.push({
-//           page: pageUrl,
-//           link: normalized,
-//           status: result.status,
-//           error,
-//           quickFix
-//         });
-//       }
-
-
-
-
-//       if (new URL(normalized).hostname === new URL(baseUrl).hostname && !visited.has(normalized)) {
-//         internalLinks.push(normalized);
-//       }
-//     }
-
-//     for (const next of internalLinks) {
-//       await crawl(next, depth + 1);
-//     }
-//   }
-
-//   await crawl(baseUrl, 0);
-//   await browser.close();
-//   return brokenLinks;
-// }
-
-// export async function getPageSpeedSummary(website_id: string) {
-//   const params = new URLSearchParams({
-//     url,
-//     key: API_KEY,
-//     strategy: "desktop",
-//     cacheBust: Date.now().toString(),
-//   });
-
-//   ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) =>
-//     params.append("category", c)
-//   );
-
-//   const response = await axios.get(`${API_URL}?${params}`);
-//   const data = response.data;
-
-//   const audits = data.lighthouseResult?.audits || {};
-//   const detailedAuditResults = Object.keys(audits).map((key) => {
-//     const audit = audits[key];
-//     return {
-//       id: key,
-//       title: audit.title,
-//       description: audit.description,
-//       score: audit.score,
-//       displayValue: audit.displayValue || null,
-//       details: audit.details || null,
-//       scoreDisplayMode: audit.scoreDisplayMode || null,
-//     };
-//   });
-
-//   return {
-//     url: data.lighthouseResult?.finalUrl,
-//     fetchedAt: new Date().toISOString(),
-//     categories: data.lighthouseResult?.categories,
-//     audits: detailedAuditResults,
-//   };
-// }
-
 async function getWebsiteUrlById(website_id: string): Promise<string> {
   const website = await prisma.user_websites.findUnique({
     where: { website_id: website_id },
@@ -332,21 +239,6 @@ export async function savePageSpeedAnalysis(website_id: string, summary: any) {
     },
   });
 
-  // 3. Insert all audit details using the generated website_analysis_id
-  // await prisma.pagespeed_audit.createMany({
-  //   data: summary.audits.map((audit) => ({
-  //     website_id,
-  //     website_analysis_id: analysis.website_analysis_id, // link audits to analysis record
-  //     audit_key: audit.id,
-  //     title: audit.title,
-  //     description: audit.description,
-  //     score: typeof audit.score === "number" ? audit.score : null,
-  //     display_value: audit.displayValue,
-  //     details: audit.details,
-  //     created_at: new Date(),
-  //     updated_at: new Date(),
-  //   })),
-  // });
   await prisma.pagespeed_audit.createMany({
   data: summary.audits.map((audit: {
     id: string;
@@ -369,6 +261,5 @@ export async function savePageSpeedAnalysis(website_id: string, summary: any) {
   })),
 });
 
-  // 4. Return the created analysis record (with id)
   return analysis;
 }

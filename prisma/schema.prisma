@@ -376,7 +376,9 @@ model competitor_scraped_data {
   linkedin_handle  String? @db.LongText
   youtube_handle   String? @db.LongText
   tiktok_handle    String? @db.LongText
+  page_speed       Json? // <- Add this line
   other_links      Json?
+  
   raw_html         String? @db.LongText
 
   scraped_at DateTime @default(now())
@@ -396,6 +398,7 @@ model llm_audit_reports {
   social_media_report   String?  @db.LongText
   brand_audit           String?  @db.LongText
   best_practices_report String?  @db.LongText
+  competitor_analysis_ps_report string @db.LongText
   created_at            DateTime @default(now())
   updated_at            DateTime @default(now()) @updatedAt
 
