@@ -398,8 +398,58 @@ model llm_audit_reports {
   social_media_report   String?  @db.LongText
   brand_audit           String?  @db.LongText
   best_practices_report String?  @db.LongText
+  competitor_analysis_ps_report String? @db.LongText
   created_at            DateTime @default(now())
   updated_at            DateTime @default(now()) @updatedAt
 
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
+}
+
+model user_requirements {
+  requirement_id      String  @id @default(uuid())
+  user_id             String
+  website_id          String
+  property_id         String
+  access_token        String  @db.LongText
+  refresh_token       String? @db.LongText
+  profile             Json?
+  session_id          String? @db.LongText
+  fetched_properties  Json?
+  summary_status      String? // e.g., "pending", "success", "error"
+  summary_data        Json?
+  competitor_urls     String? @db.LongText
+  ip_address          String? @db.LongText
+  user_agent          String? @db.LongText
+  industry            String? @db.LongText
+  region_of_operation String? @db.LongText
+  target_location     String? @db.LongText
+  target_audience     String? @db.LongText
+  primary_offering    String? @db.LongText
+  USP                 String? @db.LongText
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  // Relations
+  users         users         @relation(fields: [user_id], references: [user_id])
+  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+}
+
+model analysis_status {
+  id                    String   @id @default(uuid())
+  user_id               String
+  website_id            String
+  competitor_analysis   Boolean  @default(false)
+  pagespeed_analysis    Boolean  @default(false)
+  social_media_analysis Boolean  @default(false)
+  brand_audit           Boolean  @default(false)
+  traffic_analysis      Boolean  @default(false)
+  broken_links          Boolean  @default(false)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @default(now()) @updatedAt
+
+  users         users         @relation(fields: [user_id], references: [user_id])
+  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+
+  @@unique([user_id, website_id]) // One record per user-website
 }
