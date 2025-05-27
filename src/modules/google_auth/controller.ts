@@ -134,11 +134,8 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
 
   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
-<<<<<<< Updated upstream
   if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
 
-=======
->>>>>>> Stashed changes
   if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
 console.log(website_id,"website id ")
   try {
