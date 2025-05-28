@@ -63,16 +63,7 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
     const analysis_id = analysisRecord.website_analysis_id;
 
     // 3. Fetch audit details
-    const auditDetails = await prisma.pagespeed_audit.findMany({
-      where: { website_analysis_id: analysis_id },
-      select: {
-        audit_key: true,
-        title: true,
-        description: true,
-        score: true,
-        display_value: true,
-      },
-    });
+
 
     // 4. Fetch summary scores
     const analysis = await prisma.brand_website_analysis.findUnique({
@@ -90,6 +81,9 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
         cumulative_layout_shift: true,
         time_to_interactive: true,
         missing_image_alts: true,
+        total_broken_links:true,
+        broken_links: true,
+      
       },
     });
 
@@ -105,7 +99,7 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
       seo: analysis.seo_score ?? "N/A",
       accessibility: analysis.accessibility_score ?? "N/A",
       bestPractices: analysis.best_practices_score ?? "N/A",
-      pwa: analysis.pwa_score ?? "N/A",
+      
     };
 
     // 5. Compose the prompt
@@ -125,7 +119,7 @@ You are a senior web performance expert responsible for creating detailed, techn
 - SEO: ${categoryScores.seo}
 - Accessibility: ${categoryScores.accessibility}
 - Best Practices: ${categoryScores.bestPractices}
-- PWA: ${categoryScores.pwa}
+
 
 ### Core Web Vitals:
 - First Contentful Paint: ${analysis.first_contentful_paint}
@@ -137,6 +131,9 @@ You are a senior web performance expert responsible for creating detailed, techn
 
 ### Additional Findings:
 - Missing Image Alts: ${analysis.missing_image_alts}
+- Number of broken links: ${analysis.total_broken_links}
+- broken link detail :${analysis.broken_links}
+
 
 
 ---
@@ -203,7 +200,7 @@ Use specific numbers and insights from the audit data. Avoid generic statements.
       temperature: 0.7,
       max_tokens: max_tokens,
     });
-    console.log("LLM Response:", response);
+    // console.log("LLM Response:", response);
     const llmOutput = response.choices?.[0]?.message?.content;
 
     // 7. Store report

@@ -220,46 +220,40 @@ export async function getPageSpeedSummary(website_id: string) {
   };
 }
 
-
 export async function savePageSpeedAnalysis(website_id: string, summary: any) {
-  // 2. Create the brand_website_analysis record and return the generated primary key
-  const analysis = await prisma.brand_website_analysis.create({
+  const audits = summary.audits || [];
+
+  const getAuditValue = (id: string) => {
+    const audit = audits.find((a: any) => a.id === id);
+    return audit?.displayValue || null;
+  };
+
+  return await prisma.brand_website_analysis.create({
     data: {
       website_id,
       performance_score: summary.categories?.performance?.score != null ? summary.categories.performance.score * 100 : null,
       seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
       accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
       best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
-      pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
+      // pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
+
+      // Timing metrics
+      first_contentful_paint: getAuditValue("first-contentful-paint"),
+      largest_contentful_paint: getAuditValue("largest-contentful-paint"),
+      total_blocking_time: getAuditValue("total-blocking-time"),
+      speed_index: getAuditValue("speed-index"),
+      cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
+      time_to_interactive: getAuditValue("interactive"),
+
+   
+
+      audit_details: summary.audits,
       created_at: new Date(),
       updated_at: new Date(),
     },
     select: {
-      website_analysis_id: true,  // Make sure to return this field
+      website_analysis_id: true,
     },
   });
-
-  await prisma.pagespeed_audit.createMany({
-  data: summary.audits.map((audit: {
-    id: string;
-    title: string;
-    description: string;
-    score: number | null;
-    displayValue?: string | null;
-    details?: any;
-  }) => ({
-    website_id,
-    website_analysis_id: analysis.website_analysis_id,
-    audit_key: audit.id,
-    title: audit.title,
-    description: audit.description,
-    score: typeof audit.score === "number" ? audit.score : null,
-    display_value: audit.displayValue,
-    details: audit.details,
-    created_at: new Date(),
-    updated_at: new Date(),
-  })),
-});
-
-  return analysis;
 }
+

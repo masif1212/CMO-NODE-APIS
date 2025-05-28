@@ -28,61 +28,47 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       });
     }
 
-    
+    // Save PageSpeed analysis, including audits in `audit_details`
     const saved = await savePageSpeedAnalysis(website_id, summary);
 
-
     const auditKeysToInclude = [
-  "first-contentful-paint",
-  "largest-contentful-paint",
-  "total-blocking-time",
-  "speed-index",
-  "cumulative-layout-shift",
-  "interactive",
-];
+      "first-contentful-paint",
+      "largest-contentful-paint",
+      "total-blocking-time",
+      "speed-index",
+      "cumulative-layout-shift",
+      "interactive",
+    ];
 
+    // Read audit_details from saved analysis (already stored as JSON)
+    const auditDetails = summary.audits || [];
 
+    const auditMap: Record<string, any> = {};
+    for (const audit of auditDetails) {
+      if (auditKeysToInclude.includes(audit.id)) {
+        const normalizedKey = audit.id.replace(/-/g, "_");
+        auditMap[normalizedKey] = {
+          display_value: audit.displayValue,
+          score: typeof audit.score === "number" ? audit.score : null,
+        };
+      }
+    }
 
-const allAuditDetails = await prisma.pagespeed_audit.findMany({
-  where: {
-    website_analysis_id: saved.website_analysis_id,
-  },
-  select: {
-    audit_key: true,
-    title: true,
-    description: true,
-    score: true,
-    display_value: true,
-  },
-});
-
-
-const auditMap: Record<string, any> = {};
-for (const audit of allAuditDetails) {
-  if (auditKeysToInclude.includes(audit.audit_key)) {
-    const normalizedKey = audit.audit_key.replace(/-/g, "_"); // convert to underscore
-    auditMap[normalizedKey] = {
-      display_value: audit.display_value,
-      score: audit.score,
-    };
-  }
-}
-
-
-    // Add category scores (SEO, Accessibility, Mobile Friendly, etc)
+    // Category Scores
     const categories = summary.categories || {};
     const categoryScores = {
       performance: categories.performance?.score != null ? categories.performance.score * 100 : null,
       seo: categories.seo?.score != null ? categories.seo.score * 100 : null,
       accessibility: categories.accessibility?.score != null ? categories.accessibility.score * 100 : null,
-      "best_practices": categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
-   
+      best_practices: categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
     };
-      await prisma.analysis_status.upsert({
+
+    // Mark pagespeed_analysis as done
+    await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
           user_id,
-          website_id: website_id,
+          website_id,
         },
       },
       update: {
@@ -90,23 +76,21 @@ for (const audit of allAuditDetails) {
       },
       create: {
         user_id,
-        website_id: website_id,
+        website_id,
         pagespeed_analysis: true,
       },
     });
+
     return res.status(201).json({
       message: "PageSpeed summary saved successfully.",
-      website_id: website_id,
+      website_id,
       analysis_id: saved.website_analysis_id,
-      // data: saved,
       categories: categoryScores,
       audits: auditMap,
-      
-      audit_details: allAuditDetails,   // <- return categories here
+      audit_details: auditDetails, // entire raw audits object if needed
     });
   } catch (err: any) {
     console.error("❌ handlePageSpeed error:", err);
-   
     return res.status(500).json({
       success: false,
       error: "Failed to process PageSpeed.",
@@ -114,7 +98,6 @@ for (const audit of allAuditDetails) {
     });
   }
 };
-
 
 export const handleBrokenLinks = async (req: Request, res: Response) => {
   const { website_id, user_id, maxDepth = 1 } = req.body;
@@ -168,6 +151,8 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
     });
   }
 };
+
+
 
 
 

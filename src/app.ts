@@ -11,8 +11,9 @@ import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/social_media/router";
 import { competitorRouter } from "./modules/competitor_analysis/competitor.routes";
 import brandAuditRouter from "./modules/brand_audit_report/router";
-const app = express();
+import dashboardRouter from "./modules/dashboard/dashboard.router";
 
+const app = express();
 
 
 
@@ -53,6 +54,8 @@ app.use('/api/competitors', competitorRouter);
 app.use("/api/brand-audit", brandAuditRouter);
 
 app.use("/api/social_media/youtube", youtubeRouter);
+
+app.use("/api", dashboardRouter);
 // Global error handler
 app.use(errorHandler);
 

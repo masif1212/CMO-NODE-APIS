@@ -59,7 +59,7 @@ model user_websites {
   website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite") // 1‑to‑1
   competitor_scraped_data     competitor_scraped_data[]
 
-  pagespeed_audit   pagespeed_audit[]
+  
   llm_audit_reports llm_audit_reports?
   user_requirements user_requirements[]
   analysis_status   analysis_status[]
@@ -240,27 +240,14 @@ model brand_website_analysis {
   time_to_interactive      String?
   total_broken_links       Int?
   broken_links             Json?
+  audit_details           Json? 
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
 
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }
 
-model pagespeed_audit {
-  id                  String   @id @default(uuid())
-  website_id          String
-  website_analysis_id String // 
-  audit_key           String
-  title               String   @db.LongText
-  description         String?  @db.LongText
-  score               Float?
-  display_value       String?  @db.LongText
-  details             Json?
-  created_at          DateTime @default(now())
-  updated_at          DateTime @default(now()) @updatedAt
 
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
-}
 
 model brand_traffic_analysis {
   traffic_analysis_id String   @id @default(uuid())
