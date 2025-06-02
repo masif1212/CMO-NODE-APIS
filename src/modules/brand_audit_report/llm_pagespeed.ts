@@ -7,7 +7,6 @@ const model = process.env.OPENAI_MODEL || "gpt-4.1";
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const max_tokens = Number(process.env.MAX_TOKENS) || 1000; 
-import { marked } from 'marked';
 import { table } from "console";
 
 export async function generateLLMAuditReportForPagespeed(website_id: string) {

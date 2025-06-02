@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio"; 
-import { marked } from 'marked'; // for Markdown to HTML conversion
 const prisma = new PrismaClient();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -115,44 +114,18 @@ Date: ${currentDate}
     });
 
     const llmOutput = response.choices?.[0]?.message?.content;
-        const htmlBody = marked(llmOutput ?? "");
     
     // Add CSS for table styling
-    const fullHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>LLM Response</title>
-      <style>
-        table, th, td {
-          border: 1px solid black;
-          border-collapse: collapse;
-          padding: 8px;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        body {
-          font-family: sans-serif;
-          padding: 20px;
-        }
-      </style>
-    </head>
-    <body>
-      ${htmlBody}
-    </body>
-    </html>
-    `;
+  
 
     await prisma.llm_responses.upsert({
           where: { website_id },
           update: {
-            brand_audit: fullHtml,
+            brand_audit: llmOutput,
           },
           create: {
             website_id,
-            brand_audit: fullHtml,
+            brand_audit: llmOutput,
           },
         });
      
@@ -160,7 +133,7 @@ Date: ${currentDate}
       success: true,
       website_id,
       analysis_id: website_analysis_id,
-      report: fullHtml,
+      report: llmOutput,
     });
   } catch (err: any) {
     console.error("❌ Broken Link Audit Error:", err);

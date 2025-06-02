@@ -4,7 +4,7 @@ CREATE TABLE `users` (
     `email` VARCHAR(191) NOT NULL,
     `first_name` VARCHAR(191) NULL,
     `last_name` VARCHAR(191) NULL,
-    `type` VARCHAR(191) NULL,
+    `user_type` VARCHAR(191) NULL,
     `is_email_verified` BOOLEAN NOT NULL DEFAULT false,
     `is_mfa_enabled` BOOLEAN NOT NULL DEFAULT false,
     `account_status` VARCHAR(191) NOT NULL DEFAULT 'active',
