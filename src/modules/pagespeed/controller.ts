@@ -18,7 +18,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   }
 
   try {
-    const summary = await getPageSpeedSummary(website_id);
+    const summary = await getPageSpeedSummary(user_id,website_id);
 
     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
       return res.status(502).json({
@@ -29,7 +29,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     }
 
     // Save PageSpeed analysis, including audits in `audit_details`
-    const saved = await savePageSpeedAnalysis(website_id, summary);
+    const saved = await savePageSpeedAnalysis(user_id,website_id, summary);
 
     const auditKeysToInclude = [
       "first-contentful-paint",
@@ -111,12 +111,12 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
    
 
     // Step 2: Run the broken link crawler
-    const brokenLinksResult = await checkBrokenLinks(website_id, maxDepth);
+    const brokenLinksResult = await checkBrokenLinks(user_id,website_id, maxDepth);
 
     const totalBroken = brokenLinksResult.length;
 
     // Step 3: Save analysis to DB
-    const saved = await saveBrokenLinkAnalysis(website_id, brokenLinksResult, totalBroken);
+    const saved = await saveBrokenLinkAnalysis(user_id,website_id, brokenLinksResult, totalBroken);
    
 
     // Step 2: Mark brand audit as complete in analysis_status

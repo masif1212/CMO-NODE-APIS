@@ -1,10 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
-import { scrapeWebsite } from './scraper';
+import { scrapeWebsitecompetitos,scrapeAndSaveWebsite } from './scraper';
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM,createComparisonPrompt } from './llm';
 import { parseCompetitorData } from './parser';
 import { getPageSpeedData } from './pagespeed';
-import{ openai } from './openai';
+import OpenAI from 'openai';
+import 'dotenv/config';
+
+export const openai = new OpenAI({
+     apiKey: process.env.OPENAI_API_KEY
+});
+
 
 const prisma = new PrismaClient();
 
@@ -23,17 +29,17 @@ export class CompetitorService {
       },
     });
 
-    const scrapedMain = await scrapeWebsite(website_url);
+    const scrapedMain = await scrapeAndSaveWebsite(website_url,website_id);
     if (!scrapedMain) {
       throw new Error(`Failed to scrape main website: ${website_url}`);
     }
 
-    const mainWebsiteData = await prisma.website_scraped_data.upsert({
-      where: { website_id },
-      update: { ...scrapedMain, updated_at: new Date() },
-      create: { website_id, ...scrapedMain },
-      include: { competitor_details: true },
-    });
+    // const mainWebsiteData = await prisma.website_scraped_data.upsert({
+    //   where: { website_id },
+    //   update: { ...scrapedMain, updated_at: new Date() },
+    //   create: { website_id, ...scrapedMain },
+    //   include: { competitor_details: true },
+    // });
 
     // 🔥 Get PageSpeed and Save to brand_website_analysis
     const pageSpeed = await getPageSpeedData(website_url);
@@ -80,7 +86,7 @@ const userRequirement = {
 
     const competitorPromises = competitorUrls.filter(u => u.startsWith('http')).map(async (compUrl) => {
       try {
-        const scraped = await scrapeWebsite(compUrl);
+        const scraped = await scrapeWebsitecompetitos(compUrl);
         if (!scraped) throw new Error('Scrape failed');
 
         const competitorData = await extractCompetitorDataFromLLM(scraped);
@@ -115,6 +121,19 @@ const userRequirement = {
           });
         }
 
+        // Save additional scraped fields to competitor_scraped_data if needed
+        await prisma.competitor_scraped_data.update({
+          where: { competitor_id },
+          data: {
+            // Add any additional fields you want to persist
+            page_title: scraped.page_title,
+            meta_description: scraped.meta_description,
+            og_description: scraped.og_description,
+            og_title: scraped.og_title,
+            og_image: scraped.og_image,
+          },
+        });
+
         return {
           ...savedCompetitor,
           page_speed: pageSpeedData || null,
@@ -124,6 +143,7 @@ const userRequirement = {
             og_description: scraped.og_description,
             og_title: scraped.og_title,
             og_image: scraped.og_image,
+            
           },
         };
       } catch (err: any) {
@@ -142,7 +162,7 @@ const userRequirement = {
     const competitorsToGenerate = Math.max(0, 3 - competitorResults.length);
     if (competitorsToGenerate > 0) {
       try {
-        const aiResponse = await fetchCompetitorsFromLLM(mainWebsiteData, userRequirement, competitorsToGenerate);
+        const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, competitorsToGenerate);
 
         await prisma.website_scraped_data.update({
           where: { website_id },
@@ -173,7 +193,7 @@ const userRequirement = {
               },
             });
 
-            const scraped = await scrapeWebsite(comp.website_url);
+            const scraped = await scrapeWebsitecompetitos(comp.website_url);
             if (scraped) {
               await prisma.competitor_scraped_data.upsert({
                 where: { competitor_id },
@@ -199,6 +219,17 @@ const userRequirement = {
                   og_description: scraped.og_description,
                   og_title: scraped.og_title,
                   og_image: scraped.og_image,
+                  facebook_handler: scraped.facebook_handle,
+                  twitter_handler:scraped.twitter_handle,
+                  tikok_handler:scraped.tiktok_handle,
+                  youtube_handler:scraped.youtube_handle,
+                  linkedin_handle:scraped.linkedin_handle,
+                  instagram_handle:scraped.instagram_handle,
+
+
+
+
+              
                 },
               });
             }
@@ -223,7 +254,7 @@ const userRequirement = {
     });
 
     labeledResults['mainWebsite'] = {
-      website: mainWebsiteData,
+      website: scrapedMain,
       brandWebsiteAnalysis: brandWebsiteAnalysis ?? null,
     };
 
@@ -280,6 +311,15 @@ static async getComparisonRecommendations(website_id: string) {
       meta_keywords: mainWebsite.website_scraped_data?.meta_keywords || 'N/A',
       meta_description: mainWebsite.website_scraped_data?.meta_description || 'N/A',
       og_description: mainWebsite.website_scraped_data?.og_description || 'N/A',
+      facebook_handle:mainWebsite.website_scraped_data?.facebook_handle || 'N/A',
+      twitter_handle: mainWebsite.website_scraped_data?.twitter_handle || 'N/A',
+      youtube_handle: mainWebsite.website_scraped_data?.youtube_handle || 'N/A',
+      instagram_handle: mainWebsite.website_scraped_data?.instagram_handle || 'N/A',
+      linkedin_handle: mainWebsite.website_scraped_data?.linkedin_handle || 'N/A',
+      tiktok_handle: mainWebsite.website_scraped_data?.tiktok_handle || 'N/A',
+      og_title: mainWebsite.website_scraped_data?.og_title || 'N/A',
+      og_image: mainWebsite.website_scraped_data?.og_image || 'N/A',
+      
     },
     page_speed: {
       performance_score: mainWebsite.brand_website_analysis?.[0]?.performance_score ?? 'N/A',
@@ -291,6 +331,10 @@ static async getComparisonRecommendations(website_id: string) {
       largest_contentful_paint: mainWebsite.brand_website_analysis?.[0]?.largest_contentful_paint ?? 'N/A',
       total_blocking_time: mainWebsite.brand_website_analysis?.[0]?.total_blocking_time ?? 'N/A',
       cumulative_layout_shift: mainWebsite.brand_website_analysis?.[0]?.cumulative_layout_shift ?? 'N/A',
+      // total_broken_links: mainWebsite.brand_website_analysis?.[0]?.total_broken_links ?? 'N/A',
+      // broken_links: mainWebsite.brand_website_analysis?.[0]?.broken_links ?? [],
+      // audit_details: mainWebsite.brand_website_analysis?.[0]?.audit_details ?? [],
+      
     },
   };
 
@@ -315,6 +359,17 @@ static async getComparisonRecommendations(website_id: string) {
         meta_keywords:scraped?.meta_keywords || 'N/A',
         meta_description: scraped?.meta_description || 'N/A',
         og_description: scraped?.og_description || 'N/A',
+        facbook_handler:scraped?.facebook_handle || 'N/A',
+        instagram_handler:scraped?.instagram_handle || 'N/A',
+        twitter_hanlder:scraped?.twitter_handle || 'N/A',
+        youtube_handle: scraped?.youtube_handle || 'N/A',
+        instagram_handle: scraped?.instagram_handle || 'N/A',
+        linkedin_handle: scraped?.linkedin_handle || 'N/A',
+        tiktok_handle: scraped?.tiktok_handle || 'N/A',
+        og_title: scraped?.og_title || 'N/A',
+        og_image: scraped?.og_image || 'N/A',
+
+
       },
       page_speed: {
         performance_score: categories.performance ?? 'N/A',

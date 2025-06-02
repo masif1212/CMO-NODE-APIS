@@ -5,21 +5,14 @@ import * as cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
-export const generateLLMTrafficReport = async (req: Request, res: Response) => {
-  const { website_id } = req.body;
 
-  if (!website_id) {
-    return res.status(400).json({
-      success: false,
-      error: "'website_id' is required.",
-    });
-  }
+export async function generateLLMTrafficReport(website_id: string) {    
+ 
 
   try {
-    // 1. Fetch traffic data for the given website_id
-  
-             const scrapedData = await prisma.website_scraped_data.findUnique({
+              const scrapedData = await prisma.website_scraped_data.findUnique({
                where: { website_id },
                select: {
                  page_title: true,
@@ -32,7 +25,7 @@ export const generateLLMTrafficReport = async (req: Request, res: Response) => {
              });
          
              if (!scrapedData) {
-               return res.status(404).json({
+               return ({
                  success: false,
                  error: "No scraped metadata found for the provided website_id.",
                });
@@ -63,7 +56,7 @@ export const generateLLMTrafficReport = async (req: Request, res: Response) => {
     });
 
     if (!trafficData) {
-      return res.status(404).json({
+      return ({
         success: false,
         error: "No traffic analysis found for the provided website_id.",
       });
@@ -125,7 +118,7 @@ Make the tone professional and technically actionable. Prioritize changes that y
 
     // 3. Call OpenAI
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: model,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.6,
     });
@@ -134,14 +127,13 @@ Make the tone professional and technically actionable. Prioritize changes that y
     await prisma.llm_responses.upsert({
         where: { website_id },
         update: {
-            traffic_report: llmOutput,
-        },
-        create: {
+            brand_audit: llmOutput,
+        },create: {
             website_id,
-            traffic_report: llmOutput,
+            brand_audit: llmOutput,
         },
         });
-    return res.status(200).json({
+    return ({
       success: true,
       website_id,
       traffic_analysis_id,
@@ -149,7 +141,7 @@ Make the tone professional and technically actionable. Prioritize changes that y
     });
   } catch (err: any) {
     console.error("❌ Traffic Audit Error:", err);
-    return res.status(500).json({
+    return ({
       success: false,
       error: "Failed to generate LLM traffic audit report.",
       detail: err?.message || "Internal server error",

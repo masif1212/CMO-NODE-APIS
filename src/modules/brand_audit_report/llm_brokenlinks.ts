@@ -2,20 +2,20 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio"; 
+import { marked } from 'marked'; // for Markdown to HTML conversion
 const prisma = new PrismaClient();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
 const max_tokens = Number(process.env.MAX_TOKENS) || 3000; 
-export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Response) => {
-  const { website_id, user_id }= req.body;
 
-  if (!website_id) {
-    return res.status(400).json({
-      success: false,
-      error: "'website_id' is required.",
-    });
-  }
+export async function generateLLMAuditReportForBrokenLinks(website_id: string) {    
+
+  const currentDate = new Date().toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
 
   try {
          const scrapedData = await prisma.website_scraped_data.findUnique({
@@ -31,7 +31,7 @@ export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Re
          });
      
          if (!scrapedData) {
-           return res.status(404).json({
+           return ({
              success: false,
              error: "No scraped metadata found for the provided website_id.",
            });
@@ -54,7 +54,7 @@ export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Re
     });
 
     if (!analysisRecord) {
-      return res.status(404).json({
+      return ({
         success: false,
         error: "No analysis found for the provided website_id.",
       });
@@ -63,7 +63,7 @@ export const generateLLMAuditReportForBrokenLinks = async (req: Request, res: Re
     const { website_analysis_id, broken_links, total_broken_links } = analysisRecord;
 
     if (!broken_links || total_broken_links === 0) {
-      return res.status(200).json({
+      return ({
         success: true,
         website_id,
         analysis_id: website_analysis_id,
@@ -97,6 +97,13 @@ Please analyze this list and provide:
 2. Explanation of the possible causes of these broken links.
 3. Technical and actionable steps the developer or webmaster should take to fix and prevent broken links in the future.
 Be specific, concise, and professional in your tone.
+
+
+AT THE END 
+Prepared by:
+CMO ON THE GO
+Date: ${currentDate}
+
 `;
 
     // 3. Call OpenAI
@@ -108,26 +115,56 @@ Be specific, concise, and professional in your tone.
     });
 
     const llmOutput = response.choices?.[0]?.message?.content;
-    await prisma.llm_audit_reports.upsert({
+        const htmlBody = marked(llmOutput ?? "");
+    
+    // Add CSS for table styling
+    const fullHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>LLM Response</title>
+      <style>
+        table, th, td {
+          border: 1px solid black;
+          border-collapse: collapse;
+          padding: 8px;
+        }
+        th {
+          background-color: #f2f2f2;
+        }
+        body {
+          font-family: sans-serif;
+          padding: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      ${htmlBody}
+    </body>
+    </html>
+    `;
+
+    await prisma.llm_responses.upsert({
           where: { website_id },
           update: {
-            broken_links_report: llmOutput,
+            brand_audit: fullHtml,
           },
           create: {
             website_id,
-            broken_links_report: llmOutput,
+            brand_audit: fullHtml,
           },
         });
-    console.log("LLM Response:", response);    
-    return res.status(200).json({
+     
+    return ({
       success: true,
       website_id,
       analysis_id: website_analysis_id,
-      report: llmOutput,
+      report: fullHtml,
     });
   } catch (err: any) {
     console.error("❌ Broken Link Audit Error:", err);
-    return res.status(500).json({
+    return ({
       success: false,
       error: "Failed to generate broken link audit report.",
       detail: err?.message || "Internal server error",

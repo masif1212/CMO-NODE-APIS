@@ -16,7 +16,6 @@ model users {
   email                 String    @unique
   first_name            String?
   last_name             String?
-  user_type                  String?
   is_email_verified     Boolean   @default(false)
   is_mfa_enabled        Boolean   @default(false)
   account_status        String    @default("active")
@@ -43,8 +42,8 @@ model users {
 }
 
 model user_websites {
+  website_id   String   @id @default(uuid())
   user_id      String
-  website_id   String   @default(uuid()) @unique
   website_url  String
   website_type String?
   website_name String?
@@ -57,17 +56,15 @@ model user_websites {
   brand_traffic_analysis      brand_traffic_analysis[]
   brand_social_media_analysis brand_social_media_analysis[]
   competitor_analysis         competitor_analysis[]
-  website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite")
+  website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite") // 1‑to‑1
   competitor_scraped_data     competitor_scraped_data[]
-  llm_responses           llm_responses?
-  user_requirements           user_requirements[]
-  analysis_status             analysis_status[]
-  payments                    payments[]
 
-  @@id([user_id, website_id]) // ✅ Composite primary key
-  @@unique([user_id, website_id], name: "user_id_website_id") // ✅ Enables findUnique
+  
+  llm_responses llm_responses?
+  user_requirements user_requirements[]
+  analysis_status   analysis_status[]
+  payments          payments[]
 }
-
 
 model authentication_methods {
   auth_id                String    @id @default(uuid())
@@ -243,8 +240,7 @@ model brand_website_analysis {
   time_to_interactive      String?
   total_broken_links       Int?
   broken_links             Json?
-  geo_llm                  String? @db.LongText
-  audit_details            Json? 
+  audit_details           Json? 
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
 
@@ -392,7 +388,6 @@ model llm_responses {
   social_media_report           String?  @db.LongText
   brand_audit                   String?  @db.LongText
   best_practices_report         String?  @db.LongText
-  geo_llm                       String?  @db.LongText
   competitor_analysis_ps_report String?  @db.LongText
   created_at                    DateTime @default(now())
   updated_at                    DateTime @default(now()) @updatedAt

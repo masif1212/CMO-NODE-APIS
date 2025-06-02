@@ -1,4 +1,10 @@
-import { openai } from './openai';
+
+import OpenAI from 'openai';
+import 'dotenv/config';
+
+export const openai = new OpenAI({
+     apiKey: process.env.OPENAI_API_KEY
+});
 
 export async function fetchCompetitorsFromLLM(site: any, userRequirement:any, competitorsToGenerate: number = 4): Promise<string> {
       const prompt = `
@@ -13,6 +19,7 @@ Given the following website metadata and details:
 
 - Industry: ${userRequirement.industry ?? 'Unknown'}
 - Region of Operation: ${userRequirement.region_of_operation ?? 'Unknown'}
+ Region of Operation: ${userRequirement.region_of_operation ?? 'Unknown'}
 - Target Location: ${userRequirement.target_location ?? 'Unknown'}
 - Target Audience: ${userRequirement.target_audience ?? 'Unknown'}
 - Primary Offering: ${userRequirement.primary_offering ?? 'Unknown'}
@@ -49,7 +56,16 @@ If no competitors are found, return an empty array.
   const res = await openai.responses.create({
     model: 'gpt-4o',
     input: prompt,
-    tools: [{ type: 'web_search_preview', search_context_size: 'medium' }],
+    tools: [
+      { 
+        type: 'web_search_preview', 
+        search_context_size: 'medium',
+        user_location: {
+          type: 'approximate',
+          region: userRequirement.region_of_operation?.country || 'Unknown',
+          }
+      }
+    ],
   });
   return res.output_text.trim() || '';
 }
@@ -140,7 +156,7 @@ ${compDesc}
 🔍 TASK
 ==============================
 
-1. Provide a **detailed comparative analysis** of the main website versus its competitors, focusing on these key aspects:
+1. Provide a **detailed comparative analysis** of the main website versus its competitors, focusing on, these key aspects:
 
 - ⚡ Performance metrics (Speed Index, Largest Contentful Paint, Time to Interactive, Cumulative Layout Shift, Total Blocking Time)
 - 🔍 SEO quality (SEO score, meta/title tag quality, keyword usage, meta description clarity and length)

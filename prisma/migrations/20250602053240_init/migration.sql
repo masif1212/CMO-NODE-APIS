@@ -4,6 +4,7 @@ CREATE TABLE `users` (
     `email` VARCHAR(191) NOT NULL,
     `first_name` VARCHAR(191) NULL,
     `last_name` VARCHAR(191) NULL,
+    `type` VARCHAR(191) NULL,
     `is_email_verified` BOOLEAN NOT NULL DEFAULT false,
     `is_mfa_enabled` BOOLEAN NOT NULL DEFAULT false,
     `account_status` VARCHAR(191) NOT NULL DEFAULT 'active',
@@ -18,15 +19,17 @@ CREATE TABLE `users` (
 
 -- CreateTable
 CREATE TABLE `user_websites` (
-    `website_id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
     `website_url` VARCHAR(191) NOT NULL,
     `website_type` VARCHAR(191) NULL,
     `website_name` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    PRIMARY KEY (`website_id`)
+    UNIQUE INDEX `user_websites_website_id_key`(`website_id`),
+    UNIQUE INDEX `user_websites_user_id_website_id_key`(`user_id`, `website_id`),
+    PRIMARY KEY (`user_id`, `website_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -218,6 +221,7 @@ CREATE TABLE `brand_website_analysis` (
     `time_to_interactive` VARCHAR(191) NULL,
     `total_broken_links` INTEGER NULL,
     `broken_links` JSON NULL,
+    `geo_llm` LONGTEXT NULL,
     `audit_details` JSON NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -352,7 +356,7 @@ CREATE TABLE `competitor_scraped_data` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `llm_audit_reports` (
+CREATE TABLE `llm_responses` (
     `id` VARCHAR(191) NOT NULL,
     `website_id` VARCHAR(191) NOT NULL,
     `pagespeed_report` LONGTEXT NULL,
@@ -361,11 +365,12 @@ CREATE TABLE `llm_audit_reports` (
     `social_media_report` LONGTEXT NULL,
     `brand_audit` LONGTEXT NULL,
     `best_practices_report` LONGTEXT NULL,
+    `geo_llm` LONGTEXT NULL,
     `competitor_analysis_ps_report` LONGTEXT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `llm_audit_reports_website_id_key`(`website_id`),
+    UNIQUE INDEX `llm_responses_website_id_key`(`website_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -525,7 +530,7 @@ ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_co
 ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `llm_audit_reports` ADD CONSTRAINT `llm_audit_reports_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `llm_responses` ADD CONSTRAINT `llm_responses_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `user_requirements` ADD CONSTRAINT `user_requirements_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;

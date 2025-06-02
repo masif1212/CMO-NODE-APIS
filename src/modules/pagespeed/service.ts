@@ -114,14 +114,20 @@ function getErrorMessage(status: number, url: string): { error: string; quickFix
       };
   }
 }
-
-async function getWebsiteUrlById(website_id: string): Promise<string> {
+async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   const website = await prisma.user_websites.findUnique({
-    where: { website_id: website_id },
-    select: { website_url: true },
+    where: {
+      user_id_website_id: {
+        user_id,
+        website_id,
+      },
+    },
+    select: {
+      website_url: true,
+    },
   });
 
-  if (!website || !website.website_url) {
+  if (!website?.website_url) {
     throw new Error(`No URL found for website_id: ${website_id}`);
   }
 
@@ -129,11 +135,85 @@ async function getWebsiteUrlById(website_id: string): Promise<string> {
 }
 
 
-export async function checkBrokenLinks(website_id: string, maxDepth = 1): Promise<BrokenLinkResult[]> {
-  const baseUrl = await getWebsiteUrlById(website_id);
+
+// export async function checkBrokenLinks(user_id: string, website_id: string, maxDepth = 1): Promise<BrokenLinkResult[]> {
+//   const baseUrl = await getWebsiteUrlById(user_id,website_id);
+//   const browser = await puppeteer.launch({ headless: "new" as any });
+//   const brokenLinks: BrokenLinkResult[] = [];
+
+//   async function crawl(pageUrl: string, depth: number) {
+//     if (visited.has(pageUrl) || depth > maxDepth) return;
+//     visited.add(pageUrl);
+
+//     let links: string[];
+//     try {
+//       links = await extractLinks(pageUrl, browser);
+//     } catch (e: any) {
+//       console.error(`Error rendering ${pageUrl}: ${e.message}`);
+//       return;
+//     }
+
+//     const internalLinks: string[] = [];
+//     for (const link of links) {
+//       const normalized = link.split("#")[0];
+//       if (isExcluded(normalized) || checkedLinks.has(normalized)) continue;
+
+//       checkedLinks.add(normalized);
+
+//       const result = await fetchWithTimeout(normalized);
+//       if (!result.ok) {
+//         const { error, quickFix } = getErrorMessage(Number(result.status), normalized);
+
+//         brokenLinks.push({
+//           page: pageUrl,
+//           link: normalized,
+//           status: result.status,
+//           error,
+//           quickFix
+//         });
+//       }
+
+//       if (new URL(normalized).hostname === new URL(baseUrl).hostname && !visited.has(normalized)) {
+//         internalLinks.push(normalized);
+//       }
+//     }
+
+//     for (const next of internalLinks) {
+//       await crawl(next, depth + 1);
+//     }
+//   }
+
+//   await crawl(baseUrl, 0);
+//   await browser.close();
+//   return brokenLinks;
+// }
+
+
+
+export async function checkBrokenLinks(
+  user_id: string,
+  website_id: string,
+  maxDepth = 1
+): Promise<BrokenLinkResult[]> {
+  // Step 1: Verify website ownership before proceeding
+  const userWebsite = await prisma.user_websites.findFirst({
+    where: { user_id, website_id },
+  });
+
+  if (!userWebsite) {
+    throw new Error("Website does not belong to the user.");
+  }
+
+  // Step 2: Get base URL safely (assuming this also verifies the website)
+  const baseUrl = await getWebsiteUrlById(user_id, website_id);
+
+  // Puppeteer browser and sets for tracking
   const browser = await puppeteer.launch({ headless: "new" as any });
   const brokenLinks: BrokenLinkResult[] = [];
+  const visited = new Set<string>();
+  const checkedLinks = new Set<string>();
 
+  // Recursive crawl function
   async function crawl(pageUrl: string, depth: number) {
     if (visited.has(pageUrl) || depth > maxDepth) return;
     visited.add(pageUrl);
@@ -162,11 +242,14 @@ export async function checkBrokenLinks(website_id: string, maxDepth = 1): Promis
           link: normalized,
           status: result.status,
           error,
-          quickFix
+          quickFix,
         });
       }
 
-      if (new URL(normalized).hostname === new URL(baseUrl).hostname && !visited.has(normalized)) {
+      if (
+        new URL(normalized).hostname === new URL(baseUrl).hostname &&
+        !visited.has(normalized)
+      ) {
         internalLinks.push(normalized);
       }
     }
@@ -176,13 +259,16 @@ export async function checkBrokenLinks(website_id: string, maxDepth = 1): Promis
     }
   }
 
+  // Step 3: Start crawling from baseUrl
   await crawl(baseUrl, 0);
+
   await browser.close();
   return brokenLinks;
 }
 
-export async function getPageSpeedSummary(website_id: string) {
-  const url = await getWebsiteUrlById(website_id);
+
+export async function getPageSpeedSummary(user_id: string, website_id: string) {
+  const url = await getWebsiteUrlById(user_id,website_id);
 
   const params = new URLSearchParams({
     url,
@@ -220,7 +306,7 @@ export async function getPageSpeedSummary(website_id: string) {
   };
 }
 
-export async function savePageSpeedAnalysis(website_id: string, summary: any) {
+export async function savePageSpeedAnalysis(user_id: string, website_id: string, summary: any) {
   const audits = summary.audits || [];
 
   const getAuditValue = (id: string) => {

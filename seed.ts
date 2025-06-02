@@ -17,7 +17,6 @@ async function main() {
 
   console.log("Created user:", newUser);
 
-  // Example: Create a website for the user
   const newWebsite = await prisma.user_websites.create({
     data: {
       user_id: newUser.user_id, // Use the user_id from the created user

@@ -12,6 +12,12 @@ import youtubeRouter from "./modules/social_media/router";
 import { competitorRouter } from "./modules/competitor_analysis/competitor.routes";
 import brandAuditRouter from "./modules/brand_audit_report/router";
 import dashboardRouter from "./modules/dashboard/dashboard.router";
+import geo_llm from "./modules/geo_llm/router"; // ✅ Import
+import userRequirementsRouter from "./modules/form_data/router";
+
+
+// Register new route
+
 
 const app = express();
 
@@ -56,6 +62,11 @@ app.use("/api/brand-audit", brandAuditRouter);
 app.use("/api/social_media/youtube", youtubeRouter);
 
 app.use("/api", dashboardRouter);
+
+app.use("/api/user-requirements", userRequirementsRouter);
+
+
+app.use("/api/geo_llm", geo_llm);
 // Global error handler
 app.use(errorHandler);
 

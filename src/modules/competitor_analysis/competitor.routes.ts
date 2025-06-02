@@ -17,17 +17,6 @@ competitorRouter.post('/', async (req, res, next) => {
      }
 });
 
-// competitorRouter.get('/:website_id/recommendations', async (req, res, next) => {
-//   try {
-//     const { website_id } = req.params;
-//     const data = await CompetitorService.getComparisonRecommendations(website_id);
-//     res.status(200).json({ recommendations: data });
-//   } catch (e) {
-//     next(e);
-//   }
-// });
-
-
 
 competitorRouter.post('/recommendations', async (req, res, next) => {
   try {

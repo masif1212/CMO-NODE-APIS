@@ -7,18 +7,18 @@ const model = process.env.OPENAI_MODEL || "gpt-4.1";
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const max_tokens = Number(process.env.MAX_TOKENS) || 1000; 
+import { marked } from 'marked';
+import { table } from "console";
+
+export async function generateLLMAuditReportForPagespeed(website_id: string) {
+  
 
 
-export const generateLLMAuditReportforpagespeed = async (req: Request, res: Response) => {
-  const { website_id,user_id } = req.body;
-
-  if (!website_id) {
-    return res.status(400).json({
-      success: false,
-      error: "'website_id' is required.",
-    });
-  }
-
+  const currentDate = new Date().toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
   try {
     // 1. Fetch metadata from scraped data
     const scrapedData = await prisma.website_scraped_data.findUnique({
@@ -34,7 +34,7 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
     });
 
     if (!scrapedData) {
-      return res.status(404).json({
+      return ({
         success: false,
         error: "No scraped metadata found for the provided website_id.",
       });
@@ -54,18 +54,15 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
     });
 
     if (!analysisRecord) {
-      return res.status(404).json({
+      return {
         success: false,
         error: "No analysis found for the provided website_id.",
-      });
+      };
     }
 
     const analysis_id = analysisRecord.website_analysis_id;
 
-    // 3. Fetch audit details
-
-
-    // 4. Fetch summary scores
+   
     const analysis = await prisma.brand_website_analysis.findUnique({
       where: { website_analysis_id: analysis_id },
       select: {
@@ -88,7 +85,7 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
     });
 
     if (!analysis) {
-      return res.status(404).json({
+      return ({
         success: false,
         error: "Analysis data not found for the given analysis_id.",
       });
@@ -99,6 +96,7 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
       seo: analysis.seo_score ?? "N/A",
       accessibility: analysis.accessibility_score ?? "N/A",
       bestPractices: analysis.best_practices_score ?? "N/A",
+      pwa: analysis.pwa_score ?? "N/A",
       
     };
 
@@ -191,6 +189,12 @@ Write a **professional, human-readable, and technically grounded** audit report 
 
 Use specific numbers and insights from the audit data. Avoid generic statements. Keep the tone technically authoritative yet accessible for both devs and business stakeholders.
 
+
+AT THE END 
+Prepared by:  
+CMO ON THE GO  
+Created on: ${currentDate}
+
 `;
 
     // 6. Generate report
@@ -200,17 +204,17 @@ Use specific numbers and insights from the audit data. Avoid generic statements.
       temperature: 0.7,
       max_tokens: max_tokens,
     });
-    // console.log("LLM Response:", response);
-    const llmOutput = response.choices?.[0]?.message?.content;
+    
 
-    // 7. Store report
-    await prisma.llm_audit_reports.upsert({
+const llmOutput = response?.choices?.[0]?.message?.content ?? "No content from LLM.";
+
+await prisma.llm_responses.upsert({
       where: { website_id },
-      update: { pagespeed_report: llmOutput },
-      create: { website_id, pagespeed_report: llmOutput },
+      update: { brand_audit: llmOutput },
+      create: { website_id, brand_audit: llmOutput },
     });
 
-    return res.status(200).json({
+    return({
       success: true,
       website_id,
       analysis_id,
@@ -218,7 +222,7 @@ Use specific numbers and insights from the audit data. Avoid generic statements.
     });
   } catch (err: any) {
     console.error("❌ LLM Audit Error:", err);
-    return res.status(500).json({
+    return ({
       success: false,
       error: "Failed to generate LLM audit report.",
       detail: err?.message || "Internal server error",
