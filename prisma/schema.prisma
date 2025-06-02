@@ -16,7 +16,7 @@ model users {
   email                 String    @unique
   first_name            String?
   last_name             String?
-  user_type                  String?
+  user_type             String?
   is_email_verified     Boolean   @default(false)
   is_mfa_enabled        Boolean   @default(false)
   account_status        String    @default("active")
