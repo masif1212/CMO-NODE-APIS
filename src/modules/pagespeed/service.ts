@@ -136,60 +136,6 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
 
 
 
-// export async function checkBrokenLinks(user_id: string, website_id: string, maxDepth = 1): Promise<BrokenLinkResult[]> {
-//   const baseUrl = await getWebsiteUrlById(user_id,website_id);
-//   const browser = await puppeteer.launch({ headless: "new" as any });
-//   const brokenLinks: BrokenLinkResult[] = [];
-
-//   async function crawl(pageUrl: string, depth: number) {
-//     if (visited.has(pageUrl) || depth > maxDepth) return;
-//     visited.add(pageUrl);
-
-//     let links: string[];
-//     try {
-//       links = await extractLinks(pageUrl, browser);
-//     } catch (e: any) {
-//       console.error(`Error rendering ${pageUrl}: ${e.message}`);
-//       return;
-//     }
-
-//     const internalLinks: string[] = [];
-//     for (const link of links) {
-//       const normalized = link.split("#")[0];
-//       if (isExcluded(normalized) || checkedLinks.has(normalized)) continue;
-
-//       checkedLinks.add(normalized);
-
-//       const result = await fetchWithTimeout(normalized);
-//       if (!result.ok) {
-//         const { error, quickFix } = getErrorMessage(Number(result.status), normalized);
-
-//         brokenLinks.push({
-//           page: pageUrl,
-//           link: normalized,
-//           status: result.status,
-//           error,
-//           quickFix
-//         });
-//       }
-
-//       if (new URL(normalized).hostname === new URL(baseUrl).hostname && !visited.has(normalized)) {
-//         internalLinks.push(normalized);
-//       }
-//     }
-
-//     for (const next of internalLinks) {
-//       await crawl(next, depth + 1);
-//     }
-//   }
-
-//   await crawl(baseUrl, 0);
-//   await browser.close();
-//   return brokenLinks;
-// }
-
-
-
 export async function checkBrokenLinks(
   user_id: string,
   website_id: string,
@@ -267,8 +213,86 @@ export async function checkBrokenLinks(
 }
 
 
+// export async function getPageSpeedSummary(user_id: string, website_id: string) {
+//   const url = await getWebsiteUrlById(user_id,website_id);
+
+//   const params = new URLSearchParams({
+//     url,
+//     key: API_KEY,
+//     strategy: "desktop",
+//     cacheBust: Date.now().toString(),
+//   });
+
+//   ["performance", "seo", "accessibility", "best_practices", "pwa"].forEach((c) =>
+//     params.append("category", c)
+//   );
+
+//   const response = await axios.get(`${API_URL}?${params}`);
+//   const data = response.data;
+
+//   const audits = data.lighthouseResult?.audits || {};
+//   const detailedAuditResults = Object.keys(audits).map((key) => {
+//     const audit = audits[key];
+//     return {
+//       id: key,
+//       title: audit.title,
+//       description: audit.description,
+//       score: audit.score,
+//       displayValue: audit.displayValue || null,
+//       details: audit.details || null,
+//       scoreDisplayMode: audit.scoreDisplayMode || null,
+//     };
+//   });
+
+//   return {
+//     url: data.lighthouseResult?.finalUrl,
+//     fetchedAt: new Date().toISOString(),
+//     categories: data.lighthouseResult?.categories,
+//     audits: detailedAuditResults,
+//   };
+// }
+
+// export async function savePageSpeedAnalysis(user_id: string, website_id: string, summary: any) {
+//   const audits = summary.audits || [];
+
+//   const getAuditValue = (id: string) => {
+//     const audit = audits.find((a: any) => a.id === id);
+//     return audit?.displayValue || null;
+//   };
+
+//   return await prisma.brand_website_analysis.create({
+//     data: {
+//       website_id,
+//       performance_score: summary.categories?.performance?.score != null ? summary.categories.performance.score * 100 : null,
+//       seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
+//       accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
+//       best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
+//       // pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
+
+//       // Timing metrics
+//       first_contentful_paint: getAuditValue("first-contentful-paint"),
+//       largest_contentful_paint: getAuditValue("largest-contentful-paint"),
+//       total_blocking_time: getAuditValue("total-blocking-time"),
+//       speed_index: getAuditValue("speed-index"),
+//       cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
+//       time_to_interactive: getAuditValue("interactive"),
+
+   
+
+//       audit_details: summary.audits,
+//       created_at: new Date(),
+//       updated_at: new Date(),
+//     },
+//     select: {
+//       website_analysis_id: true,
+//     },
+//   });
+// }
+
+
+
 export async function getPageSpeedSummary(user_id: string, website_id: string) {
-  const url = await getWebsiteUrlById(user_id,website_id);
+  const url = await getWebsiteUrlById(user_id, website_id);
 
   const params = new URLSearchParams({
     url,
@@ -298,14 +322,29 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
     };
   });
 
+  // Extract numeric values for LCP, TBT, CLS
+  const LCP = audits["largest-contentful-paint"]?.numericValue || 0;
+  const TBT = audits["total-blocking-time"]?.numericValue || 0;
+  const CLS = audits["cumulative-layout-shift"]?.numericValue || 0;
+
+  // RevenueLoss% formula
+  const revenueLossPercent = (
+   ((LCP - 2.5) * 7) +
+    (((TBT - 200) / 100) * 3) +
+    (CLS * 10)
+  ); 
+
+
+  
   return {
     url: data.lighthouseResult?.finalUrl,
     fetchedAt: new Date().toISOString(),
     categories: data.lighthouseResult?.categories,
+    revenueLossPercent: parseFloat(revenueLossPercent.toFixed(2)),
     audits: detailedAuditResults,
+    
   };
 }
-
 export async function savePageSpeedAnalysis(user_id: string, website_id: string, summary: any) {
   const audits = summary.audits || [];
 
@@ -331,7 +370,8 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
       time_to_interactive: getAuditValue("interactive"),
 
-   
+      // Revenue loss
+      revenue_loss_percent: summary.revenueLossPercent,
 
       audit_details: summary.audits,
       created_at: new Date(),
@@ -339,7 +379,7 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
     },
     select: {
       website_analysis_id: true,
+      revenue_loss_percent: true, 
     },
   });
 }
-

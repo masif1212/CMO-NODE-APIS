@@ -85,6 +85,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       message: "PageSpeed summary saved successfully.",
       website_id,
       analysis_id: saved.website_analysis_id,
+      revenueLossPercent: saved.revenue_loss_percent,
       categories: categoryScores,
       audits: auditMap,
       audit_details: auditDetails, // entire raw audits object if needed
