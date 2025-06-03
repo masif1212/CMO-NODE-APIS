@@ -267,7 +267,7 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
       top_devices: summary?.devices as Prisma.InputJsonValue,
       top_browsers: summary?.browsers as Prisma.InputJsonValue,
       top_sources: summary?.sources as Prisma.InputJsonValue,
-      new_vs_returning_users: summary?.newVsReturning as Prisma.InputJsonValue, // ✅ new field
+      new_vs_returning: summary?.newVsReturning as Prisma.InputJsonValue, // ✅ new field
     },
   });
 };
