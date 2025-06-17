@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { parse } from 'tldts'; // For root domain extraction
 import { validateComprehensiveSchema, SchemaOutput } from "./schemaValidator";
+import * as cheerio from 'cheerio';
 
 dotenv.config();
 
@@ -192,10 +193,42 @@ Format:
         },
       });
     }
+    const scrapedMeta = await prisma.website_scraped_data.findUnique({
+  where: { website_id },
+  select: {
+    page_title: true,
+    meta_description: true,
+    meta_keywords: true,
+    og_title: true,
+    og_description: true,
+    og_image: true,
+    ctr_loss_percent: true,
+    raw_html: true,
+    
+  },
+});
 
+  let h1Text = "Not Found";
+    if (scrapedMeta && scrapedMeta.raw_html) {
+      const $ = cheerio.load(scrapedMeta.raw_html);
+      h1Text = $("h1").first().text().trim() || "Not Found";
+    }
 
-    return { data: parsedBrands, website_found: websiteFound, message,      schema_analysis: schemaResult.message ? { message: schemaResult.message } : schemaResult.schemas, // Include error or schemas
- };
+ const {
+  raw_html, // omit this
+  ...metaDataWithoutRawHtml
+} = scrapedMeta || {};
+   
+return {
+  data: parsedBrands,
+  website_found: websiteFound,
+  message,
+  schema_analysis: schemaResult.message
+    ? { message: schemaResult.message }
+    : schemaResult.schemas,
+  meta_data: metaDataWithoutRawHtml, 
+  h1_Text:h1Text
+};
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);
   }

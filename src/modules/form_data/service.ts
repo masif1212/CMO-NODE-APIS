@@ -10,8 +10,8 @@ export const createBrandProfile = async (
     industry?: string;
     location?: string;
     target_audience?: string;
-    property_id: string;
-    access_token: string;
+    property_id?: string;
+    access_token?: string;
   }
 ) => {
   const existing = await prisma.user_requirements.findFirst({
