@@ -1,9 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import type { Element } from "domhandler";
+import dns from "dns/promises";
 import { PrismaClient } from "@prisma/client";
-import { google, youtube_v3 } from "googleapis";
-import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 
@@ -18,29 +16,53 @@ interface ScrapedMetaData {
 
 interface ScrapeResult {
   record: any;
-  youtubeUrl?: string;
+  websiteId: string;
+  statusCode: number;
+  ipAddress: string;
+  responseTimeMs: number;
+  message: string;
 }
 
+export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult> {
+  const start = Date.now();
+  const domain = new URL(url).hostname;
 
-export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult & { websiteId: string }> {
-  // ✅ Always create a new website record
+  let statusCode = 0;
+  let ipAddress = "N/A";
+  let message = "Unknown error";
+  let html: string = "";
+
+  try {
+    const response = await axios.get(url);
+    html = response.data;
+    statusCode = response.status;
+    const dnsResult = await dns.lookup(domain);
+    ipAddress = dnsResult.address;
+    message = statusCode >= 200 && statusCode < 400 ? "Website is up" : "Website responded with an error";
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch or resolve the website: ${error.message}`);
+    } else {
+      throw new Error("Unknown error occurred during website scraping.");
+    }
+  }
+
+  const responseTimeMs = Date.now() - start;
+
+  // Create new website record (always)
   const newWebsite = await prisma.user_websites.create({
     data: {
       website_url: url,
       users: {
-        connect: { user_id: user_id },
+        connect: { user_id },
       },
     },
     select: { website_id: true },
   });
 
   const websiteId = newWebsite.website_id;
-
-  // Fetch and load the HTML
-  const { data: html } = await axios.get(url);
   const $ = cheerio.load(html);
 
-  // Extract metadata
   const meta: ScrapedMetaData = {
     page_title: $("title").text() || undefined,
     meta_description: $('meta[name="description"]').attr("content") || undefined,
@@ -50,7 +72,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     og_image: $('meta[property="og:image"]').attr("content") || undefined,
   };
 
-  // Social links extraction
+  // Social media and external links
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
   const otherLinks: string[] = [];
 
@@ -68,7 +90,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     else otherLinks.push(href);
   });
 
-  // ✅ Always create new scraped data (no upsert)
+  // Save scraped data
   const record = await prisma.website_scraped_data.create({
     data: {
       website_id: websiteId,
@@ -87,9 +109,23 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
       tiktok_handle: tiktok,
       other_links: otherLinks.length > 0 ? otherLinks : undefined,
       raw_html: html,
+
+      // ✅ Network diagnostics
+      status_code: statusCode,
+      ip_address: ipAddress,
+      response_time_ms: responseTimeMs,
+      status_message: message,
     },
   });
 
-  return { websiteId, record };
+  return {
+    websiteId,
+    record,
+    statusCode,
+    ipAddress,
+    responseTimeMs,
+    message,
+  };
 }
+
 

@@ -114,10 +114,10 @@ Date: ${currentDate}
     });
 
     const llmOutput = response.choices?.[0]?.message?.content;
+        
     
     // Add CSS for table styling
-  
-
+    
     await prisma.llm_responses.upsert({
           where: { website_id },
           update: {
