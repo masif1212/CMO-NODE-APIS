@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createBrandAudit } from "./brandAuditModule";
+import { createBrandAudit } from "./recommendation_by_cmo";
 import { PrismaClient } from "@prisma/client"; // <-- import Prisma client
 
 const prisma = new PrismaClient(); // <-- instantiate client

@@ -4,7 +4,7 @@ import { getLegalAIBrandsController } from './controller';
 
 const geo_llm = express.Router();
 
-// Change GET to POST
+
 geo_llm.post('/', (req, res, next) => {
   Promise.resolve(getLegalAIBrandsController(req, res))
 	.catch(next);

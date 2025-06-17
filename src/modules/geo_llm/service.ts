@@ -2,6 +2,7 @@ import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { parse } from 'tldts'; // For root domain extraction
+import { validateComprehensiveSchema, SchemaOutput } from "./schemaValidator";
 
 dotenv.config();
 
@@ -71,7 +72,7 @@ export const fetchLegalAIBrands = async (
   const prompt = `
 You are a business research assistant.
 
-List the top 10 AI-driven legal technology brands${context ? ` that are ${context}` : ''}.
+List the top 10  technology brands${context ? ` that are ${context}` : ''}.
 
 Only include brands that have their **own official homepage URLs** — do NOT include blog posts, review articles, directories, or aggregator websites.
 
@@ -154,9 +155,47 @@ Format:
 
     const message = websiteFound
       ? 'Congratulations! Your brand is listed among the top brands.'
-      : 'Sorry, your brand does not appear in the top brands. You might want to improve your marketing strategy or online presence.';
+      : 'Sorry, your brand does not appear in the top brands. You might want to improve your marketing strategy and website struturing for better online visibility';
 
-    return { data: parsedBrands, website_found: websiteFound, message };
+
+    const schemaResult: SchemaOutput = await validateComprehensiveSchema(websiteUrl);
+    console.log("Schema Validation Result:", JSON.stringify(schemaResult, null, 2)); // Debug log
+    if (schemaResult && schemaResult.message) {
+      console.warn("Schema validation error:", schemaResult);
+      // Store the error message if no schemas are found
+      await prisma.brand_website_analysis.upsert({
+        where: {
+          website_analysis_id: website_id,
+        },
+        update: {
+          schema_analysis: { error: schemaResult.message },
+        },
+        create: {
+          website_analysis_id: website_id,
+          website_id,
+          schema_analysis: { error: schemaResult.message },
+        },
+      });
+    } else if (schemaResult && "schemas" in schemaResult) {
+      // Store schema data if available
+      await prisma.brand_website_analysis.upsert({
+        where: {
+          website_analysis_id: website_id,
+        },
+        update: {
+          schema_analysis: JSON.stringify((schemaResult as any).schemas),
+        },
+        create: {
+          website_analysis_id: website_id,
+          website_id,
+          schema_analysis: JSON.stringify((schemaResult as any).schemas),
+        },
+      });
+    }
+
+
+    return { data: parsedBrands, website_found: websiteFound, message,      schema_analysis: schemaResult.message ? { message: schemaResult.message } : schemaResult.schemas, // Include error or schemas
+ };
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);
   }

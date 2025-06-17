@@ -115,7 +115,9 @@ function getErrorMessage(status: number, url: string): { error: string; quickFix
   }
 }
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+  // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
+
     where: {
       user_id_website_id: {
         user_id,
@@ -128,13 +130,11 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   });
 
   if (!website?.website_url) {
-    throw new Error(`No URL found for website_id: ${website_id}`);
+    throw new Error(`No URL found for user_id: ${user_id} and website_id: ${website_id}`);
   }
 
   return website.website_url;
 }
-
-
 
 export async function checkBrokenLinks(
   user_id: string,
@@ -212,85 +212,6 @@ export async function checkBrokenLinks(
   return brokenLinks;
 }
 
-
-// export async function getPageSpeedSummary(user_id: string, website_id: string) {
-//   const url = await getWebsiteUrlById(user_id,website_id);
-
-//   const params = new URLSearchParams({
-//     url,
-//     key: API_KEY,
-//     strategy: "desktop",
-//     cacheBust: Date.now().toString(),
-//   });
-
-//   ["performance", "seo", "accessibility", "best_practices", "pwa"].forEach((c) =>
-//     params.append("category", c)
-//   );
-
-//   const response = await axios.get(`${API_URL}?${params}`);
-//   const data = response.data;
-
-//   const audits = data.lighthouseResult?.audits || {};
-//   const detailedAuditResults = Object.keys(audits).map((key) => {
-//     const audit = audits[key];
-//     return {
-//       id: key,
-//       title: audit.title,
-//       description: audit.description,
-//       score: audit.score,
-//       displayValue: audit.displayValue || null,
-//       details: audit.details || null,
-//       scoreDisplayMode: audit.scoreDisplayMode || null,
-//     };
-//   });
-
-//   return {
-//     url: data.lighthouseResult?.finalUrl,
-//     fetchedAt: new Date().toISOString(),
-//     categories: data.lighthouseResult?.categories,
-//     audits: detailedAuditResults,
-//   };
-// }
-
-// export async function savePageSpeedAnalysis(user_id: string, website_id: string, summary: any) {
-//   const audits = summary.audits || [];
-
-//   const getAuditValue = (id: string) => {
-//     const audit = audits.find((a: any) => a.id === id);
-//     return audit?.displayValue || null;
-//   };
-
-//   return await prisma.brand_website_analysis.create({
-//     data: {
-//       website_id,
-//       performance_score: summary.categories?.performance?.score != null ? summary.categories.performance.score * 100 : null,
-//       seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
-//       accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
-//       best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
-//       // pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
-
-//       // Timing metrics
-//       first_contentful_paint: getAuditValue("first-contentful-paint"),
-//       largest_contentful_paint: getAuditValue("largest-contentful-paint"),
-//       total_blocking_time: getAuditValue("total-blocking-time"),
-//       speed_index: getAuditValue("speed-index"),
-//       cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
-//       time_to_interactive: getAuditValue("interactive"),
-
-   
-
-//       audit_details: summary.audits,
-//       created_at: new Date(),
-//       updated_at: new Date(),
-//     },
-//     select: {
-//       website_analysis_id: true,
-//     },
-//   });
-// }
-
-
-
 export async function getPageSpeedSummary(user_id: string, website_id: string) {
   const url = await getWebsiteUrlById(user_id, website_id);
 
@@ -301,7 +222,7 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
     cacheBust: Date.now().toString(),
   });
 
-  ["performance", "seo", "accessibility", "best_practices", "pwa"].forEach((c) =>
+  ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) =>
     params.append("category", c)
   );
 
@@ -309,6 +230,14 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
   const data = response.data;
 
   const audits = data.lighthouseResult?.audits || {};
+
+  const TRUST_AND_SAFETY_IDS = [
+    "csp-xss",
+    "has-hsts",
+    "origin-isolation",
+    "clickjacking-mitigation"
+  ];
+
   const detailedAuditResults = Object.keys(audits).map((key) => {
     const audit = audits[key];
     return {
@@ -322,29 +251,53 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
     };
   });
 
+  const bestPracticeAuditIds = (data.lighthouseResult?.categories?.["best-practices"]?.auditRefs || []).map(
+    (ref: any) => ref.id
+  );
+
+  const bestPracticeAudits = detailedAuditResults.filter((audit) =>
+    bestPracticeAuditIds.includes(audit.id)
+  );
+
+  const bestPracticeGroups = {
+    trustAndSafety: [] as any[],
+    general: [] as any[],
+    passed: [] as any[],
+    notApplicable: [] as any[],
+  };
+
+  for (const audit of bestPracticeAudits) {
+    if (TRUST_AND_SAFETY_IDS.includes(audit.id)) {
+      bestPracticeGroups.trustAndSafety.push(audit);
+    } else if (audit.id === "js-libraries") {
+      bestPracticeGroups.general.push(audit); // Always in general
+    } else if (audit.scoreDisplayMode === "notApplicable") {
+      bestPracticeGroups.notApplicable.push(audit);
+    } else if (audit.score === 1) {
+      bestPracticeGroups.passed.push(audit);
+    } else if (audit.score === 0) {
+      bestPracticeGroups.general.push(audit);
+    }
+  }
+
   // Extract numeric values for LCP, TBT, CLS
   const LCP = audits["largest-contentful-paint"]?.numericValue || 0;
   const TBT = audits["total-blocking-time"]?.numericValue || 0;
   const CLS = audits["cumulative-layout-shift"]?.numericValue || 0;
+  const lcpSeconds = LCP / 1000;
 
-  // RevenueLoss% formula
-  const revenueLossPercent = (
-   ((LCP - 2.5) * 7) +
-    (((TBT - 200) / 100) * 3) +
-    (CLS * 10)
-  ); 
+  const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10);
 
-
-  
   return {
     url: data.lighthouseResult?.finalUrl,
     fetchedAt: new Date().toISOString(),
     categories: data.lighthouseResult?.categories,
     revenueLossPercent: parseFloat(revenueLossPercent.toFixed(2)),
     audits: detailedAuditResults,
-    
+    bestPracticeGroups,
   };
 }
+
 export async function savePageSpeedAnalysis(user_id: string, website_id: string, summary: any) {
   const audits = summary.audits || [];
 
@@ -360,7 +313,6 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       seo_score: summary.categories?.seo?.score != null ? summary.categories.seo.score * 100 : null,
       accessibility_score: summary.categories?.accessibility?.score != null ? summary.categories.accessibility.score * 100 : null,
       best_practices_score: summary.categories?.["best-practices"]?.score != null ? summary.categories["best-practices"].score * 100 : null,
-      // pwa_score: summary.categories?.pwa?.score != null ? summary.categories.pwa.score * 100 : null,
 
       // Timing metrics
       first_contentful_paint: getAuditValue("first-contentful-paint"),
@@ -373,13 +325,18 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       // Revenue loss
       revenue_loss_percent: summary.revenueLossPercent,
 
-      audit_details: summary.audits,
+      audit_details: {
+        allAudits: summary.audits,
+        bestPracticeGroups: summary.bestPracticeGroups,
+      },
+
       created_at: new Date(),
       updated_at: new Date(),
     },
     select: {
       website_analysis_id: true,
-      revenue_loss_percent: true, 
+      revenue_loss_percent: true,
+      best_practices_score: true,
     },
   });
 }
