@@ -10,7 +10,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/social_media/router";
 import { competitorRouter } from "./modules/competitor_analysis/competitor.routes";
-import brandAuditRouter from "./modules/brand_audit_report/router";
+import brandAuditRouter from "./modules/llm_call/router";
 import dashboardRouter from "./modules/dashboard/dashboard.router";
 import geo_llm from "./modules/geo_llm/router"; // ✅ Import
 import userRequirementsRouter from "./modules/form_data/router";

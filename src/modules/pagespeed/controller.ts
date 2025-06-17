@@ -1,11 +1,10 @@
 import { Request, Response } from "express";
-import { getPageSpeedSummary, checkBrokenLinks } from "./service";
-import { savePageSpeedAnalysis } from "./service";
-
+import { getPageSpeedSummary, savePageSpeedAnalysis } from "./service";
+import { checkBrokenLinks } from "./service";
 import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
 
+const prisma = new PrismaClient();
 
 export const handlePageSpeed = async (req: Request, res: Response) => {
   const { website_id, user_id } = req.body;
@@ -18,7 +17,8 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   }
 
   try {
-    const summary = await getPageSpeedSummary(user_id,website_id);
+    // Step 1: Get PageSpeed summary
+    const summary = await getPageSpeedSummary(user_id, website_id);
 
     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
       return res.status(502).json({
@@ -28,8 +28,8 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       });
     }
 
-    // Save PageSpeed analysis, including audits in `audit_details`
-    const saved = await savePageSpeedAnalysis(user_id,website_id, summary);
+    // Step 2: Save PageSpeed analysis
+    const saved = await savePageSpeedAnalysis(user_id, website_id, summary);
 
     const auditKeysToInclude = [
       "first-contentful-paint",
@@ -40,8 +40,9 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       "interactive",
     ];
 
-    // Read audit_details from saved analysis (already stored as JSON)
+    // Read audit_details from saved analysis
     const auditDetails = summary.audits || [];
+    const best_practices_audits = summary.bestPracticeGroups || {};
 
     const auditMap: Record<string, any> = {};
     for (const audit of auditDetails) {
@@ -63,7 +64,14 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       best_practices: categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
     };
 
-    // Mark pagespeed_analysis as done
+   
+    const website = await prisma.user_websites.findUnique({
+      where: { website_id: website_id },
+    });
+    if (!website || !website.website_url) {
+      throw new Error("Website URL not found for the given website_id");
+    }
+
     await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
@@ -80,15 +88,16 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         pagespeed_analysis: true,
       },
     });
-
     return res.status(201).json({
-      message: "PageSpeed summary saved successfully.",
+      message: "PageSpeed and schema summary saved successfully.",
       website_id,
       analysis_id: saved.website_analysis_id,
       revenueLossPercent: saved.revenue_loss_percent,
       categories: categoryScores,
       audits: auditMap,
-      audit_details: auditDetails, // entire raw audits object if needed
+      best_practices_audits: best_practices_audits,
+      // audit_details: auditDetails,
+      // schema_analysis: schemaResult.message ? { message: schemaResult.message } : schemaResult.schemas, // Include error or schemas
     });
   } catch (err: any) {
     console.error("❌ handlePageSpeed error:", err);
@@ -109,18 +118,17 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
 
   try {
     // Step 1: Ensure website is tracked
-   
 
     // Step 2: Run the broken link crawler
-    const brokenLinksResult = await checkBrokenLinks(user_id,website_id, maxDepth);
+    const brokenLinksResult = await checkBrokenLinks(user_id, website_id, maxDepth);
 
     const totalBroken = brokenLinksResult.length;
 
     // Step 3: Save analysis to DB
-    const saved = await saveBrokenLinkAnalysis(user_id,website_id, brokenLinksResult, totalBroken);
-   
+    const saved = await saveBrokenLinkAnalysis(user_id, website_id, brokenLinksResult, totalBroken);
 
-    // Step 2: Mark brand audit as complete in analysis_status
+
+    // Step 4: Mark brand audit as complete in analysis_status
     await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
@@ -152,8 +160,3 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
     });
   }
 };
-
-
-
-
-
