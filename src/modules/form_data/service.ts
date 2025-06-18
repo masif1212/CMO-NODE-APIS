@@ -10,8 +10,8 @@ export const createBrandProfile = async (
     industry?: string;
     location?: string;
     target_audience?: string;
-    property_id?: string;
-    access_token?: string;
+    
+  
   }
 ) => {
   const existing = await prisma.user_requirements.findFirst({
@@ -21,8 +21,6 @@ export const createBrandProfile = async (
   const saveData: any = {
     user_id,
     website_id,
-    property_id: String(data.property_id),
-    access_token: data.access_token,
   };
 
   if (data.industry) saveData.industry = data.industry;
@@ -43,6 +41,7 @@ export const createBrandProfile = async (
     return await prisma.user_requirements.create({ data: saveData });
   }
 };
+
 
 export const updateUserType = async (user_id: string, user_type: string) => {
   return await prisma.users.update({

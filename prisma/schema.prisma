@@ -290,7 +290,10 @@ model brand_social_media_analysis {
   shares          Int?
   videos_count    Int?
   posts_count     Int?
+  postingFrequency Float?
+  dailyPostingGraph Json? // For the 30-day continuous graph
   engagement_rate Float?
+  engagementToFollowerRatio Float?
   data            Json?
   graph_data      Json?
   created_at      DateTime @default(now())
@@ -429,8 +432,8 @@ model user_requirements {
   requirement_id      String  @id @default(uuid())
   user_id             String
   website_id          String
-  property_id         String
-  access_token        String  @db.LongText
+  property_id         String?
+  access_token        String?  @db.LongText
   refresh_token       String? @db.LongText
   profile             Json?
   session_id          String? @db.LongText

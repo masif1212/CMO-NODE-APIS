@@ -11,8 +11,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       industry,
       location,
       target_audience,
-      property_id,
-      access_token,
+      
       user_id,
       website_id,
     } = req.body;
@@ -31,8 +30,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       industry,
       location,
       target_audience,
-      property_id,
-      access_token,
+      
     });
 
     res.status(200).json({ success: true, data: result });

@@ -270,8 +270,10 @@ CREATE TABLE `brand_social_media_analysis` (
     `shares` INTEGER NULL,
     `videos_count` INTEGER NULL,
     `posts_count` INTEGER NULL,
+    `postingFrequency` DOUBLE NULL,
     `engagement_rate` DOUBLE NULL,
     `data` JSON NULL,
+    `graph_data` JSON NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -314,6 +316,7 @@ CREATE TABLE `website_scraped_data` (
     `tiktok_handle` VARCHAR(191) NULL,
     `other_links` JSON NULL,
     `raw_html` LONGTEXT NULL,
+    `ai_response` LONGTEXT NULL,
     `status_code` INTEGER NULL,
     `ip_address` VARCHAR(191) NULL,
     `response_time_ms` INTEGER NULL,
