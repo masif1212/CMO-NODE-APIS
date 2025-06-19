@@ -50,8 +50,10 @@ export const fetchLegalAIBrands = async (
         region_of_operation: '',
         target_location: '',
         target_audience: '',
-        property_id: '',
-        access_token: '',
+        primary_offering:'',
+        USP: '',
+        
+        
       },
     });
   }
@@ -61,13 +63,18 @@ export const fetchLegalAIBrands = async (
     region_of_operation,
     target_location,
     target_audience,
+    USP,
+    primary_offering,
+
   } = userReq;
 
   const parts = [];
-  if (industry) parts.push(`in the ${industry} sector`);
+  if (industry) parts.push(`in the industry : ${industry} sector`);
   if (region_of_operation) parts.push(`operating in ${region_of_operation}`);
   if (target_location) parts.push(`targeting users in ${target_location}`);
   if (target_audience) parts.push(`serving ${target_audience}`);
+  if(USP) parts.push(`, usp  :  ${USP}`);
+  if(primary_offering) parts.push(`and their brand primary_offering :   ${primary_offering}`);
   const context = parts.length > 0 ? parts.join(', ') : '';
 
   const prompt = `
@@ -93,7 +100,7 @@ Format:
 ]
 `.trim();
 
-  console.log('Prompt:', prompt);
+  // console.log('Prompt:', prompt);
 
   try {
     const res = await openai.responses.create({
@@ -105,7 +112,7 @@ Format:
           search_context_size: 'medium',
           user_location: {
             type: 'approximate',
-            region: region_of_operation || 'Unknown',
+            region: target_location || 'Unknown',
           },
         },
       ],
@@ -156,78 +163,51 @@ Format:
 
     const message = websiteFound
       ? 'Congratulations! Your brand is listed among the top brands.'
-      : 'Sorry, your brand does not appear in the top brands. You might want to improve your marketing strategy and website struturing for better online visibility';
+      : 'Sorry, your brand does not appear in the top brands. You need to improve your marketing strategy and website struturing for better online visibility';
 
 
     const schemaResult: SchemaOutput = await validateComprehensiveSchema(websiteUrl);
-    console.log("Schema Validation Result:", JSON.stringify(schemaResult, null, 2)); // Debug log
+    // console.log("Schema Validation Result:", JSON.stringify(schemaResult, null, 2)); // Debug log
     if (schemaResult && schemaResult.message) {
-      console.warn("Schema validation error:", schemaResult);
+      console.warn("Schema validation:", schemaResult);
       // Store the error message if no schemas are found
-      await prisma.brand_website_analysis.upsert({
+      await prisma.website_scraped_data.upsert({
         where: {
-          website_analysis_id: website_id,
+          website_id: website_id,
         },
         update: {
-          schema_analysis: { error: schemaResult.message },
+          schema_analysis: { message: schemaResult.message },
         },
         create: {
-          website_analysis_id: website_id,
-          website_id,
-          schema_analysis: { error: schemaResult.message },
+          website_id: website_id,
+          website_url: websiteUrl,
+          schema_analysis: { message: schemaResult.message },
         },
       });
     } else if (schemaResult && "schemas" in schemaResult) {
       // Store schema data if available
-      await prisma.brand_website_analysis.upsert({
+      await prisma.website_scraped_data.upsert({
         where: {
-          website_analysis_id: website_id,
+          website_id: website_id,
         },
         update: {
           schema_analysis: JSON.stringify((schemaResult as any).schemas),
         },
         create: {
-          website_analysis_id: website_id,
-          website_id,
+          website_id: website_id,
+          website_url: websiteUrl,
           schema_analysis: JSON.stringify((schemaResult as any).schemas),
         },
       });
     }
-    const scrapedMeta = await prisma.website_scraped_data.findUnique({
-  where: { website_id },
-  select: {
-    page_title: true,
-    meta_description: true,
-    meta_keywords: true,
-    og_title: true,
-    og_description: true,
-    og_image: true,
-    ctr_loss_percent: true,
-    raw_html: true,
-    
-  },
-});
 
-  let h1Text = "Not Found";
-    if (scrapedMeta && scrapedMeta.raw_html) {
-      const $ = cheerio.load(scrapedMeta.raw_html);
-      h1Text = $("h1").first().text().trim() || "Not Found";
-    }
-
- const {
-  raw_html, // omit this
-  ...metaDataWithoutRawHtml
-} = scrapedMeta || {};
    
 return {
   data: parsedBrands,
   website_found: websiteFound,
   message,
-  schema_analysis: schemaResult.message
-    ? { message: schemaResult.message }
-    : schemaResult.schemas,
-  meta_data: metaDataWithoutRawHtml, 
-  h1_Text:h1Text
+  schema_analysis: schemaResult
+
 };
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);

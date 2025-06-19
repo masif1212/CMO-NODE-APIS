@@ -3,7 +3,7 @@ import puppeteer, { Browser } from "puppeteer";
 import { PrismaClient } from "@prisma/client";
 import { CreateWebsiteAnalysisDto } from "./schema";
 import { URL } from "url";
-import { BrokenLinkResult } from "../../types/express";
+import { BrokenLinkResult } from "../../../types/express";
 
 const prisma = new PrismaClient();
 const API_KEY = process.env.PAGESPEED_API_KEY || "YOUR_KEY";
@@ -327,7 +327,7 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
 
       audit_details: {
         allAudits: summary.audits,
-        bestPracticeGroups: summary.bestPracticeGroups,
+        optimization_opportinuties: summary.bestPracticeGroups,
       },
 
       created_at: new Date(),

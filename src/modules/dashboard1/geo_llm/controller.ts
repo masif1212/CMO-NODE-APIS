@@ -9,7 +9,7 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
     if (!user_id || !website_id) {
       return res.status(400).json({ message: 'user_id and website_id are required' });
     }
-
+    
     const result = await fetchLegalAIBrands(user_id, website_id);
     res.status(200).json(result);
   } catch (err: any) {

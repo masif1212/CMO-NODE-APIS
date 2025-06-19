@@ -98,7 +98,7 @@ const userRequirement = {
             competitor_id,
             website_id,
             name: competitorData.name || scraped.page_title || compUrl,
-            website_url: compUrl,
+            competitor_website_url: compUrl,
             industry: competitorData.industry || userRequirement?.industry || 'Unknown',
             region: competitorData.region || userRequirement?.region_of_operation || 'Unknown',
             target_audience: competitorData.target_audience || userRequirement?.target_audience || 'Unknown',
@@ -107,7 +107,7 @@ const userRequirement = {
           },
         });
 
-        await prisma.competitor_scraped_data.upsert({
+        await prisma.competitor_data.upsert({
           where: { competitor_id },
           update: { ...scraped, updated_at: new Date() },
           create: { competitor_id, website_id, ...scraped },
@@ -115,14 +115,14 @@ const userRequirement = {
 
         const pageSpeedData = await getPageSpeedData(compUrl);
         if (pageSpeedData) {
-          await prisma.competitor_scraped_data.update({
+          await prisma.competitor_data.update({
             where: { competitor_id },
             data: { page_speed: pageSpeedData },
           });
         }
 
-        // Save additional scraped fields to competitor_scraped_data if needed
-        await prisma.competitor_scraped_data.update({
+        // Save additional scraped fields to competitor_data if needed
+        await prisma.competitor_data.update({
           where: { competitor_id },
           data: {
             // Add any additional fields you want to persist
@@ -174,7 +174,7 @@ const userRequirement = {
           if (!comp.website_url?.startsWith('http')) continue;
           if (
             competitorUrls.includes(comp.website_url) ||
-            competitorResults.some(r => r.website_url === comp.website_url)
+            competitorResults.some(r => r.competitor_website_url === comp.website_url)
           ) continue;
 
           try {
@@ -184,7 +184,7 @@ const userRequirement = {
                 competitor_id,
                 website_id,
                 name: comp.name,
-                website_url: comp.website_url,
+                competitor_website_url: comp.website_url,
                 industry: comp.industry,
                 region: comp.region,
                 target_audience: comp.target_audience,
@@ -195,7 +195,7 @@ const userRequirement = {
 
             const scraped = await scrapeWebsitecompetitos(comp.website_url);
             if (scraped) {
-              await prisma.competitor_scraped_data.upsert({
+              await prisma.competitor_data.upsert({
                 where: { competitor_id },
                 update: { ...scraped, updated_at: new Date() },
                 create: { competitor_id, website_id, ...scraped },
@@ -203,7 +203,7 @@ const userRequirement = {
 
               const pageSpeedData = await getPageSpeedData(comp.website_url);
               if (pageSpeedData) {
-                await prisma.competitor_scraped_data.update({
+                await prisma.competitor_data.update({
                   where: { competitor_id },
                   data: { page_speed: pageSpeedData },
                 });
@@ -266,12 +266,12 @@ const userRequirement = {
         },
       },
       update: {
-        competitor_analysis: true,
+        competitor_analysis: "1",
       },
       create: {
         user_id,
         website_id,
-        competitor_analysis: true,
+        competitor_analysis: "1",
       },
     });
 
@@ -300,7 +300,7 @@ static async getComparisonRecommendations(website_id: string) {
   const competitors = await prisma.competitor_details.findMany({
     where: { website_id },
     include: {
-      competitor_scraped_data: true,
+      competitor_data: true,
     },
   });
 
@@ -339,7 +339,7 @@ static async getComparisonRecommendations(website_id: string) {
   };
 
   const comps = competitors.map(comp => {
-    const scraped = comp.competitor_scraped_data;
+    const scraped = comp.competitor_data;
     let ps: any = scraped?.page_speed ?? {};
     if (typeof ps === 'string') {
       try {
@@ -353,7 +353,7 @@ static async getComparisonRecommendations(website_id: string) {
 
     return {
       name: comp.name,
-      website_url: comp.website_url,
+      website_url: comp.competitor_website_url,
       meta: {
         title: scraped?.page_title || 'N/A',
         meta_keywords:scraped?.meta_keywords || 'N/A',

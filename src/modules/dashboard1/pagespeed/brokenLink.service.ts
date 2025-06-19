@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { BrokenLinkResult } from "../../types/express";
+import { BrokenLinkResult } from "../../../types/express";
 
 const prisma = new PrismaClient();
 

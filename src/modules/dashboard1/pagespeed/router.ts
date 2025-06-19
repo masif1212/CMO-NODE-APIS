@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { handlePageSpeed, handleBrokenLinks } from "./controller";
-import { asyncHandler } from "../../utils/asyncHandler";
+import { asyncHandler } from "../../../utils/asyncHandler";
 // import { generateLLMAuditReportforpagespeed } from "./llm-pagespeed";
 // import { generateLLMAuditReportForBrokenLinks } from "./llm-broken_links";
 const router = Router();

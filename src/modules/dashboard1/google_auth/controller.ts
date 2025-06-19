@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
-import { oAuth2Client } from "../../config/googleClient";
+import { oAuth2Client } from "../../../config/googleClient";
 import { getUserProperties, getAnalyticsSummary } from "./service";
 import jwt from "jsonwebtoken";
 import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from '@prisma/client';
-import { generateLLMTrafficReport } from "./llm_traffic_anaylsis";
+import { generateLLMTrafficReport } from "../llm_dashboard1";
+import cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 
@@ -100,31 +101,65 @@ export const fetchProperties = async (req: Request, res: Response) => {
   }
 };
   
+
+
+
 // export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 //   const { property_id, website_id, user_id } = req.body;
 
 //   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
-//   if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
+//   if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
 
+//   if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
+// console.log(website_id,"website id ")
 //   try {
-//     const { getAnalyticsSummary } = await import("./service");
-//     const { oAuth2Client } = await import("../../config/googleClient");
 //     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
-//     // Fetch the analytics summary
 //     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
-//     console.log("Analytics summary:", summary);
 
-//     // Check if the summary is empty or doesn't contain meaningful data
-//     if (!summary || Object.keys(summary).length === 0 || !summary.traffic || !summary.country || !summary.bouncePages) {
+//     if (!summary || !summary.traffic || !summary.country || !summary.bouncePages) {
 //       return res.status(404).json({ message: "Analytics summary not found" });
 //     }
 
-//     // Save the analytics data if it is valid
+//     // Save analytics summary
+//     const savedSummary = await saveTrafficAnalysis(website_id, summary);
+
+//     // Save user requirement inline here
+//     await saveUserRequirement({
+//       user_id,
+//       website_id,
+//       property_id,
+//       access_token: req.session.user.accessToken,
+//       profile: req.session.user.profile,
+//     });
+    
+//         // Step 2: Mark brand audit as complete in analysis_status
+//         await prisma.analysis_status.upsert({
+//           where: {
+//             user_id_website_id: {
+//               user_id,
+//               website_id: website_id,
+//             },
+//           },
+//           update: {
+//             traffic_analysis: true,
+//           },
+//           create: {
+//             user_id,
+//             website_id: website_id,
+//             traffic_analysis: true,
+//           },
+//         });
+    
 //     const saved = await saveTrafficAnalysis(website_id, summary);
-//     return res.status(200).json({ message: "Analytics summary saved", data: saved });
-//   } catch (error: any)
-//    {
+//     try {
+//       // const llm_res = generateLLMTrafficReport(website_id);
+//       return res.status(200).json({ message: "Analytics summary saved", data: saved });
+//     } catch (error: any) {
+//       console.error("Analytics save error:", error);
+//       return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
+//     }
+//   } catch (error: any) {
 //     console.error("Analytics save error:", error);
 //     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
 //   }
@@ -134,11 +169,16 @@ export const fetchProperties = async (req: Request, res: Response) => {
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
 
-  if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
-  if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
+  if (!req.session?.user?.accessToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-  if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
-console.log(website_id,"website id ")
+  if (!property_id || !website_id || !user_id) {
+    return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
+  }
+
+  console.log(website_id, "website id");
+
   try {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
 
@@ -148,8 +188,8 @@ console.log(website_id,"website id ")
       return res.status(404).json({ message: "Analytics summary not found" });
     }
 
-    // Save analytics summary
-    const savedSummary = await saveTrafficAnalysis(website_id, summary);
+    // Save traffic analytics and get traffic_analysis_id
+    const savedTraffic = await saveTrafficAnalysis(website_id, summary); // should return traffic_analysis_id
 
     // Save user requirement inline here
     await saveUserRequirement({
@@ -159,36 +199,70 @@ console.log(website_id,"website id ")
       access_token: req.session.user.accessToken,
       profile: req.session.user.profile,
     });
+
+    // Save traffic_analysis_id in analysis_status
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id,
+        },
+      },
+      update: {
+        traffic_analysis: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
+        updated_at: new Date(),
+      },
+      create: {
+        user_id,
+        website_id,
+        traffic_analysis: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+ const scrapedMeta = await prisma.website_scraped_data.findUnique({
+  where: { website_id },
+  select: {
+    page_title: true,
+    meta_description: true,
+    meta_keywords: true,
+    og_title: true,
+    og_description: true,
+    og_image: true,
+    ctr_loss_percent: true,
+    raw_html: true,
+    homepage_alt_text_coverage: true,
+    status_message: true,
+    status_code: true,
+    ip_address: true,
+    response_time_ms: true,
     
-        // Step 2: Mark brand audit as complete in analysis_status
-        await prisma.analysis_status.upsert({
-          where: {
-            user_id_website_id: {
-              user_id,
-              website_id: website_id,
-            },
-          },
-          update: {
-            traffic_analysis: true,
-          },
-          create: {
-            user_id,
-            website_id: website_id,
-            traffic_analysis: true,
-          },
-        });
-    
-    const saved = await saveTrafficAnalysis(website_id, summary);
-    try {
-      // const llm_res = generateLLMTrafficReport(website_id);
-      return res.status(200).json({ message: "Analytics summary saved", data: saved });
-    } catch (error: any) {
-      console.error("Analytics save error:", error);
-      return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
+  },
+});
+
+  let h1Text = "Not Found";
+    if (scrapedMeta && scrapedMeta.raw_html) {
+      const $ = cheerio.load(scrapedMeta.raw_html);
+      h1Text = $("h1").first().text().trim() || "Not Found";
     }
+
+ const {
+  raw_html, // omit this
+  ...metaDataWithoutRawHtml
+} = scrapedMeta || {};
+
+    return res.status(200).json({
+      message: "seo audit",
+      h1Text,
+      metaDataWithoutRawHtml,
+      data: savedTraffic,
+    });
   } catch (error: any) {
     console.error("Analytics save error:", error);
-    return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
+    return res.status(500).json({
+      error: "Failed to save analytics summary",
+      detail: error.message,
+    });
   }
 };
 
@@ -197,12 +271,12 @@ console.log(website_id,"website id ")
 export const dashborad1_Recommendation = async (req: Request, res: Response) => {
   const {website_id, user_id } = req.body;
 
-  if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
+  // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_res = generateLLMTrafficReport(website_id,user_id)
-    return res.status(200).json({ message: "llm_response_generated", llm_response: llm_res });
+    const llm_res = await generateLLMTrafficReport(website_id,user_id)
+    return res.status(200).json({  llm_response: llm_res });
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

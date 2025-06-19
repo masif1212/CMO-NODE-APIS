@@ -4,16 +4,17 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import usersRouter from "./modules/users/router";
-import pageSpeedRouter from "./modules/pagespeed/router";
-import authRouter from "./modules/google_auth/router";
+import pageSpeedRouter from "./modules/dashboard1/pagespeed/router";
+import authRouter , { dashboardRouter1 }from "./modules/dashboard1/google_auth/router";
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
-import youtubeRouter from "./modules/social_media/router";
-import { competitorRouter } from "./modules/competitor_analysis/competitor.routes";
+import youtubeRouter from "./modules/dashboard2/router";
+import { competitorRouter } from "./modules/dashboard3/competitor.routes";
 import brandAuditRouter from "./modules/llm_call/router";
-import dashboardRouter from "./modules/dashboard/dashboard.router";
-import geo_llm from "./modules/geo_llm/router"; // ✅ Import
+import geo_llm from "./modules/dashboard1/geo_llm/router"; // ✅ Import
 import userRequirementsRouter from "./modules/form_data/router";
+import mainDashboard from "./modules/dashboard/dashboard.router"; // Adjust path as needed
+
 
 
 
@@ -54,6 +55,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/pagespeed", pageSpeedRouter);
 app.use("/api/auth", authRouter);
 app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
+app.use("/api", mainDashboard);
 
 // Existing routes...
 app.use("/api/scrape", routes); 
@@ -62,9 +64,11 @@ app.use("/api/brand-audit", brandAuditRouter);
 
 app.use("/api/social_media/youtube", youtubeRouter);
 
-app.use("/api", dashboardRouter);
+app.use("/api/dashboardRouter1", dashboardRouter1);
 
 app.use("/api/user-requirements", userRequirementsRouter);
+
+
 
 
 app.use("/api/geo_llm", geo_llm);

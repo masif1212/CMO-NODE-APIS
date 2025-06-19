@@ -27,12 +27,12 @@ export const handleWebsiteDataWithUpsert = async (req: Request, res: Response, n
         },
       },
       update: {
-        brand_audit: true,
+        brand_audit: "1",
       },
       create: {
         user_id,
         website_id: website_id,
-        brand_audit: true,
+        brand_audit: "1",
       },
     });
 

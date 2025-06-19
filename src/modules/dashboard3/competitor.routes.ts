@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { CompetitorService } from './ompetitor.service';
+import { CompetitorService } from './competitor.service';
 
 export const competitorRouter = Router();
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-competitorRouter.post('/', async (req, res, next) => {
+competitorRouter.post('/identification', async (req, res, next) => {
      try {
           const { website_url,user_id } = req.body;
           const data = await CompetitorService.process(website_url,user_id);

@@ -298,7 +298,6 @@ The following website data has been collected:
 - Time to Interactive: ${analysis.time_to_interactive}
 
 ### Additional Findings:
-- Missing Image Alts: ${analysis.missing_image_alts}
 
 ---
 
