@@ -8,11 +8,9 @@ const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
-// export async function POST(req: Request) {
 export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
-  console.log("website_id",website_id)
-// const urlObj = new URL(websiteid);
-// const website_id = urlObj.searchParams.get("website_id");
+  // console.log("website_id",website_id)
+
 
 if (!website_id) {
   return Response.json({ error: "Missing website_id" }, { status: 400 });
@@ -24,11 +22,7 @@ if (!user_id) {
 
 try {
 
-  // const [scraped, analysis, traffic] = await Promise.all([
-  //   prisma.website_scraped_data.findUnique({ where: { website_id } }),
-  //   prisma.brand_website_analysis.findUnique({ where: { website_analysis_id: website_id } }),
-  //   prisma.brand_traffic_analysis.findUnique({ where: { traffic_analysis_id: website_id } }),
-  // ]);
+
 
 
   const [scraped, analysis, traffic] = await Promise.all([
@@ -44,74 +38,16 @@ try {
     orderBy: { created_at: "desc" }, // or use updated_at
   }),
 ]);
-  console.log("analysis",analysis)
+  // console.log("analysis",analysis)
 
-    // if (!scraped || !analysis || !traffic) {
-    //   return Response.json(
-    //     { error: "Missing required data for website analysis." },
-    //     { status: 404 }
-    //   );
-    // }
-
+   
     let h1Text = "Not Found";
     if (scraped && scraped.raw_html) {
       const $ = cheerio.load(scraped.raw_html);
       h1Text = $("h1").first().text().trim() || "Not Found";
     }
-    console.log("h1",h1Text)
-    // -------------------
-    // PROMPT 1 - WHAT'S WORKING & WHAT NEEDS FIXING
-    // -------------------
-//     const workingFixPrompt = `
-// You are a professional SEO and website auditor. Based on the data provided, categorize key website features into two sections: 
-
-// **1. What’s Working Well**  
-// **2. What Needs Fixing**
-
-// For each item, include:
-// - **Importance**: High, Medium, Low
-// - **Rating**: Score out of 10
-// - **Justification**: Why it's important, especially in terms of SEO, performance, and marketing
-
-// Also, explain **why** fixing issues like keywords, broken links, page titles, etc. matters — especially for SEO visibility, CTR, traffic, and brand trust.
-
-// ## Website Metadata
-// - Title: ${scraped?.page_title ?? "N/A"}
-// - Meta Description: ${scraped?.meta_description ?? "N/A"}
-// - Meta Keywords: ${scraped?.meta_keywords ?? "N/A"}
-// - H1: ${h1Text}
-
-
-// ## OG Tags
-// - OG Title: ${scraped?.og_title ?? "N/A"}
-// - OG Description: ${scraped?.og_description ?? "N/A"}
-// - OG Image: ${scraped?.og_image ? "Present" : "Missing"}
-
-// ## Performance
-// - LCP: ${analysis?.largest_contentful_paint ?? "N/A"}
-// - CLS: ${analysis?.cumulative_layout_shift ?? "N/A"}
-// - FCP: ${analysis?.first_contentful_paint ?? "N/A"}
-// - Speed Index: ${analysis?.speed_index ?? "N/A"}
-// - TTI: ${analysis?.time_to_interactive ?? "N/A"}
-// - TBT: ${analysis?.total_blocking_time ?? "N/A"}
-// - performance Score: ${analysis?.performance_score ?? "N/A"}
-
-// ## SEO
-// - SEO Score: ${analysis?.seo_score ?? "N/A"}
-// - Broken Links: ${analysis && Array.isArray(analysis.broken_links) ? analysis.broken_links.join(", ") : analysis?.broken_links || "None"}
-// - Schema: ${scraped && scraped.schema_analysis ? JSON.stringify(scraped.schema_analysis) : "None"}
-
-// ## UX/Behavior
-// - Session Duration: ${traffic?.avg_session_duration ?? "N/A"}
-// - Engagement Rate: ${traffic?.engagement_rate ?? "N/A"}
-// - Engaged Sessions: ${traffic?.engaged_sessions ?? "N/A"}
-
-// Return only these 2 sections:
-// 1. **What’s Working**
-// 2. **What Needs Fixing**
-
-// Use markdown formatting with bold titles and bullet points. Add brief explanations and scores.`;
-
+    // console.log("h1",h1Text)
+    
 
 
 const workingFixPrompt = `
@@ -181,7 +117,7 @@ Return your response in the following **JSON format**:
 `;
 
 
-console.log("workingfix propmt",workingFixPrompt)
+// console.log("workingfix propmt",workingFixPrompt)
 
     const workingFixRes = await openai.chat.completions.create({
       model,
@@ -199,7 +135,7 @@ console.log("workingfix propmt",workingFixPrompt)
     });
 
     const workingFixContent = workingFixRes.choices[0].message.content || "";
-    console.log("workingFixContent",workingFixContent)
+    // console.log("workingFixContent",workingFixContent)
    
 
 

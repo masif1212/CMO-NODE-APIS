@@ -84,10 +84,10 @@ export const logout = (req: Request, res: Response) => {
 };
 
 export const fetchProperties = async (req: Request, res: Response) => {
-  console.log("Session:", req.session); // Log session to check for the presence of `accessToken`
+  // console.log("Session:", req.session); // Log session to check for the presence of `accessToken`
   try {
     if (!req.session?.user?.accessToken) {
-      console.log("No access token found");
+      // console.log("No access token found");
       return res.status(401).json({ error: "No access token found" });
     }
 
@@ -101,71 +101,6 @@ export const fetchProperties = async (req: Request, res: Response) => {
   }
 };
   
-
-
-
-// export const fetchAnalyticsReport = async (req: Request, res: Response) => {
-//   const { property_id, website_id, user_id } = req.body;
-
-//   if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
-//   if (!property_id || !website_id || !user_id) return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
-
-//   if (!property_id || !website_id) return res.status(400).json({ error: "Missing property_id or website_id" });
-// console.log(website_id,"website id ")
-//   try {
-//     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
-
-//     const summary = await getAnalyticsSummary(oAuth2Client, property_id);
-
-//     if (!summary || !summary.traffic || !summary.country || !summary.bouncePages) {
-//       return res.status(404).json({ message: "Analytics summary not found" });
-//     }
-
-//     // Save analytics summary
-//     const savedSummary = await saveTrafficAnalysis(website_id, summary);
-
-//     // Save user requirement inline here
-//     await saveUserRequirement({
-//       user_id,
-//       website_id,
-//       property_id,
-//       access_token: req.session.user.accessToken,
-//       profile: req.session.user.profile,
-//     });
-    
-//         // Step 2: Mark brand audit as complete in analysis_status
-//         await prisma.analysis_status.upsert({
-//           where: {
-//             user_id_website_id: {
-//               user_id,
-//               website_id: website_id,
-//             },
-//           },
-//           update: {
-//             traffic_analysis: true,
-//           },
-//           create: {
-//             user_id,
-//             website_id: website_id,
-//             traffic_analysis: true,
-//           },
-//         });
-    
-//     const saved = await saveTrafficAnalysis(website_id, summary);
-//     try {
-//       // const llm_res = generateLLMTrafficReport(website_id);
-//       return res.status(200).json({ message: "Analytics summary saved", data: saved });
-//     } catch (error: any) {
-//       console.error("Analytics save error:", error);
-//       return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
-//     }
-//   } catch (error: any) {
-//     console.error("Analytics save error:", error);
-//     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
-//   }
-// };
-
-
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
 
@@ -247,15 +182,18 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     }
 
  const {
-  raw_html, // omit this
+  raw_html, 
   ...metaDataWithoutRawHtml
 } = scrapedMeta || {};
 
     return res.status(200).json({
       message: "seo audit",
+      traffic_anaylsis: savedTraffic,
+      onpage_opptimization:{
       h1Text,
       metaDataWithoutRawHtml,
-      data: savedTraffic,
+      
+      }
     });
   } catch (error: any) {
     console.error("Analytics save error:", error);

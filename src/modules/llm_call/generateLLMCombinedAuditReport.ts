@@ -94,7 +94,6 @@ Include insights on how these metadata elements contribute to the website’s SE
 - Time to Interactive: ${page.time_to_interactive ?? "N/A"}
 
 ### Additional Findings:
-- Missing Image Alts: ${page.missing_image_alts ?? "N/A"}
 - Number of Broken Links: ${page.total_broken_links ?? 0}
 - Broken Links:${page.broken_links ?? "N/A"}
 \`\`\`json
@@ -180,7 +179,7 @@ For each social media platform:
 
   // ... API call and response handling unchanged
 
-  console.log("🧠 Final User Prompt Sent to GPT:\n", userPrompt);
+  // console.log("🧠 Final User Prompt Sent to GPT:\n", userPrompt);
 
   const gptResponse = await openai.chat.completions.create({
     model:model,

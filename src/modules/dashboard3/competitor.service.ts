@@ -386,7 +386,7 @@ static async getComparisonRecommendations(website_id: string) {
   });
 
   const prompt = createComparisonPrompt(main, comps);
-  console.log('Generated prompt for LLM:', prompt);
+  // console.log('Generated prompt for LLM:', prompt);
 
   const response = await openai.chat.completions.create({
     messages: [{ role: 'user', content: prompt }],

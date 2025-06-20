@@ -280,6 +280,35 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
     }
   }
 
+
+
+    const accessibilityAuditIds = (data.lighthouseResult?.categories?.["accessibility"]?.auditRefs || []).map(
+    (ref: any) => ref.id
+  );
+
+  const accessibilityAudits = detailedAuditResults.filter((audit) =>
+    accessibilityAuditIds.includes(audit.id)
+  );
+
+  const userAccessReadiness = {
+    critical: [] as any[],
+    enhancements: [] as any[],
+    passed: [] as any[],
+    notApplicable: [] as any[],
+  };
+
+  for (const audit of accessibilityAudits) {
+    if (audit.scoreDisplayMode === "notApplicable") {
+      userAccessReadiness.notApplicable.push(audit);
+    } else if (audit.score === 1) {
+      userAccessReadiness.passed.push(audit);
+    } else if (audit.score === 0) {
+      userAccessReadiness.critical.push(audit);
+    } else {
+      userAccessReadiness.enhancements.push(audit);
+    }
+  }
+
   // Extract numeric values for LCP, TBT, CLS
   const LCP = audits["largest-contentful-paint"]?.numericValue || 0;
   const TBT = audits["total-blocking-time"]?.numericValue || 0;
@@ -295,6 +324,7 @@ export async function getPageSpeedSummary(user_id: string, website_id: string) {
     revenueLossPercent: parseFloat(revenueLossPercent.toFixed(2)),
     audits: detailedAuditResults,
     bestPracticeGroups,
+    userAccessReadiness,
   };
 }
 
@@ -328,6 +358,7 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       audit_details: {
         allAudits: summary.audits,
         optimization_opportinuties: summary.bestPracticeGroups,
+        user_access_readiness: summary.userAccessReadiness,
       },
 
       created_at: new Date(),

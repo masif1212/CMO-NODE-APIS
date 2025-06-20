@@ -2,9 +2,6 @@ import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { parse } from 'tldts'; // For root domain extraction
-import { validateComprehensiveSchema, SchemaOutput } from "./schemaValidator";
-import * as cheerio from 'cheerio';
-
 dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -166,48 +163,18 @@ Format:
       : 'Sorry, your brand does not appear in the top brands. You need to improve your marketing strategy and website struturing for better online visibility';
 
 
-    const schemaResult: SchemaOutput = await validateComprehensiveSchema(websiteUrl);
     // console.log("Schema Validation Result:", JSON.stringify(schemaResult, null, 2)); // Debug log
-    if (schemaResult && schemaResult.message) {
-      console.warn("Schema validation:", schemaResult);
-      // Store the error message if no schemas are found
-      await prisma.website_scraped_data.upsert({
-        where: {
-          website_id: website_id,
-        },
-        update: {
-          schema_analysis: { message: schemaResult.message },
-        },
-        create: {
-          website_id: website_id,
-          website_url: websiteUrl,
-          schema_analysis: { message: schemaResult.message },
-        },
-      });
-    } else if (schemaResult && "schemas" in schemaResult) {
-      // Store schema data if available
-      await prisma.website_scraped_data.upsert({
-        where: {
-          website_id: website_id,
-        },
-        update: {
-          schema_analysis: JSON.stringify((schemaResult as any).schemas),
-        },
-        create: {
-          website_id: website_id,
-          website_url: websiteUrl,
-          schema_analysis: JSON.stringify((schemaResult as any).schemas),
-        },
-      });
-    }
+    
 
    
 return {
-  data: parsedBrands,
-  website_found: websiteFound,
-  message,
-  schema_analysis: schemaResult
 
+  
+  AI_Discoverability: {
+    // data: parsedBrands,
+    website_found: websiteFound,
+    message: message // make sure 'message' is defined
+  }
 };
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);

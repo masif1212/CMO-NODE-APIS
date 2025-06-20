@@ -126,7 +126,7 @@ if the data for any of the reports is not available skips that section and more 
       ],
       temperature: 0.7,
     }); 
-    console.log("LLM Response:", gptResponse);
+    // console.log("LLM Response:", gptResponse);
 
     const combinedAudit = gptResponse.choices[0].message?.content?.trim();
     

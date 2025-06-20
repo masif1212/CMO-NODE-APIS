@@ -16,11 +16,11 @@ export async function analyzeYouTubeDataByWebsiteId(website_id: string) {
   const channelId = await resolveYouTubeChannelId(youtubeUrl);
   if (!channelId) return { status: "invalid-channel" };
 
-  console.log("Resolved Channel ID:", channelId);
+  // console.log("Resolved Channel ID:", channelId);
 
   const videoIdsAndDates = await fetchVideosLast30Days(channelId);
   if (videoIdsAndDates.length === 0) {
-    console.log("No videos found for last 30 days");
+    // console.log("No videos found for last 30 days");
     return { status: "no-videos-found" };
   }
 

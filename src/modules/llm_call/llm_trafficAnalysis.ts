@@ -122,7 +122,7 @@ Make the tone professional and technically actionable. Prioritize changes that y
       messages: [{ role: "user", content: prompt }],
       temperature: 0.6,
     });
-    console.log("LLM Response:", response);
+    // console.log("LLM Response:", response);
     const llmOutput = response.choices?.[0]?.message?.content;
     await prisma.llm_responses.upsert({
         where: { website_id },

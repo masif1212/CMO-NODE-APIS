@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
 import { getPageSpeedSummary, savePageSpeedAnalysis } from "./service";
-import { checkBrokenLinks } from "./service";
-import { saveBrokenLinkAnalysis } from "./brokenLink.service";
 import { PrismaClient } from "@prisma/client";
 import * as cheerio from "cheerio";
 
@@ -170,56 +168,3 @@ return res.status(201).json({
   }
 };
 
-export const handleBrokenLinks = async (req: Request, res: Response) => {
-  const { website_id, user_id, maxDepth = 1 } = req.body;
-
-  if (!website_id || !user_id) {
-    return res.status(400).json({ error: "Both 'url' and 'user_id' are required." });
-  }
-
-  try {
-    // Step 1: Ensure website is tracked
-
-    // Step 2: Run the broken link crawler
-    const brokenLinksResult = await checkBrokenLinks(user_id, website_id, maxDepth);
-
-    const totalBroken = brokenLinksResult.length;
-
-    // Step 3: Save analysis to DB
-    const saved = await saveBrokenLinkAnalysis(user_id, website_id, brokenLinksResult, totalBroken);
-
-
-   
-
-    await prisma.analysis_status.upsert({
-    where: {
-    user_id_website_id: {
-      user_id,
-      website_id,
-    },
-  },
-  update: {
-    broken_links: saved.website_analysis_id,
-  },
-  create: {
-    user_id,
-    website_id,
-    broken_links: saved.website_analysis_id,
-  },
-});
-
-    return res.status(201).json({
-      message: totalBroken ? "Broken links found and saved." : "No broken links found. Data recorded.",
-      website_id: website_id,
-      analysis_id: saved.website_analysis_id,
-      totalBroken,
-      brokenLinks: brokenLinksResult,
-    });
-  } catch (err: any) {
-    console.error("❌ handleBrokenLinks error:", err);
-    return res.status(500).json({
-      error: "Failed to check broken links.",
-      detail: err?.message || "Internal server error",
-    });
-  }
-};
