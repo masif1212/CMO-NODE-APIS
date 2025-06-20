@@ -84,8 +84,8 @@ if (analysis?.audit_details) {
       },
       Link_Health: {
           message: totalBroken ? "Broken links found and saved." : "No broken links found.",
-          website_id: website_id,
-          analysis_id: saved.website_analysis_id,
+          // website_id: website_id,
+          // analysis_id: saved.website_analysis_id,
           totalBroken,
           brokenLinks: brokenLinksResult,
       }}

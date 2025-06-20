@@ -8,47 +8,107 @@ const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
+// Utility: Estimate numeric rating from textual content
+const estimateRating = (key: string, content: any): number => {
+  const str = JSON.stringify(content).toLowerCase();
+
+  if (str.includes("excellent") || str.includes("present") || str.includes("implemented")) return 10;
+  if (str.includes("strong") || str.includes("comprehensive")) return 9;
+  if (str.includes("good") || str.includes("clear")) return 8;
+  if (str.includes("adequate") || str.includes("detected")) return 7;
+  if (str.includes("missing") || str.includes("not found")) return 2;
+  if (str.includes("n/a") || str.includes("na")) return 1;
+
+  return 5;
+};
+
+// Utility: Inject title+ratings into nested structure
+const injectRatings = (section: any): any => {
+  if (!section || typeof section !== "object") return section;
+
+  const result: any = {};
+
+  for (const [key, value] of Object.entries(section)) {
+    if (
+      value &&
+      typeof value === "object" &&
+      ("title" in value || "reason" in value || "issue" in value)
+    ) {
+      const title =
+        (value as any).title ||
+        (value as any).reason ||
+        ((value as any).issue && (value as any).issue.title) ||
+        ((value as any).issue && (value as any).issue.reason) ||
+        key;
+      const rating = estimateRating(title, value);
+      result[key] = {
+        ...((value as any).element ? { element: { rating, title } } : {}),
+        ...((value as any).issue ? { issue: { rating, title } } : {}),
+    
+          rating,
+          reason:
+            (value as any).explanation?.reason ||
+            (value as any).reason ||
+            "No explanation provided",
+      
+      };
+    } else {
+      result[key] = injectRatings(value);
+    }
+  }
+
+  return result;
+};
+
+
+const normalizeRecommendations = (
+  input: any
+): Record<string, { tag: string; recommendation: string }[]> => {
+  const result: Record<string, { tag: string; recommendation: string }[]> = {};
+
+  for (const [category, items] of Object.entries(input || {})) {
+    result[category] = [];
+
+    for (const item of items as any[]) {
+      result[category].push({
+        tag: item.tag || "Untitled",
+        recommendation: typeof item.recommendation === "string"
+          ? item.recommendation.trim()
+          : JSON.stringify(item.recommendation),
+      });
+    }
+  }
+
+  return result;
+};
+
 export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
-  // console.log("website_id",website_id)
+  if (!website_id || !user_id) {
+    return Response.json({ error: "Missing website_id or user_id" }, { status: 400 });
+  }
 
+  try {
+    const [scraped, analysis, traffic] = await Promise.all([
+      prisma.website_scraped_data.findUnique({ where: { website_id } }),
+      prisma.brand_website_analysis.findFirst({
+        where: { website_id },
+        orderBy: { created_at: "desc" },
+      }),
+      prisma.brand_traffic_analysis.findFirst({
+        where: { website_id },
+        orderBy: { created_at: "desc" },
+      }),
+    ]);
 
-if (!website_id) {
-  return Response.json({ error: "Missing website_id" }, { status: 400 });
-}
-
-if (!user_id) {
-  return Response.json({ error: "Missing user_id" }, { status: 400 });
-}
-
-try {
-
-
-
-
-  const [scraped, analysis, traffic] = await Promise.all([
-  prisma.website_scraped_data.findUnique({ where: { website_id } }),
-
-  prisma.brand_website_analysis.findFirst({
-    where: { website_id },
-    orderBy: { created_at: "desc" }, // or use updated_at
-  }),
-
-  prisma.brand_traffic_analysis.findFirst({
-    where: { website_id },
-    orderBy: { created_at: "desc" }, // or use updated_at
-  }),
-]);
-  // console.log("analysis",analysis)
-
-   
+    // Extract H1
     let h1Text = "Not Found";
-    if (scraped && scraped.raw_html) {
+    if (scraped?.raw_html) {
       const $ = cheerio.load(scraped.raw_html);
       h1Text = $("h1").first().text().trim() || "Not Found";
     }
-    // console.log("h1",h1Text)
-    
- let optimization_opportinuties: any = "None";
+
+       
+let optimization_opportinuties: any = "None";
 
 if (analysis?.audit_details) {
   try {
@@ -64,261 +124,131 @@ if (analysis?.audit_details) {
   }
 }
 
-console.log("Optimization Opportunities:", optimization_opportinuties);
-
-const workingFixPrompt = `
-You are a professional SEO and website auditor. Based on the data provided, categorize key website features into two sections:
-
-1. **What's Working**
-2. **What Needs Fixing**
-
-For each item, provide a structured response in **JSON format** with the following fields:
-- **item**: Short name of the feature
-- **importance**: "High", "Medium", or "Low"
-- **rating**: Score out of 10
-- **justification**: A brief explanation of the result and its SEO/performance impact
+// console.log("Optimization Opportunities:", optimization_opportinuties);
 
 
-### Website Metadata
-- Title: ${scraped?.page_title ?? "N/A"}
-- Meta Description: ${scraped?.meta_description ?? "N/A"}
-- Meta Keywords: ${scraped?.meta_keywords ?? "N/A"}
-- H1: ${h1Text}
 
-### OG Tags
-- OG Title: ${scraped?.og_title ?? "N/A"}
-- OG Description: ${scraped?.og_description ?? "N/A"}
-- OG Image: ${scraped?.og_image ? "Present" : "Missing"}
+    const allData = {
+      metadata: {
+        title: scraped?.page_title ?? "N/A",
+        description: scraped?.meta_description ?? "N/A",
+        keywords: scraped?.meta_keywords ?? "N/A",
+        h1: h1Text,
+        og: {
+          title: scraped?.og_title ?? "N/A",
+          description: scraped?.og_description ?? "N/A",
+          image: scraped?.og_image ? "Present" : "Missing",
+        },
+        schema: scraped?.schema_analysis ?? "None",
+        ctr_loss_percent: scraped?.ctr_loss_percent ?? "N/A",
+        homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
+      },
+      performance: {
+        lcp: analysis?.largest_contentful_paint ?? "N/A",
+        cls: analysis?.cumulative_layout_shift ?? "N/A",
+        fcp: analysis?.first_contentful_paint ?? "N/A",
+        speed_index: analysis?.speed_index ?? "N/A",
+        tti: analysis?.time_to_interactive ?? "N/A",
+        tbt: analysis?.total_blocking_time ?? "N/A",
+        performance_score: analysis?.performance_score ?? "N/A",
+        accessibility_score: analysis?.accessibility_score ?? "N/A",
+        best_practices_score: analysis?.best_practices_score ?? "N/A",
+        revenue_loss_percent: analysis?.revenue_loss_percent ?? "N/A",
+        optimization_oppurtunities: optimization_opportinuties,
+        // status_code: scraped?.status_code ?? "N/A",
+        // status_message: scraped?.status_message ?? "N/A",
+        // ip_address: scraped?.ip_address ?? "N/A",
+        // response_time_ms: scraped?.response_time_ms ?? "N/A",
+        
 
-### Performance
-- LCP: ${analysis?.largest_contentful_paint ?? "N/A"}
-- CLS: ${analysis?.cumulative_layout_shift ?? "N/A"}
-- FCP: ${analysis?.first_contentful_paint ?? "N/A"}
-- Speed Index: ${analysis?.speed_index ?? "N/A"}
-- TTI: ${analysis?.time_to_interactive ?? "N/A"}
-- TBT: ${analysis?.total_blocking_time ?? "N/A"}
-- Performance Score: ${analysis?.performance_score ?? "N/A"}
+      },
+      seo: {
+        seo_score: analysis?.seo_score ?? "N/A",
+        broken_links: Array.isArray(analysis?.broken_links)
+          ? analysis?.broken_links
+          : [analysis?.broken_links ?? "None"],
+      },
+      traffic: {
+        avg_session_duration: traffic?.avg_session_duration,
+        engagement_rate: traffic?.engagement_rate,
+        engaged_sessions: traffic?.engaged_sessions,
+        total_visitors: traffic?.total_visitors,
+        unique_visitors: traffic?.unassigned,
+        sources: {
+          organic: traffic?.organic_search,
+          direct: traffic?.direct,
+          referral: traffic?.referral,
+          social: traffic?.organic_social,
+        },
+        new_vs_returning: traffic?.new_vs_returning,
+        top_countries: traffic?.top_countries,
+        top_devices: traffic?.top_devices,
+        top_sources: traffic?.top_sources,
+      },
+    };
 
-### SEO
-- SEO Score: ${analysis?.seo_score ?? "N/A"}
-- Broken Links: ${analysis && Array.isArray(analysis.broken_links) ? analysis.broken_links.join(", ") : analysis?.broken_links || "None"}
-- Schema: ${scraped?.schema_analysis ? JSON.stringify(scraped.schema_analysis) : "None"}
+    const prompt = `
+You are a senior technical SEO expert with extensive experience in metadata, accessibility, structured data, web vitals, and analytics.
 
-### UX/Behavior
-- Session Duration: ${traffic?.avg_session_duration ?? "N/A"}
-- Engagement Rate: ${traffic?.engagement_rate ?? "N/A"}
-- Engaged Sessions: ${traffic?.engaged_sessions ?? "N/A"}
+Each element you describe will be rated numerically from 1 to 10 by an automated system:
+- 10 = Excellent
+- 5 = Average / Needs improvement
+- 1 = Poor / Missing / Broken
 
-Return your response in the following **JSON format**:
-{
-  "whats_working": [
-    {
-      "item": "Meta Description",
-      "importance": "High",
-      "rating": 8,
-      "justification": "Well-written and keyword-rich, supports search CTR."
-    },
-    ...
-  ],
-  "what_needs_fixing": [
-    {
-      "item": "OG Image",
-      "importance": "High",
-      "rating": 3,
-      "justification": "Missing OG image reduces social media CTR and brand appeal."
-    },
-    ...
-  ],
-}
+
+Given the provided JSON input, output a structured JSON response with these three keys:
+
+1. **whats_working**: A dictionary of working elements. Each entry must include:
+   - \`title\`: A short descriptive label (e.g., "Title Tag", "Open Graph Image")
+   - \`explanation.reason\`: A brief expert explanation of why it works well
+
+2. **what_needs_fixing**: A dictionary of problematic elements. Each must include:
+   - \`title\`: A clear label (e.g., "Missing og:image")
+   - \`explanation.reason\`: Why it’s underperforming or incorrect
+
+3. **recommendations**: A dictionary where keys are categories (e.g., "metadata", "performance") and each value is an array of objects:
+   - \`tag\`: A readable identifier (matching titles above)
+   - \`recommendation\`: A clear, technical, actionable fix  in detail(avoid generic tools)
+
+Be consistent: titles in “what_needs_fixing” and “recommendations.tag” should match.
+
+Output only valid JSON.
 `;
 
-
-// console.log("workingfix propmt",workingFixPrompt)
-
-    const workingFixRes = await openai.chat.completions.create({
+    const llmResponse = await openai.chat.completions.create({
       model,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content: "You are an expert web auditor focused on diagnosing issues and highlighting strengths.",
-        },
-        {
-          role: "user",
-          content: workingFixPrompt,
-        },
+        { role: "system", content: prompt },
+        { role: "user", content: JSON.stringify(allData) },
       ],
-      temperature: 0.7,
     });
 
-    const workingFixContent = workingFixRes.choices[0].message.content || "";
-    // console.log("workingFixContent",workingFixContent)
-   
+    const llmContent = llmResponse.choices[0].message.function_call?.arguments
+      ? JSON.parse(llmResponse.choices[0].message.function_call.arguments)
+      : JSON.parse(llmResponse.choices[0].message.content || "{}");
 
+    const combinedOutput = {
+      whats_working: injectRatings(llmContent.whats_working),
+      what_needs_fixing: injectRatings(llmContent.what_needs_fixing),
+      recommendations: normalizeRecommendations(llmContent.recommendations),
+    };
 
-const recommendationPrompt = `
-You are a senior SEO and web performance analyst. Using the data below, conduct a comprehensive technical SEO audit and provide actionable, detailed suggestions.
-
-## Scraped Website Metadata
-- **Title**: ${scraped?.page_title ?? "N/A"}
-    → Is this title tag appropriate?
-    → Analyze structure, length, keyword usage, clarity, and uniqueness.
-    → Say if it's too long, too short, missing important keywords, or duplicates others.
-    → Suggest an improved version, even if it's already good.
-
-- **Meta Description**: ${scraped?.meta_description ?? "N/A"}
-    → Is this meta description compelling and optimized?
-    → Check for length, inclusion of primary keywords, readability, and CTA (call to action).
-    → Suggest improvements, even if it’s decent.
-
-- **Meta Keywords**: ${scraped?.meta_keywords ?? "N/A"}
-    → Are these keywords relevant, overused, outdated, or missing?
-    → Should this tag be kept or removed?
-
-- **H1 Heading**: "${h1Text}"
-    → Is this H1 heading appropriate?
-    → Analyze structure, length, keyword usage, clarity, and uniqueness.
-    → Say if it's good, too short, too generic, keyword-stuffed, or missing key terms.
-    → Suggest improvements even if it's already good.
-
-- **CTR Loss Percent (estimated)**: ${scraped?.ctr_loss_percent ?? "N/A"}%
-    → Based on metadata and above-the-fold content, could the CTR be improved?
-    → Suggest specific metadata or headline changes to reduce loss.
-
-## Open Graph (OG) Tags
-- **OG Title**: ${scraped?.og_title ?? "N/A"}
-    → Is the OG title optimized for social sharing?
-    → Does it align with the page title and include value or intrigue?
-    → Suggest improvements.
-
-- **OG Description**: ${scraped?.og_description ?? "N/A"}
-    → Is this concise, relevant, and click-worthy for platforms like Facebook and LinkedIn?
-    → Suggest improvements even if good.
-
-- **OG Image**: ${scraped?.og_image ? "Present" : "Missing"}
-    → Is an image present?
-    → If not, recommend ideal dimensions, format, and content type.
-    → If present, describe what kind of OG image would maximize CTR.
-
-## Website Performance Analysis
-- **Largest Contentful Paint (LCP)**: ${analysis?.largest_contentful_paint ?? "N/A"}
-- **Cumulative Layout Shift (CLS)**: ${analysis?.cumulative_layout_shift ?? "N/A"}
-- **First Contentful Paint (FCP)**: ${analysis?.first_contentful_paint ?? "N/A"}
-- **Speed Index**: ${analysis?.speed_index ?? "N/A"}
-- **Time to Interactive (TTI)**: ${analysis?.time_to_interactive ?? "N/A"}
-- **Total Blocking Time (TBT)**: ${analysis?.total_blocking_time ?? "N/A"}
-- **Performance Score**: ${analysis?.performance_score ?? "N/A"}
-
-→ Are any metrics out of Core Web Vitals thresholds?
-→ Suggest specific technical optimizations (code splitting, lazy loading, font loading, etc.)
-
-## Accessibility and Best Practices
-- **Accessibility Score**: ${analysis?.accessibility_score ?? "N/A"}
-- **Best Practices Score**: ${analysis?.best_practices_score ?? "N/A"}
-→ What common accessibility issues are likely?
-→ Suggest fixes and audit tools.
-
-## SEO Specific Audit
-- **SEO Score**: ${analysis?.seo_score ?? "N/A"}
-- **Broken Links** (${analysis?.total_broken_links ?? "N/A"}): ${Array.isArray(analysis?.broken_links) ? analysis?.broken_links.join(", ") : (typeof analysis?.broken_links === "string" ? analysis?.broken_links : "None")}
-→ List impact of broken links and suggest a prioritization plan to fix.
-
-- **Schema Markup**: ${scraped?.schema_analysis ? JSON.stringify(scraped?.schema_analysis) : "None"}
-→ Is structured data present and valid?
-→ Are rich results supported (e.g., product, article, local business)?
-→ Suggest schema types and fixes for maximum visibility.
-
-- **Estimated Revenue Loss Due to Performance**: ${analysis?.revenue_loss_percent ?? "N/A"}%
-
-## Website Traffic and Behavior Analysis
-- **Avg Session Duration**: ${traffic?.avg_session_duration}
-- **Engagement Rate**: ${traffic?.engagement_rate}
-- **Engaged Sessions**: ${traffic?.engaged_sessions}
-
-
-→ Is user engagement healthy?
-→ Based on metrics, suggest UX or content changes to boost session length and lower bounce.
-
-## Traffic Source Breakdown
-- **Total Visitors**: ${traffic?.total_visitors}
-- **Unique Visitors**: ${traffic?.unassigned}
-- **Organic Search**: ${traffic?.organic_search}
-- **Direct Traffic**: ${traffic?.direct}
-- **Referral Traffic**: ${traffic?.referral}
-- **Social Traffic**: ${traffic?.organic_social}
-- **New vs Returning Visitors**: ${traffic?.new_vs_returning}
-- **Top Countries**: ${Array.isArray(traffic?.top_countries) ? traffic?.top_countries.join(", ") : traffic?.top_countries}
-- **Top Devices**: ${traffic?.top_devices}
-- **Top Sources**: ${traffic?.top_sources}
-
-→ Are traffic sources balanced or skewed?
-→ Suggest strategies to improve underperforming channels (e.g., content for SEO, paid traffic, better social CTAs).
-
-## Output Format Instructions
-
-Please return your response in **structured sections** with the following:
-
-1. **Executive Summary**
-   - Overview of current SEO, UX, and technical status
-
-2. **Tag-by-Tag Analysis**
-   - Bullet point feedback on each tag (title, description, H1, OG, schema) with "good/bad" rating and improvement suggestions.
-
-3. **Technical SEO & Performance Fixes**
-   - Review CWV metrics, accessibility, best practices
-
-4. **User Behavior & Engagement**
-   - Interpret session and bounce data and offer retention strategies
-
-5. **Marketing & Content Strategy**
-   - What to change in content, landing pages, or UX to boost conversion
-
-6. **Top 5 Recommended Actions**
-   - Prioritized high-impact changes in order
-
-Use **clear bullet points**, **section headers**, and avoid vague language. Include suggestions even for areas that seem fine.
-`;
-
-    // Call LLM for Recommendations
-    const recommendationRes = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "You are a senior SEO and web marketing strategist.",
-        },
-        {
-          role: "user",
-          content: recommendationPrompt,
-        },
-      ],
-      temperature: 0.7,
-    });
-
-    const recommendationContent = recommendationRes.choices[0].message.content || "";
-
-    // Save both outputs in DB
     await prisma.llm_responses.upsert({
       where: { website_id },
       update: {
-        dashboard1_what_working: workingFixContent,
-        recommendation_by_mo_dashboard1: recommendationContent,
+        dashboard1_what_working: JSON.stringify(combinedOutput),
       },
       create: {
         website_id,
-        dashboard1_what_working: workingFixContent,
-        recommendation_by_mo_dashboard1: recommendationContent,
+        dashboard1_what_working: JSON.stringify(combinedOutput),
       },
     });
 
-    return ({
-      success: 'whats working and what needs to be fixed + recommendation',
-      data: {
-        what_working_and_what_needs_to_be_fix: workingFixContent,
-        recommendation: recommendationContent,
-      },
-    });
+    return { success: true, data: combinedOutput };
   } catch (err) {
     console.error("LLM Audit Error:", err);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
-}
+};

@@ -207,6 +207,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 
 
 export const dashborad1_Recommendation = async (req: Request, res: Response) => {
+  console.log("dashborad1_Recommendation called");
   const {website_id, user_id } = req.body;
 
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
@@ -214,6 +215,7 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
 
   try {
     const llm_res = await generateLLMTrafficReport(website_id,user_id)
+    console.log("LLM Response:", llm_res);
     return res.status(200).json({  llm_response: llm_res });
   } catch (error: any) {
     console.error("Analytics save error:", error);
