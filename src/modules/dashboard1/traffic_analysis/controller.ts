@@ -112,7 +112,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
   }
 
-  console.log(website_id, "website id");
+  // console.log(website_id, "website id");
 
   try {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });

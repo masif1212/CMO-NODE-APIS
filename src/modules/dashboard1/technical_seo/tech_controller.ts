@@ -34,17 +34,20 @@ export const handleBrokenLinks = async (req: Request, res: Response) => {
   },
 });
 
-let userAccessReadiness = null;
+let user_access_readiness: any = "None";
+
 if (analysis?.audit_details) {
-  let auditDetailsObj: any = analysis.audit_details;
-  if (typeof auditDetailsObj === "string") {
-    try {
-      auditDetailsObj = JSON.parse(auditDetailsObj);
-    } catch (e) {
-      auditDetailsObj = {};
-    }
+  try {
+    const auditDetails =
+      typeof analysis.audit_details === "string"
+        ? JSON.parse(analysis.audit_details)
+        : analysis.audit_details;
+
+    user_access_readiness = auditDetails?.user_access_readiness || "None";
+  } catch (error) {
+    console.error("Error parsing audit_details:", error);
+    user_access_readiness = "None";
   }
-  userAccessReadiness = auditDetailsObj.user_access_readiness || null;
 }
 
    
@@ -70,18 +73,22 @@ if (analysis?.audit_details) {
 
 
     return res.status(201).json({
+      Technical_SEO: {
       Schema_Markup_Status: {
           message: schemaResult.message,
           valid: schemaResult.schemas.summary
       },
-
+      User_Access_Readiness: {
+          user_access_readiness: user_access_readiness,
+        
+      },
       Link_Health: {
           message: totalBroken ? "Broken links found and saved." : "No broken links found.",
           website_id: website_id,
           analysis_id: saved.website_analysis_id,
           totalBroken,
           brokenLinks: brokenLinksResult,
-      }
+      }}
     });
   } catch (err: any) {
     console.error("❌ handleBrokenLinks error:", err);

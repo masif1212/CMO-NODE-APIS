@@ -48,7 +48,23 @@ try {
     }
     // console.log("h1",h1Text)
     
+ let optimization_opportinuties: any = "None";
 
+if (analysis?.audit_details) {
+  try {
+    const auditDetails =
+      typeof analysis.audit_details === "string"
+        ? JSON.parse(analysis.audit_details)
+        : analysis.audit_details;
+
+    optimization_opportinuties = auditDetails?.optimization_opportinuties || "None";
+  } catch (error) {
+    console.error("Error parsing audit_details:", error);
+    optimization_opportinuties = "None";
+  }
+}
+
+console.log("Optimization Opportunities:", optimization_opportinuties);
 
 const workingFixPrompt = `
 You are a professional SEO and website auditor. Based on the data provided, categorize key website features into two sections:

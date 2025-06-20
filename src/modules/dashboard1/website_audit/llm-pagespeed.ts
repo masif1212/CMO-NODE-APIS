@@ -80,7 +80,6 @@ export const generateLLMAuditReportforpagespeed = async (req: Request, res: Resp
         speed_index: true,
         cumulative_layout_shift: true,
         time_to_interactive: true,
-        missing_image_alts: true,
       },
     });
 
@@ -329,7 +328,7 @@ Keep the tone authoritative yet clear for all roles. Use real data and avoid vag
       temperature: 0.7,
       max_tokens: max_tokens,
     });
-    console.log("LLM Response:", response);
+    // console.log("LLM Response:", response);
     const llmOutput = response.choices?.[0]?.message?.content;
 
     // 7. Store report

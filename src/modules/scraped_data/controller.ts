@@ -14,7 +14,7 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
     const data = await scrapeWebsite(user_id, website_url);
     return res.status(200).json({
       message: "Website scraped successfully",
-      data: data,
+      data,
     });
   } catch (error) {
     console.error("Scrape handler error:", error);
