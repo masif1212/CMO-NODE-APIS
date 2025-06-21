@@ -6,7 +6,8 @@ import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from '@prisma/client';
 import { generateLLMTrafficReport } from "../llm_dashboard1";
-import cheerio from "cheerio";
+
+import * as cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 
@@ -31,27 +32,63 @@ export const startGoogleAuth = (req: Request, res: Response) => {
   res.redirect(authUrl);
 };
 
+// export const handleGoogleCallback = async (req: Request, res: Response) => {
+//   const code = req.query.code as string;
+
+//   if (!code) return res.status(400).send("Missing authorization code");
+
+//   try {
+//     const { tokens } = await oAuth2Client.getToken(code);
+//     oAuth2Client.setCredentials(tokens);
+
+//     const idToken = tokens.id_token;
+//     const decodedToken = jwt.decode(idToken as string);
+//     const userId = (decodedToken as any).sub;
+
+//     req.session.user = {
+//       userId,
+//       accessToken: tokens.access_token!,
+//       refreshToken: tokens.refresh_token,
+//       profile: decodedToken,
+//     };
+
+//     // Send HTML response that will close the popup and notify the parent window
+//     res.send(`
+//       <script>
+//         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
+//         window.close();
+//       </script>
+//     `);
+//   } catch (err) {
+//     console.error("OAuth2 callback error:", err);
+//     res.send(`
+//       <script>
+//         window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
+//         window.close();
+//       </script>
+//     `);
+//   }
+// };
+
+
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
-
-  if (!code) return res.status(400).send("Missing authorization code");
-
+  // console.log("Received Authorization Code:", code);
+  // console.log("Configured Redirect URI:", oAuth2Client.redirectUri); // Cannot access private property
   try {
     const { tokens } = await oAuth2Client.getToken(code);
+    // console.log("Tokens Received:", tokens.access_token, tokens.refresh_token);
     oAuth2Client.setCredentials(tokens);
-
     const idToken = tokens.id_token;
     const decodedToken = jwt.decode(idToken as string);
     const userId = (decodedToken as any).sub;
-
     req.session.user = {
       userId,
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token,
       profile: decodedToken,
     };
-
-    // Send HTML response that will close the popup and notify the parent window
+    // console.log("Session Updated:", req.session.user);
     res.send(`
       <script>
         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
@@ -59,13 +96,23 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
       </script>
     `);
   } catch (err) {
-    console.error("OAuth2 callback error:", err);
-    res.send(`
-      <script>
-        window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
-        window.close();
-      </script>
-    `);
+    if (err instanceof Error) {
+      console.error("Token Exchange Error:", err.message, err.stack);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed: ${err.message}' }, '*');
+          window.close();
+        </script>
+      `);
+    } else {
+      console.error("Token Exchange Error:", err);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
+          window.close();
+        </script>
+      `);
+    }
   }
 };
 
@@ -176,10 +223,26 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 });
 
   let h1Text = "Not Found";
-    if (scrapedMeta && scrapedMeta.raw_html) {
-      const $ = cheerio.load(scrapedMeta.raw_html);
-      h1Text = $("h1").first().text().trim() || "Not Found";
+
+if (scrapedMeta?.raw_html ) {
+  try {
+    console.log("parsing HTML...");
+    // console.log("Raw HTML Length:", scrapedMeta.raw_html);
+    const $ = cheerio.load(scrapedMeta.raw_html);
+
+    h1Text = $("h1").first().text().trim() || "Not Found";
+    console.log("H1 Text:", h1Text);
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn("Cheerio failed to parse HTML:", err.message);
+    } else {
+      console.warn("Cheerio failed to parse HTML:", err);
     }
+    // Skips setting h1Text if error happens
+  }
+} else {
+  console.warn("Cheerio.load not available or raw_html missing");
+}
 
  const {
   raw_html, 
@@ -192,8 +255,8 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
       onpage_opptimization:{
       h1Text,
       metaDataWithoutRawHtml,
-      
-      }
+      },
+      raw_html: scrapedMeta?.raw_html,
     });
   } catch (error: any) {
     console.error("Analytics save error:", error);
@@ -207,7 +270,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 
 
 export const dashborad1_Recommendation = async (req: Request, res: Response) => {
-  console.log("dashborad1_Recommendation called");
+  // console.log("dashborad1_Recommendation called");
   const {website_id, user_id } = req.body;
 
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
@@ -215,7 +278,7 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
 
   try {
     const llm_res = await generateLLMTrafficReport(website_id,user_id)
-    console.log("LLM Response:", llm_res);
+    // console.log("LLM Response:", llm_res);
     return res.status(200).json({  llm_response: llm_res });
   } catch (error: any) {
     console.error("Analytics save error:", error);

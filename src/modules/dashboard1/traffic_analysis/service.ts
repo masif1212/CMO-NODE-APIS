@@ -86,8 +86,10 @@ export const getUserProperties = async (auth: OAuth2Client) => {
 
 
 export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string) => {
+  // console.log("Fetching analytics summary for property:", propertyId);
   const analyticsData = google.analyticsdata({ version: "v1beta", auth });
 
+  // console.log("Analytics Data API initialized",analyticsData);
   const today = new Date();
   const startDate = new Date(today);
   startDate.setDate(today.getDate() - 30);
@@ -241,12 +243,13 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
 
   const total_visitors = parseInt(summary?.activeUsers, 10) || 0;
   const overall_bounce_rate = parseFloat(summary?.bounceRate) || null;
-
+  // console.log("Total Visitors:", total_visitors);
+  // console.log("Overall Bounce Rate:", overall_bounce_rate);
   const actionable_fix =
     (trafficMap["organic_search"] || 0) / total_visitors > 0.5
       ? "✅ Organic traffic looks healthy."
       : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
-
+  
   return prisma.brand_traffic_analysis.create({
     data: {
       website_id,
