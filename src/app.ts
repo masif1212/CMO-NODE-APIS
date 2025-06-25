@@ -10,11 +10,12 @@ import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/dashboard2/router";
 import { competitorRouter } from "./modules/dashboard3/competitor.routes";
-import brandAuditRouter from "./modules/llm_call/router";
 import geo_llm from "./modules/dashboard1/geo/router";
 import userRequirementsRouter from "./modules/form_data/router";
 import mainDashboard from "./modules/dashboard/dashboard.router"; 
 import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
+import dashboard4Router from "./modules/dashboard4/router";
+
 
 
 
@@ -52,28 +53,44 @@ app.use(
 );
 
 
-app.use("/api/users", usersRouter);
-app.use("/api/pagespeed", pageSpeedRouter);
-app.use("/api/auth", authRouter);
-app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
-app.use("/api", mainDashboard);
 
-// Existing routes...
-app.use("/api/scrape", routes); 
-app.use('/api/competitors', competitorRouter);
-app.use("/api/brand-audit", brandAuditRouter);
-app.use("/api", technicalSeoRouter);
+// Main dashboard route
+app.use("/api/main_dashboard", mainDashboard);
 
-app.use("/api/social_media/youtube", youtubeRouter);
-
-app.use("/api/dashboardRouter1", dashboardRouter1);
-
+//form data route
 app.use("/api/user-requirements", userRequirementsRouter);
 
 
+//route for scrapping data
+app.use("/api/scrape", routes);
 
 
-app.use("/api", geo_llm);
+//dashboard1 routes
+
+app.use("/api/pagespeed", pageSpeedRouter);//website health audit
+app.use("/api/users", usersRouter);// googe auth api
+
+app.use("/api/auth", authRouter);
+app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
+
+app.use("/api/technical_seo", technicalSeoRouter);
+
+app.use("/api/geo", geo_llm);
+
+app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for dashboard 1
+
+//dashboard2 routes
+app.use("/api/social_media/youtube", youtubeRouter);
+
+//dashboard3 routes
+
+app.use('/api/competitors', competitorRouter);
+
+
+
+//dashboard4 routes
+app.use("/api/recommendationbycmo", dashboard4Router);
+
 // Global error handler
 app.use(errorHandler);
 

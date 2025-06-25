@@ -6,8 +6,7 @@ import { URL } from "url";
 import { BrokenLinkResult } from "../../../types/express";
 
 const prisma = new PrismaClient();
-const API_KEY = process.env.PAGESPEED_API_KEY || "YOUR_KEY";
-const API_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
+
 const TIMEOUT_MS = 10000;
 
 const excludedDomains = [
@@ -69,6 +68,7 @@ async function extractLinks(pageUrl: string, browser: Browser): Promise<string[]
   await page.close();
   return [...new Set(links)];
 }
+
 
 function getErrorMessage(status: number, url: string): { error: string; quickFix: string } {
   switch (status) {
@@ -153,10 +153,17 @@ export async function checkBrokenLinks(
 
   // Step 2: Get base URL safely (assuming this also verifies the website)
 //   
-
+  
   // Puppeteer browser and sets for tracking
-  const browser = await puppeteer.launch({ headless: "new" as any });
+  console.log(`Puppeteer is launching...`);
+  const browser = await puppeteer.launch({ headless: "new" as any })
+
+  console.log(`Puppeteer launched successfully.`);
+  console.log(`Starting to crawl website: ${website_url} with max depth: ${maxDepth}`);
+
   const brokenLinks: BrokenLinkResult[] = [];
+
+  
   const visited = new Set<string>();
   const checkedLinks = new Set<string>();
 
@@ -206,7 +213,6 @@ export async function checkBrokenLinks(
     }
   }
 
-  // Step 3: Start crawling from baseUrl
   await crawl(website_url, 0);
 
   await browser.close();

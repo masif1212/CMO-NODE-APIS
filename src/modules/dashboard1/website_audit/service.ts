@@ -139,7 +139,7 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
 export async function checkBrokenLinks(
   user_id: string,
   website_id: string,
-  maxDepth = 1
+  maxDepth = 0
 ): Promise<BrokenLinkResult[]> {
   // Step 1: Verify website ownership before proceeding
   const userWebsite = await prisma.user_websites.findFirst({

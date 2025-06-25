@@ -74,6 +74,165 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   }
 }
 
+// export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult> {
+//   const start = Date.now();
+//   const domain = new URL(url).hostname;
+
+//   let statusCode = 0;
+//   let ipAddress = "N/A";
+//   let message = "Unknown error";
+//   let html = "";
+
+//   try {
+//     const response = await axios.get(url);
+//     html = response.data;
+//     statusCode = response.status;
+//     const dnsResult = await dns.lookup(domain);
+//     ipAddress = dnsResult.address;
+//     message = statusCode >= 200 && statusCode < 400 ? "Website is up" : "Website responded with an error";
+//   } catch (error) {
+//     throw new Error(`Failed to fetch or resolve the website: ${(error as Error).message}`);
+//   }
+
+//   const responseTimeMs = Date.now() - start;
+
+//   const newWebsite = await prisma.user_websites.create({
+//     data: {
+//       website_url: url,
+//       users: { connect: { user_id } },
+//     },
+//     select: { website_id: true },
+//   });
+
+//   const websiteId = newWebsite.website_id;
+//   const $ = cheerio.load(html);
+
+//   const meta = {
+//     page_title: $("title").text() || "not found",
+//     // page_title: $("head > title").first().text().trim() || "not found",
+//     // page_title: $('meta[name="description"]').attr("content") || "not found",
+
+//     meta_description: $('meta[name="description"]').attr("content") || "not found",
+//     meta_keywords: $('meta[name="keywords"]').attr("content") || "not found",
+//     og_title: $('meta[property="og:title"]').attr("content") || "not found",
+//     og_description: $('meta[property="og:description"]').attr("content") || "not found",
+//     og_image: $('meta[property="og:image"]').attr("content") || "not found",
+//   };
+
+//   let twitter, facebook, instagram, linkedin, youtube, tiktok;
+//   const otherLinks: string[] = [];
+
+//   $("a").each((_, el) => {
+//     const href = $(el).attr("href");
+//     if (!href) return;
+//     const link = href.toLowerCase();
+//     if (link.includes("twitter.com")) twitter ||= href;
+//     else if (link.includes("facebook.com")) facebook ||= href;
+//     else if (link.includes("instagram.com")) instagram ||= href;
+//     else if (link.includes("linkedin.com")) linkedin ||= href;
+//     else if (link.includes("youtube.com")) youtube ||= href;
+//     else if (link.includes("tiktok.com")) tiktok ||= href;
+//     else otherLinks.push(href);
+//   });
+
+//   // ✅ Image alt text analysis for homepage
+//   const imgTags = $("img");
+//   const totalImages = imgTags.length;
+//   const imagesWithAlt = imgTags.filter((_, el) => {
+//     const alt = $(el).attr("alt");
+//     return !!(alt && alt.trim().length > 0);
+//   }).length;
+
+//   const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+
+//   // Sitemap extraction
+//   const sitemapUrls = await getRobotsTxtAndSitemaps(url);
+//   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
+//   const allUrls = new Set<string>([url, ...sitemapLinks.map(u => u.trim())]);
+//   const uniqueUrls = [...allUrls];
+
+//   let affectedPagesCount = 0;
+//   const keyPages = await Promise.all(uniqueUrls.map(async (pageUrl) => {
+//     try {
+//       const res = await axios.get(pageUrl);
+//       if (res.status >= 200 && res.status < 400) {
+//         const $$ = cheerio.load(res.data);
+//         const title = $$("title").text() || "not found";
+//         const meta_description = $$('meta[name="description"]').attr("content") || "not found";
+//         const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
+//         const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
+
+//         const missingAny = !(title && meta_description && og_title && meta_keywords);
+//         if (missingAny) affectedPagesCount++;
+
+//         return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+//       }
+//     } catch {
+//       return null;
+//     }
+//   }));
+
+//   const filteredPages = keyPages
+//     .filter((p): p is NonNullable<typeof p> => !!p)
+//     .map((p) => ({
+//       url: p.url,
+//       title: p.title ?? "not found",
+//       meta_description: p.meta_description ?? "not found",
+//       og_title: p.og_title ?? null,
+//       meta_keywords: p.meta_keywords ?? "not found",
+//     }));
+
+//   const extract_message = sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found";
+//   const totalKeyPages = filteredPages.length;
+
+//   const CTR_Loss_Percent = {
+//     total_key_pages: totalKeyPages,
+//     total_affected_pages: affectedPagesCount,
+//     CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+//     extract_message,
+//   };
+
+//   const record = await prisma.website_scraped_data.create({
+//     data: {
+//       website_id: websiteId,
+//       website_url: url,
+//       page_title: meta.page_title,
+//       meta_description: meta.meta_description,
+//       meta_keywords: meta.meta_keywords,
+//       og_title: meta.og_title,
+//       og_description: meta.og_description,
+//       og_image: meta.og_image,
+//       twitter_handle: twitter,
+//       facebook_handle: facebook,
+//       instagram_handle: instagram,
+//       linkedin_handle: linkedin,
+//       youtube_handle: youtube,
+//       tiktok_handle: tiktok,
+//       ctr_loss_percent: CTR_Loss_Percent,
+//       sitemap_pages: filteredPages,
+//       homepage_alt_text_coverage: homepageAltTextCoverage,
+//       other_links: otherLinks.length > 0 ? otherLinks : "not found",
+//       raw_html: html,
+//       status_code: statusCode,
+//       ip_address: ipAddress,
+//       response_time_ms: responseTimeMs,
+//       status_message: message,
+//     },
+//   });
+
+//   return {
+//     website_id: record.website_id,
+//     // record: {
+//     //   ...record,
+//     //   raw_html: "not found",
+//     //   other_links: "not found",
+//     //   sitemap_pages: "not found",
+//     // },
+//   };
+// }
+
+
+
 export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult> {
   const start = Date.now();
   const domain = new URL(url).hostname;
@@ -107,13 +266,35 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const websiteId = newWebsite.website_id;
   const $ = cheerio.load(html);
 
+  // 🧠 Enhanced title tag handler
+  // function extractTitleTags(): string {
+  //   const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
+  //   if (titles.length === 0) return "not found";
+  //   if (titles.length === 1) return titles[0];
+  //   return `${titles.join(" || ")} - needs attention - multiple title tags found`;
+  // }
+
+  function extractTitleTags(): object {
+  const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
+  const status = titles.length === 0 ? "not found" : (titles.length === 1 ? "ok" : "multiple");
+  const message = titles.length > 1
+    ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+    : (titles[0] || "not found");
+
+  return {
+    status,
+    titles,
+    message,
+  };
+}
+
   const meta = {
-    page_title: $("title").text() || undefined,
-    meta_description: $('meta[name="description"]').attr("content") || undefined,
-    meta_keywords: $('meta[name="keywords"]').attr("content") || undefined,
-    og_title: $('meta[property="og:title"]').attr("content") || undefined,
-    og_description: $('meta[property="og:description"]').attr("content") || undefined,
-    og_image: $('meta[property="og:image"]').attr("content") || undefined,
+    page_title: extractTitleTags(),
+    meta_description: $('meta[name="description"]').attr("content") || "not found",
+    meta_keywords: $('meta[name="keywords"]').attr("content") || "not found",
+    og_title: $('meta[property="og:title"]').attr("content") || "not found",
+    og_description: $('meta[property="og:description"]').attr("content") || "not found",
+    og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
 
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
@@ -132,7 +313,6 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     else otherLinks.push(href);
   });
 
-  // ✅ Image alt text analysis for homepage
   const imgTags = $("img");
   const totalImages = imgTags.length;
   const imagesWithAlt = imgTags.filter((_, el) => {
@@ -141,23 +321,42 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   }).length;
 
   const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+  const logoSelectors = [
+  'link[rel="icon"]',
+  'link[rel="shortcut icon"]',
+  'link[rel="apple-touch-icon"]',
+  'img[alt*="logo"]',
+  'img[src*="logo"]'
+];
 
-  // Sitemap extraction
+  let logoUrl: string | undefined = undefined;
+  for (const selector of logoSelectors) {
+    const el = $(selector).first();
+    let src = el.attr("href") || el.attr("src");
+    if (src) {
+      // Handle relative URLs
+      if (src.startsWith("//")) src = "https:" + src;
+      else if (src.startsWith("/")) src = new URL(src, url).href;
+      logoUrl = src;
+      break;
+    }
+  }
   const sitemapUrls = await getRobotsTxtAndSitemaps(url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
   const allUrls = new Set<string>([url, ...sitemapLinks.map(u => u.trim())]);
   const uniqueUrls = [...allUrls];
-
+  
   let affectedPagesCount = 0;
   const keyPages = await Promise.all(uniqueUrls.map(async (pageUrl) => {
     try {
       const res = await axios.get(pageUrl);
       if (res.status >= 200 && res.status < 400) {
         const $$ = cheerio.load(res.data);
-        const title = $$("title").text() || undefined;
-        const meta_description = $$('meta[name="description"]').attr("content") || undefined;
-        const og_title = $$('meta[property="og:title"]').attr("content") || undefined;
-        const meta_keywords = $$('meta[name="keywords"]').attr("content") || undefined;
+        const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
+        const title = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : (titles[0] || "not found");
+        const meta_description = $$('meta[name="description"]').attr("content") || "not found";
+        const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
+        const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
 
         const missingAny = !(title && meta_description && og_title && meta_keywords);
         if (missingAny) affectedPagesCount++;
@@ -173,10 +372,10 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     .filter((p): p is NonNullable<typeof p> => !!p)
     .map((p) => ({
       url: p.url,
-      title: p.title ?? null,
-      meta_description: p.meta_description ?? null,
+      title: p.title ?? "not found",
+      meta_description: p.meta_description ?? "not found",
       og_title: p.og_title ?? null,
-      meta_keywords: p.meta_keywords ?? null,
+      meta_keywords: p.meta_keywords ?? "not found",
     }));
 
   const extract_message = sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found";
@@ -193,7 +392,8 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     data: {
       website_id: websiteId,
       website_url: url,
-      page_title: meta.page_title,
+      page_title: JSON.stringify(meta.page_title),
+      logo_url: logoUrl,
       meta_description: meta.meta_description,
       meta_keywords: meta.meta_keywords,
       og_title: meta.og_title,
@@ -208,7 +408,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
       ctr_loss_percent: CTR_Loss_Percent,
       sitemap_pages: filteredPages,
       homepage_alt_text_coverage: homepageAltTextCoverage,
-      other_links: otherLinks.length > 0 ? otherLinks : undefined,
+      other_links: otherLinks.length > 0 ? otherLinks : "not found",
       raw_html: html,
       status_code: statusCode,
       ip_address: ipAddress,
@@ -219,12 +419,6 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
 
   return {
     website_id: record.website_id,
-    // record: {
-    //   ...record,
-    //   raw_html: undefined,
-    //   other_links: undefined,
-    //   sitemap_pages: undefined,
-    // },
   };
 }
 

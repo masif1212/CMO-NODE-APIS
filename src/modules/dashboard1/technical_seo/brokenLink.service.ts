@@ -14,7 +14,7 @@ export const saveBrokenLinkAnalysis = async (
     where: { user_id, website_id },
   });
   if (!userWebsite) {
-    throw new Error("Website does not belong to the user.");
+    throw new Error("no website_id.");
   }
 
   // Step 2: Get all website IDs owned by user

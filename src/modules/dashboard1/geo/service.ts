@@ -12,7 +12,7 @@ const getDomainRoot = (url: string): string => {
   return parsed.domain || '';
 };
 
-export const fetchLegalAIBrands = async (
+export const fetchBrands = async (
   user_id: string,
   website_id: string
 ): Promise<any> => {
@@ -21,11 +21,11 @@ export const fetchLegalAIBrands = async (
       user_id_website_id: { user_id, website_id },
     },
   });
-
+  
   if (!websiteEntry) {
     throw new Error(`Website entry not found for this user and website.`);
   }
-
+  console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
   let userReq = await prisma.user_requirements.findFirst({
@@ -117,7 +117,8 @@ Format:
 
     let content = res.output_text?.trim();
     if (!content) throw new Error('Empty OpenAI response');
-
+       else ("OpenAI response received successfully");
+    
     if (content.startsWith('```')) {
       content = content.replace(/```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
@@ -132,6 +133,7 @@ Format:
         update: { geo_llm: content },
         create: { website_id, geo_llm: content },
       });
+
       return {
         raw: content,
         website_found: false,

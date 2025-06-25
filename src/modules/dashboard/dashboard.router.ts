@@ -3,7 +3,7 @@ import { Router } from "express";
 import { getUserDashboard ,getWebsiteDetailedAnalysis} from "./dashboard.controller"; // ✅ Correct named import
 
 const router = Router();
-router.get("/main_dashboard", (req, res, next) => {
+router.get("/", (req, res, next) => {
   getUserDashboard(req, res).catch(next);
 });
 

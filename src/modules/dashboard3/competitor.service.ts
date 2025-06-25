@@ -1,68 +1,108 @@
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
-import { scrapeWebsitecompetitos,scrapeAndSaveWebsite } from './scraper';
+import { scrapeWebsitecompetitos } from './scraper';
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM,createComparisonPrompt } from './llm';
 import { parseCompetitorData } from './parser';
 import { getPageSpeedData } from './pagespeed';
 import OpenAI from 'openai';
 import 'dotenv/config';
+import * as cheerio from "cheerio";
+import { raw } from 'mysql2';
+import e from 'express';
+
 
 export const openai = new OpenAI({
      apiKey: process.env.OPENAI_API_KEY
 });
-
+const model = process.env.OPENAI_MODEL || 'gpt-4.1';
 
 const prisma = new PrismaClient();
 
-export class CompetitorService {
-  static async process(website_url: string, user_id: string) {
-    if (!website_url || !user_id) {
-      throw new Error('website_url and user_id are required');
-    }
 
-    const website_id = uuidv4();
-    await prisma.user_websites.create({
+
+async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+  const website = await prisma.user_websites.findUnique({
+
+    where: {
+      user_id_website_id: {
+        user_id,
+        website_id,
+      },
+    },
+    select: {
+      website_url: true,
+    },
+  });
+
+  if (!website?.website_url) {
+    throw new Error(`No URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  }
+
+  return website.website_url;
+}
+
+export class CompetitorService {
+  static async process(website_id: string, user_id: string) {
+    if (!website_id || !user_id) {
+      throw new Error('website_id and user_id are required');
+    } 
+
+    console.log(`getting website url for user_id ${user_id}, website_id: ${website_id}`);
+    const website_url = await getWebsiteUrlById(user_id, website_id);
+    if (!website_url) {
+      throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+    }else (console.log("website url get ",website_url));
+
+    
+    
+    
+    const [scrapedMain, analysis] = await Promise.all([
+  prisma.website_scraped_data.findUnique({ where: { website_id } }),
+  prisma.brand_website_analysis.findFirst({
+    where: { website_id },
+    orderBy: { created_at: "desc" },
+  }),
+  prisma.brand_traffic_analysis.findFirst({
+    where: { website_id },
+    orderBy: { created_at: "desc" },
+  }),
+]);
+
+// Extract H1
+let h1Text = "Not Found";
+if (scrapedMain?.raw_html) {
+  const $ = cheerio.load(scrapedMain.raw_html);
+  h1Text = $("h1").first().text().trim() || "Not Found";
+}
+
+// Only fetch and save PageSpeed data if it doesn't already exist
+
+const pageSpeedExists = analysis?.performance_score !== null;
+if (pageSpeedExists) {
+  console.log(`PageSpeed data already exists for ${website_url}, skipping fetch.`);
+if (!pageSpeedExists) {
+  console.log(`PageSpeed data does not exist for ${website_url}, fetching...`);
+  const pageSpeed = await getPageSpeedData(website_url);
+
+  if (pageSpeed) {
+    await prisma.brand_website_analysis.create({
       data: {
         website_id,
-        user_id,
-        website_url,
+        performance_score: pageSpeed.categories.performance || null,
+        seo_score: pageSpeed.categories.seo || null,
+        accessibility_score: pageSpeed.categories.accessibility || null,
+        best_practices_score: pageSpeed.categories.best_practices || null,
+        first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
+        largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
+        total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
+        speed_index: pageSpeed.audits?.speed_index?.display_value || null,
+        cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
+        time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
       },
     });
+  }
+}
 
-    const scrapedMain = await scrapeAndSaveWebsite(website_url,website_id);
-    if (!scrapedMain) {
-      throw new Error(`Failed to scrape main website: ${website_url}`);
-    }
-
-    // const mainWebsiteData = await prisma.website_scraped_data.upsert({
-    //   where: { website_id },
-    //   update: { ...scrapedMain, updated_at: new Date() },
-    //   create: { website_id, ...scrapedMain },
-    //   include: { competitor_details: true },
-    // });
-
-    // 🔥 Get PageSpeed and Save to brand_website_analysis
-    const pageSpeed = await getPageSpeedData(website_url);
-    if (pageSpeed) {
-      await prisma.brand_website_analysis.create({
-        data: {
-          website_id,
-          performance_score: pageSpeed.categories.performance || null,
-          seo_score: pageSpeed.categories.seo || null,
-          accessibility_score: pageSpeed.categories.accessibility || null,
-          best_practices_score: pageSpeed.categories.best_practices || null,
-          // pwa_score: pageSpeed.categories.pwa || null, // Removed because 'pwa' does not exist on type
-          first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
-          largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
-          total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
-          speed_index: pageSpeed.audits?.speed_index?.display_value || null,
-          cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
-          time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
-          // total_broken_links: pageSpeed.total_broken_links || null,
-          // broken_links: pageSpeed.broken_links || [],
-        },
-      });
-    }
 
 const userRequirementRaw = await prisma.user_requirements.findFirst({
   where: { website_id },
@@ -88,6 +128,9 @@ const userRequirement = {
       try {
         const scraped = await scrapeWebsitecompetitos(compUrl);
         if (!scraped) throw new Error('Scrape failed');
+         // 👈 Add this line
+        
+       
 
         const competitorData = await extractCompetitorDataFromLLM(scraped);
         if (!competitorData) throw new Error('LLM parsing failed');
@@ -97,7 +140,7 @@ const userRequirement = {
           data: {
             competitor_id,
             website_id,
-            name: competitorData.name || scraped.page_title || compUrl,
+            name: competitorData.name || (typeof scraped === 'object' && scraped !== null ? scraped.page_title : null) || compUrl,
             competitor_website_url: compUrl,
             industry: competitorData.industry || userRequirement?.industry || 'Unknown',
             region: competitorData.region || userRequirement?.region_of_operation || 'Unknown',
@@ -109,8 +152,17 @@ const userRequirement = {
 
         await prisma.competitor_data.upsert({
           where: { competitor_id },
-          update: { ...scraped, updated_at: new Date() },
-          create: { competitor_id, website_id, ...scraped },
+          update: { ...(typeof scraped === 'object' && scraped !== null ? scraped : {}), updated_at: new Date() },
+          create: { 
+            competitor_id, 
+            website_id, 
+            ...(typeof scraped === 'object' && scraped !== null 
+                ? { 
+                    ...scraped, 
+                    website_url: scraped.website_url ?? compUrl // Ensure website_url is always a string
+                  } 
+                : { website_url: compUrl }) 
+          },
         });
 
         const pageSpeedData = await getPageSpeedData(compUrl);
@@ -121,28 +173,40 @@ const userRequirement = {
           });
         }
 
-        // Save additional scraped fields to competitor_data if needed
         await prisma.competitor_data.update({
           where: { competitor_id },
           data: {
-            // Add any additional fields you want to persist
-            page_title: scraped.page_title,
-            meta_description: scraped.meta_description,
-            og_description: scraped.og_description,
-            og_title: scraped.og_title,
-            og_image: scraped.og_image,
+            page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
+            meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
+            og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
+            og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
+            og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
           },
         });
 
+
+
+         let h1_Text = null;
+              if (scraped && typeof scraped === 'object' && 'raw_html' in scraped && scraped.raw_html) {
+                const $ = cheerio.load(scraped.raw_html);
+                // console.log('Scraped raw HTML:', scraped.raw_html);
+                h1_Text = $('h1').first().text().trim(); // gets the first <h1> tag text
+                console.log('H1:', h1_Text);
+              }  
+
         return {
           ...savedCompetitor,
-          page_speed: pageSpeedData || null,
-          meta: {
-            page_title: scraped.page_title,
-            meta_description: scraped.meta_description,
-            og_description: scraped.og_description,
-            og_title: scraped.og_title,
-            og_image: scraped.og_image,
+          
+          website_health: pageSpeedData || null,
+           
+          website_scraped_data: {
+            h1_tag:h1_Text || null,
+           
+            page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
+            meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
+            og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
+            og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
+            og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
             
           },
         };
@@ -197,8 +261,17 @@ const userRequirement = {
             if (scraped) {
               await prisma.competitor_data.upsert({
                 where: { competitor_id },
-                update: { ...scraped, updated_at: new Date() },
-                create: { competitor_id, website_id, ...scraped },
+                update: { ...(typeof scraped === 'object' && scraped !== null ? scraped : {}), updated_at: new Date() },
+                create: { 
+                  competitor_id, 
+                  website_id, 
+                  ...(typeof scraped === 'object' && scraped !== null 
+                      ? { 
+                          ...scraped, 
+                          website_url: scraped.website_url ?? comp.website_url // Ensure website_url is always a string
+                        } 
+                      : { website_url: comp.website_url }) 
+                },
               });
 
               const pageSpeedData = await getPageSpeedData(comp.website_url);
@@ -209,22 +282,33 @@ const userRequirement = {
                 });
               }
 
+              let h1_Text = null;
+              if (scraped && typeof scraped === 'object' && 'raw_html' in scraped && scraped.raw_html) {
+                // console.log('Scraped raw HTML:');
+                const rawhtml = cheerio.load(scraped.raw_html);
+                // console.log('Scraped raw HTML:', scraped.raw_html);
+                h1_Text =rawhtml('h1').first().text().trim(); // gets the first <h1> tag text
+                console.log('H1:', h1_Text);
+              }  
               competitorResults.push({
                 ...savedCompetitor,
-                page_speed: pageSpeedData || null,
-                meta_data: {
-                  page_title: scraped.page_title,
-                  meta_keywords: scraped.meta_keywords,
-                  meta_description: scraped.meta_description,
-                  og_description: scraped.og_description,
-                  og_title: scraped.og_title,
-                  og_image: scraped.og_image,
-                  facebook_handler: scraped.facebook_handle,
-                  twitter_handler:scraped.twitter_handle,
-                  tikok_handler:scraped.tiktok_handle,
-                  youtube_handler:scraped.youtube_handle,
-                  linkedin_handle:scraped.linkedin_handle,
-                  instagram_handle:scraped.instagram_handle,
+               
+                website_health: pageSpeedData || null,
+                website_scraped_data: {
+                  h1_tag:h1_Text || null,
+                  raw_html: typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped ? scraped.raw_html : null,
+                  page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
+                  meta_keywords: typeof scraped === 'object' && scraped !== null ? scraped.meta_keywords : null,
+                  meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
+                  og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
+                  og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
+                  og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
+                  facebook_handler: typeof scraped === 'object' && scraped !== null ? scraped.facebook_handle : null,
+                  twitter_handler: typeof scraped === 'object' && scraped !== null ? scraped.twitter_handle : null,
+                  tikok_handler: typeof scraped === 'object' && scraped !== null ? scraped.tiktok_handle : null,
+                  youtube_handler: typeof scraped === 'object' && scraped !== null ? scraped.youtube_handle : null,
+                  linkedin_handle: typeof scraped === 'object' && scraped !== null ? scraped.linkedin_handle : null,
+                  instagram_handle: typeof scraped === 'object' && scraped !== null ? scraped.instagram_handle : null,
 
 
 
@@ -252,11 +336,15 @@ const userRequirement = {
       where: { website_id },
       orderBy: { created_at: 'desc' },
     });
+    const { raw_html,other_links,ctr_loss_percent,schema_analysis,sitemap_pages, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
 
     labeledResults['mainWebsite'] = {
-      website: scrapedMain,
+      h1_tag: h1Text, 
+      website: scrapedMainWithoutRawHtml,
       brandWebsiteAnalysis: brandWebsiteAnalysis ?? null,
     };
+
+
 
     await prisma.analysis_status.upsert({
       where: {
@@ -275,14 +363,16 @@ const userRequirement = {
       },
     });
 
-    return labeledResults;
-  }
-
-
-
+return labeledResults;
+}}
 
 static async getComparisonRecommendations(website_id: string) {
+  if (!website_id) {
+    throw new Error('website_id is required');
+  }else (console.log("website id get ",website_id));
+  
   const mainWebsite = await prisma.user_websites.findUnique({
+    
     where: { website_id },
     include: {
       website_scraped_data: true,
@@ -337,7 +427,7 @@ static async getComparisonRecommendations(website_id: string) {
       
     },
   };
-
+  
   const comps = competitors.map(comp => {
     const scraped = comp.competitor_data;
     let ps: any = scraped?.page_speed ?? {};
@@ -387,14 +477,20 @@ static async getComparisonRecommendations(website_id: string) {
 
   const prompt = createComparisonPrompt(main, comps);
   // console.log('Generated prompt for LLM:', prompt);
-
+  if (!prompt) {
+    throw new Error('Failed to generate prompt for LLM');
+  }else (console.log("prompt updated with data "));
   const response = await openai.chat.completions.create({
     messages: [{ role: 'user', content: prompt }],
-    model: 'gpt-4o',
+    model: model,
     temperature: 0.7,
     max_tokens: 3000,
   });
-
+  if (response.choices.length === 0 || !response.choices[0].message.content) { 
+    throw new Error('LLM response is empty or invalid');  
+  } else {
+    console.log("LLM response is valid");
+  }
   return {
     recommendations: response.choices[0].message.content,
   };

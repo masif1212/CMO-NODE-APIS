@@ -7,8 +7,8 @@ const prisma = new PrismaClient();
 
 competitorRouter.post('/identification', async (req, res, next) => {
      try {
-          const { website_url,user_id } = req.body;
-          const data = await CompetitorService.process(website_url,user_id);
+          const { website_id,user_id } = req.body;
+          const data = await CompetitorService.process(website_id,user_id);
  
 
           res.status(200).json({ competitors: data });
@@ -20,10 +20,26 @@ competitorRouter.post('/identification', async (req, res, next) => {
 
 competitorRouter.post('/recommendations', async (req, res, next) => {
   try {
-    const { website_id } = req.body;
+    const { website_id ,user_id} = req.body;
     if (!website_id) throw new Error("website_id is required");
 
     const data = await CompetitorService.getComparisonRecommendations(website_id);
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id,
+        },
+      },
+      update: {
+        dashboard3: "true",
+      },
+      create: {
+        user_id,
+        website_id,
+        dashboard3: "true",
+      },
+    });
     res.status(200).json({ recommendations: data });
   } catch (e) {
     next(e);

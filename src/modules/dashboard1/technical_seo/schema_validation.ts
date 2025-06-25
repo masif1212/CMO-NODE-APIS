@@ -2,7 +2,10 @@ import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import * as microdata from 'microdata-node';
 import * as $rdf from 'rdflib';
+import { PrismaClient } from "@prisma/client";
+import { StringDecoder } from 'string_decoder';
 
+const prisma = new PrismaClient();
 interface Schema {
   '@context'?: string;
   '@type'?: string;
@@ -78,7 +81,7 @@ function validateSchema(schema: Schema): { isValid: boolean; error?: string } {
 }
 
 // ✅ Main function
-export async function validateComprehensiveSchema(url: string): Promise<SchemaOutput> {
+export async function validateComprehensiveSchema(url: string, website_id: string): Promise<SchemaOutput> {
   try {
     const response: AxiosResponse = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SchemaValidator/1.0)' },
@@ -145,6 +148,25 @@ export async function validateComprehensiveSchema(url: string): Promise<SchemaOu
       isValid,
       ...(isValid ? {} : { error })
     }));
+
+
+// Combine the groupedResults and summary
+    const schemaAnalysisData = {
+      grouped: groupedResults,
+      summary: summary,
+    };
+
+    await prisma.website_scraped_data.update({
+      where: {
+        website_id: website_id, // make sure this matches your primary key
+      },
+      data: {
+        schema_analysis: JSON.stringify(schemaAnalysisData),
+      },
+    });
+
+
+
 
     return {
       url,

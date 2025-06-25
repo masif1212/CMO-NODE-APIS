@@ -5,7 +5,7 @@ import { CreateUserDto, UpdateUserDto } from "./schema";
 export const createUserHandler = async (req: Request, res: Response) => {
   const input: CreateUserDto = req.body;
   const user = await UserService.createUser(input);
-  res.status(201).json({ success: true, data: user });
+  res.status(200).json({ success: true, data: user });
 };
 
 export const getUserHandler = async (req: Request, res: Response) => {

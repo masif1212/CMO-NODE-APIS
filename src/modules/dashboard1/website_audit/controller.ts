@@ -25,10 +25,17 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         error: "Invalid or empty response from PageSpeed Insights API.",
         detail: summary,
       });
-    }
+    } else (console.log("PageSpeed processing complete"))
 
     // Step 2: Save PageSpeed analysis
+    console.log("Saving PageSpeed analysis to database...");
     const saved = await savePageSpeedAnalysis(user_id, website_id, summary);
+    if (!saved) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to save PageSpeed analysis.",
+      });
+    }else (console.log("PageSpeed analysis saved successfully"))
 
     const auditKeysToInclude = [
       "first-contentful-paint",
@@ -71,38 +78,8 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       throw new Error("Website URL not found for the given website_id");
     }
 
-    // await prisma.analysis_status.upsert({
-    //   where: {
-    //     user_id_website_id: {
-    //       user_id,
-    //       website_id,
-    //     },
-    //   },
-    //   update: {
-    //     pagespeed_analysis: true,
-    //   },
-    //   create: {
-    //     user_id,
-    //     website_id,
-    //     pagespeed_analysis: true,
-    //   },
-    // });
-  await prisma.analysis_status.upsert({
-  where: {
-    user_id_website_id: {
-      user_id,
-      website_id,
-    },
-  },
-  update: {
-    pagespeed_analysis: saved.website_analysis_id,
-  },
-  create: {
-    user_id,
-    website_id,
-    pagespeed_analysis: saved.website_analysis_id,
-  },
-});
+    
+
 
     const scrapedMeta = await prisma.website_scraped_data.findUnique({
   where: { website_id },
@@ -124,11 +101,11 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   },
 });
 
-  let h1Text = "Not Found";
-    if (scrapedMeta && scrapedMeta.raw_html) {
-      const $ = cheerio.load(scrapedMeta.raw_html);
-      h1Text = $("h1").first().text().trim() || "Not Found";
-    }
+  // let h1Text = "Not Found";
+  //   if (scrapedMeta && scrapedMeta.raw_html) {
+  //     const $ = cheerio.load(scrapedMeta.raw_html);
+  //     h1Text = $("h1").first().text().trim() || "Not Found";
+  //   }
 
  const {
   raw_html, // omit this
@@ -143,6 +120,24 @@ const availability_tracker = {
   ip_address: scrapedMeta?.ip_address ?? null,
   response_time_ms: scrapedMeta?.response_time_ms ?? null,
 };
+
+
+  await prisma.analysis_status.upsert({
+  where: {
+    user_id_website_id: {
+      user_id,
+      website_id,
+    },
+  },
+  update: {
+    pagespeed_analysis: saved.website_analysis_id,
+  },
+  create: {
+    user_id,
+    website_id,
+    pagespeed_analysis: saved.website_analysis_id,
+  },
+});
 
 return res.status(201).json({
   message: "website audit",

@@ -150,6 +150,7 @@ export const fetchProperties = async (req: Request, res: Response) => {
   
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
+  console.log("Request Body:", req.body);
 
   if (!req.session?.user?.accessToken) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -256,7 +257,7 @@ if (scrapedMeta?.raw_html ) {
       h1Text,
       metaDataWithoutRawHtml,
       },
-      raw_html: scrapedMeta?.raw_html,
+      // raw_html: scrapedMeta?.raw_html,
     });
   } catch (error: any) {
     console.error("Analytics save error:", error);
@@ -273,12 +274,17 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
   // console.log("dashborad1_Recommendation called");
   const {website_id, user_id } = req.body;
 
+  console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
     const llm_res = await generateLLMTrafficReport(website_id,user_id)
-    // console.log("LLM Response:", llm_res);
+
+    if (!llm_res) {
+      return res.status(404).json({ message: "No recommendations found" });
+    }
+    
     return res.status(200).json({  llm_response: llm_res });
   } catch (error: any) {
     console.error("Analytics save error:", error);

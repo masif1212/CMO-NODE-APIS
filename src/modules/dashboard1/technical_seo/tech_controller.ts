@@ -9,22 +9,29 @@ import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 const prisma = new PrismaClient();
 
 
-export const handleBrokenLinks = async (req: Request, res: Response) => {
+export const technical_seo = async (req: Request, res: Response) => {
+  console.log("🚀 ~ file: tech_controller.ts:11 ~ technical_seo ~ req.body:", req.body);
 
-  const { website_id, user_id, maxDepth = 1 } = req.body;
+  const { website_id, user_id, maxDepth = 0 } = req.body;
   const website_url = await getWebsiteUrlById(user_id, website_id);
 
   if (!website_id || !user_id) {
     return res.status(400).json({ error: "Both 'url' and 'user_id' are required." });
   }
 
-  try {   
+try {   
+    console.log("fetching broken links");
     const brokenLinksResult = await checkBrokenLinks(user_id, website_id, website_url,maxDepth);
+    if( brokenLinksResult) {
+      console.log("Broken links fetched successfully:") }
 
     const totalBroken = brokenLinksResult.length;
 
     // Step 3: Save analysis to DB
+    console.log("Saving broken link analysis to database...");
     const saved = await saveBrokenLinkAnalysis(user_id, website_id, brokenLinksResult, totalBroken);
+    if (saved) {
+      console.log("Broken link analysis saved successfully:", saved);
 
      const analysis = await prisma.brand_website_analysis.findFirst({
   where: { website_id },
@@ -52,7 +59,12 @@ if (analysis?.audit_details) {
 
    
     
-    await prisma.analysis_status.upsert({
+    console.log("validating schema markup...");
+     const schemaResult: SchemaOutput = await validateComprehensiveSchema(website_url,website_id);
+    if (schemaResult) {
+      console.log("Schema validation completed successfully:");
+
+        await prisma.analysis_status.upsert({
     where: {
     user_id_website_id: {
       user_id,
@@ -68,11 +80,7 @@ if (analysis?.audit_details) {
     broken_links: saved.website_analysis_id,
   },
 });
-     const schemaResult: SchemaOutput = await validateComprehensiveSchema(website_url);
-
-
-
-    return res.status(201).json({
+    return res.status(200).json({
       Technical_SEO: {
       Schema_Markup_Status: {
           message: schemaResult.message,
@@ -90,7 +98,9 @@ if (analysis?.audit_details) {
           brokenLinks: brokenLinksResult,
       }}
     });
-  } catch (err: any) {
+    }
+  }
+} catch (err: any) {
     console.error("❌ handleBrokenLinks error:", err);
     return res.status(500).json({
       error: "Failed to check broken links.",

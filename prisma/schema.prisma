@@ -283,21 +283,22 @@ model website_scraped_data {
   website_id        String   @unique // 1‑to‑1 with user_websites
   website_url       String
   
-  page_title        String?
+  page_title        String?  @db.LongText
+  logo_url              String?  @db.LongText
   meta_description  String?  @db.LongText
   meta_keywords     String?  @db.LongText
   og_title          String?  @db.LongText
   og_description    String?  @db.LongText
-  og_image          String?
-  twitter_handle    String?
-  facebook_handle   String?
-  instagram_handle  String?
-  linkedin_handle   String?
-  youtube_handle    String?
+  og_image          String?  @db.LongText
+  twitter_handle    String?  @db.LongText
+  facebook_handle   String?  @db.LongText
+  instagram_handle  String?  @db.LongText
+  linkedin_handle   String?  @db.LongText
+  youtube_handle    String?  @db.LongText
   ctr_loss_percent  Json? 
   homepage_alt_text_coverage Int?   // <- Add this
   sitemap_pages     Json? 
-  schema_analysis          Json?
+  schema_analysis   Json?
 
   tiktok_handle     String?
   other_links       Json?
@@ -309,7 +310,7 @@ model website_scraped_data {
   status_code       Int?
   ip_address        String?
   response_time_ms  Int?
-  status_message    String?
+  status_message    String?  @db.LongText
 
   scraped_at        DateTime @default(now())
   updated_at        DateTime @default(now()) @updatedAt
@@ -359,7 +360,7 @@ model competitor_details {
   competitor_id    String   @id @default(uuid())
   website_id       String
   name             String?
-  competitor_website_url      String?
+  competitor_website_url      String? @db.LongText
   industry         String?  @db.LongText
   region           String?  @db.LongText
   target_audience  String?  @db.LongText
@@ -380,6 +381,7 @@ model competitor_data {
 
   website_url      String
   page_title       String? @db.LongText
+  logo_url                 String?  @db.LongText
   meta_description String? @db.LongText
   meta_keywords    String? @db.LongText
   og_title         String? @db.LongText
@@ -416,7 +418,7 @@ model llm_responses {
   dashboard1_what_working                   String?  @db.LongText
   dashboard2_what_working                   String?  @db.LongText
   dashboard3_competi_camparison             String?  @db.LongText
-  dashboard3_competi_recommedation             String?  @db.LongText
+  dashboard3_competi_recommedation          String?  @db.LongText
   recommendation_by_mo_dashboard1           String?  @db.LongText
   recommendation_by_mo_dashboard2           String?  @db.LongText
   recommendation_by_mo_dashboard3           String?  @db.LongText
@@ -471,6 +473,10 @@ model analysis_status {
   id                    String   @id @default(uuid())
   user_id               String
   website_id            String
+  dashboard1            String?
+  dashboard2            String?
+  dashboard3            String?
+  dashboard4            String?
   pagespeed_analysis    String? 
   broken_links          String? 
   geo_llm               String?

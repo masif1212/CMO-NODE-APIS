@@ -96,7 +96,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
 
   const startDateStr = startDate.toISOString().split("T")[0];
   const endDateStr = today.toISOString().split("T")[0];
-
+  console.log("Start Date:", startDateStr, "End Date:", endDateStr);
   const requests = {
     traffic: {
       dateRanges: [{ startDate: startDateStr, endDate: endDateStr }],
@@ -132,7 +132,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
       dateRanges: [{ startDate: startDateStr, endDate: endDateStr }],
       dimensions: [{ name: 'browser' }],
       metrics: [{ name: 'sessions' }],
-      limit: 3,
+      // limit: 3,
     },
     dailyActiveUsers: {
       dateRanges: [{ startDate: startDateStr, endDate: endDateStr }],
@@ -166,7 +166,15 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
       dateRanges: [{ startDate: startDateStr, endDate: endDateStr }],
       dimensions: [{ name: "sessionSource" }],
       metrics: [{ name: "sessions" }],
-      limit: "5",
+      limit: "100",
+      // limit: "10",
+    },
+
+    medium: {
+      dateRanges: [{ startDate: startDateStr, endDate: endDateStr }],
+      dimensions: [{ name: "sessionMedium" }],
+      metrics: [{ name: "sessions" }],
+      // limit: "10",
     },
   };
 
@@ -183,7 +191,9 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     devicesResp,
     browsersResp,
     sourcesResp,
+    
     newVsReturningResp,
+    sessionMediumtResp,
   ] = await Promise.all([
     analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.traffic }),
     analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.country }),
@@ -196,6 +206,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.browsers }),
     analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.sources }),
     analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.newVsReturning }),
+    analyticsData.properties.runReport({ property: `properties/${propertyId}`, requestBody: requests.medium }),
   ]);
 
   const dailyActiveUsers = dailyUsersResp?.data?.rows?.map(row => ({
@@ -208,6 +219,10 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     users: parseInt(row.metricValues?.[0]?.value ?? "0", 10),
   })) || [];
 
+  const sessionMedium = sessionMediumtResp?.data?.rows?.map(row => ({
+    medium: row.dimensionValues?.[0]?.value,
+    sessions: parseInt(row.metricValues?.[0]?.value ?? "0", 10),
+  })) || [];
   const engagement = {
     avgSessionDuration: parseFloat(engagementResp?.data?.rows?.[0]?.metricValues?.[0]?.value ?? "0"),
     engagedSessions: parseInt(engagementResp?.data?.rows?.[0]?.metricValues?.[1]?.value ?? "0"),
@@ -215,7 +230,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
   };
 
   const duration = ((performance.now() - start) / 1000).toFixed(2);
-
+  // console.log(`Analytics summary fetched in ${sessionMedium} seconds`);
   return {
     traffic: trafficResp?.data?.rows,
     country: countryResp?.data?.rows,
@@ -224,6 +239,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     bounceRate: overallBounceResp?.data?.rows?.[0]?.metricValues?.[0]?.value,
     dailyActiveUsers,
     newVsReturning,
+    sessionMedium,
     engagement,
     devices: devicesResp?.data?.rows,
     browsers: browsersResp?.data?.rows,
@@ -243,13 +259,40 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
 
   const total_visitors = parseInt(summary?.activeUsers, 10) || 0;
   const overall_bounce_rate = parseFloat(summary?.bounceRate) || null;
-  // console.log("Total Visitors:", total_visitors);
-  // console.log("Overall Bounce Rate:", overall_bounce_rate);
+
   const actionable_fix =
     (trafficMap["organic_search"] || 0) / total_visitors > 0.5
       ? "✅ Organic traffic looks healthy."
       : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
-  
+
+ 
+
+const combinedSources = [
+  ...(summary?.sources?.map((item: any) => {
+    const rawName = item.dimensionValues?.[0]?.value?.toLowerCase();
+    return {
+      type: "source",
+          name: rawName?.includes("chatgpt") ? "chatgpt.com" : rawName,
+
+      sessions: parseInt(item.metricValues?.[0]?.value, 10),
+    };
+  }) ?? []),
+  ...(summary?.sessionMedium?.map((item: any) => ({
+    type: "medium",
+    name: item.medium?.toLowerCase().includes("chatgpt") ? "chatgpt.com" : item.medium,
+    sessions: item.sessions,
+  })) ?? []),
+];
+
+const hasChatGPT = combinedSources.some(src => src.name === "chatgpt.com");
+// console.log("chatgpt", hasChatGPT);
+if (!hasChatGPT) {
+  combinedSources.unshift({
+    type: "source",
+    name: "chatgpt.com",
+    sessions: 0,
+  });
+}
   return prisma.brand_traffic_analysis.create({
     data: {
       website_id,
@@ -269,8 +312,9 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
       engaged_sessions: summary?.engagement?.engagedSessions,
       top_devices: summary?.devices as Prisma.InputJsonValue,
       top_browsers: summary?.browsers as Prisma.InputJsonValue,
-      top_sources: summary?.sources as Prisma.InputJsonValue,
-      new_vs_returning: summary?.newVsReturning as Prisma.InputJsonValue, // ✅ new field
+      top_sources: combinedSources as Prisma.InputJsonValue, // <-- updated
+      new_vs_returning: summary?.newVsReturning as Prisma.InputJsonValue,
     },
   });
 };
+
