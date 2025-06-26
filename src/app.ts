@@ -11,6 +11,7 @@ import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/social_media/router";
 import { competitorRouter } from "./modules/competitor_analysis/routes/competitor.routes";
 import brandAuditRouter from "./modules/brand_audit_report/router";
+import PaymentRouter from "./payments/paymentRoutes";
 const app = express();
 
 
@@ -51,6 +52,7 @@ app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this i
 app.use("/api/scrape", routes); // <-- Add this line
 app.use('/api/competitors', competitorRouter);
 app.use("/api/brand-audit", brandAuditRouter);
+app.use("/payment", PaymentRouter)
 
 app.use("/api/social_media/youtube", youtubeRouter);
 // Global error handler
