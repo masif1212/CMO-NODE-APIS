@@ -185,6 +185,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
         schema_analysis: true,
         meta_description: true,
         page_title: true,
+        homepage_alt_text_coverage: true,
         raw_html: true,
       },
     });
