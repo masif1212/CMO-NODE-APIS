@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import dns from "dns/promises";
 import { PrismaClient } from "@prisma/client";
 import { parseStringPromise } from "xml2js";
+import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 
 const prisma = new PrismaClient();
 
@@ -17,11 +18,13 @@ interface ScrapedMetaData {
 
 interface ScrapeResult {
   website_id: string;
+  logo_url: string | undefined;
   // record: any;
 }
 
 async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   try {
+    console.log("getRobotsTxtAndSitemaps")
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
     const { data } = await axios.get(robotsUrl);
     const sitemapUrls: string[] = [];
@@ -49,6 +52,7 @@ async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
 
 async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   try {
+    console.log("parseSitemap")
     const { data } = await axios.get(sitemapUrl);
     const parsed = await parseStringPromise(data);
     const urls: string[] = [];
@@ -135,7 +139,7 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
 //     else otherLinks.push(href);
 //   });
 
-//   // ✅ Image alt text analysis for homepage
+//   //   Image alt text analysis for homepage
 //   const imgTags = $("img");
 //   const totalImages = imgTags.length;
 //   const imagesWithAlt = imgTags.filter((_, el) => {
@@ -329,7 +333,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   'img[src*="logo"]'
 ];
 
-  let logoUrl: string | undefined = undefined;
+  let logoUrl = "not found";
   for (const selector of logoSelectors) {
     const el = $(selector).first();
     let src = el.attr("href") || el.attr("src");
@@ -387,38 +391,48 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
     extract_message,
   };
+  console.log("validating schema markup...");
+  const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url, websiteId);
+  if (schemaAnalysisData) {
+    console.log("Schema validation completed successfully:", schemaAnalysisData);
+    const record = await prisma.website_scraped_data.create({
+      data: {
+        website_id: websiteId,
+        website_url: url,
+        page_title: JSON.stringify(meta.page_title),
+        logo_url: logoUrl,
+        meta_description: meta.meta_description,
+        meta_keywords: meta.meta_keywords,
+        og_title: meta.og_title,
+        og_description: meta.og_description,
+        og_image: meta.og_image,
+        twitter_handle: twitter,
+        facebook_handle: facebook,
+        instagram_handle: instagram,
+        linkedin_handle: linkedin,
+        youtube_handle: youtube,
+        tiktok_handle: tiktok,
+        ctr_loss_percent: CTR_Loss_Percent,
+        sitemap_pages: filteredPages,
+        schema_analysis: JSON.stringify(schemaAnalysisData),
+        homepage_alt_text_coverage: homepageAltTextCoverage,
+        other_links: otherLinks.length > 0 ? otherLinks : "not found",
+        raw_html: html,
+        status_code: statusCode,
+        ip_address: ipAddress,
+        response_time_ms: responseTimeMs,
+        status_message: message,
+      },
+    });
 
-  const record = await prisma.website_scraped_data.create({
-    data: {
-      website_id: websiteId,
-      website_url: url,
-      page_title: JSON.stringify(meta.page_title),
-      logo_url: logoUrl,
-      meta_description: meta.meta_description,
-      meta_keywords: meta.meta_keywords,
-      og_title: meta.og_title,
-      og_description: meta.og_description,
-      og_image: meta.og_image,
-      twitter_handle: twitter,
-      facebook_handle: facebook,
-      instagram_handle: instagram,
-      linkedin_handle: linkedin,
-      youtube_handle: youtube,
-      tiktok_handle: tiktok,
-      ctr_loss_percent: CTR_Loss_Percent,
-      sitemap_pages: filteredPages,
-      homepage_alt_text_coverage: homepageAltTextCoverage,
-      other_links: otherLinks.length > 0 ? otherLinks : "not found",
-      raw_html: html,
-      status_code: statusCode,
-      ip_address: ipAddress,
-      response_time_ms: responseTimeMs,
-      status_message: message,
-    },
-  });
+    return {
+      website_id: record.website_id,
+      logo_url: record.logo_url ?? undefined
 
-  return {
-    website_id: record.website_id,
-  };
+    };
+  }
+
+  // If schemaResult is falsy, throw or return a default ScrapeResult (choose as per your logic)
+  throw new Error("error");
 }
 

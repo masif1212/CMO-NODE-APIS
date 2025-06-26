@@ -38,12 +38,12 @@ export const recommendation_by_cmo = async (
       },
     },
     update: {
-      dashboard4: "true",
+      recommendation_by_cmo: "true",
     },
     create: {
       user_id,
       website_id,
-      dashboard4: "true",
+      recommendation_by_cmo: "true",
     },
   });
 

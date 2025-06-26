@@ -40,7 +40,7 @@ const testUrl = "https://www.youtube.com/c/Veritasium";
 
 getChannelIdFromUrl(testUrl)
   .then(channelId => {
-    console.log("✅ Channel ID:", channelId);
+    console.log("  Channel ID:", channelId);
   })
   .catch(err => {
     console.error("❌ Error:", err.message);

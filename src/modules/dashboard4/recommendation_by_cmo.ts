@@ -17,8 +17,8 @@ interface CMOReport {
   // strategic_recommendations: string;
   // reportContent: string;
   
-  created_at: Date;
-  updated_at: Date;
+  // created_at: Date;
+  // updated_at: Date;
   reportContent: string;
 }
 
@@ -218,7 +218,7 @@ export async function generateCMOReport(website_id: string): Promise<CMOReport> 
         },
         { role: "user", content: prompt },
       ],
-      max_tokens: 1500,
+      max_tokens: 4000,
       temperature: 0.7,
     });
 
@@ -226,7 +226,7 @@ export async function generateCMOReport(website_id: string): Promise<CMOReport> 
 
     // Parse the report into sections (assuming OpenAI returns structured markdown)
    
-   
+   console.log("prompt:", prompt)
 
     // Store or update the report in the database
     const report = await prisma.llm_responses.upsert({
@@ -245,9 +245,9 @@ export async function generateCMOReport(website_id: string): Promise<CMOReport> 
 
     return {
       website_id: report.website_id,
-      reportContent : reportContent,
-      created_at: report.created_at,
-      updated_at: report.updated_at,
+      reportContent : reportContent
+      // created_at: report.created_at,
+      // updated_at: report.updated_at,
     };
   } catch (error) {
     console.error("Error generating CMO report:", error);

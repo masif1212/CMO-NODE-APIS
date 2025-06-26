@@ -56,7 +56,6 @@ model user_websites {
   brand_website_analysis      brand_website_analysis[]
   brand_traffic_analysis      brand_traffic_analysis[]
   brand_social_media_analysis brand_social_media_analysis[]
-  competitor_analysis         competitor_analysis[]
   website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite")
   competitor_data     competitor_data[]
   llm_responses           llm_responses?
@@ -64,8 +63,8 @@ model user_websites {
   analysis_status             analysis_status[]
   payments                    payments[]
 
-  @@id([user_id, website_id]) // ✅ Composite primary key
-  @@unique([user_id, website_id], name: "user_id_website_id") // ✅ Enables findUnique
+  @@id([user_id, website_id]) //  Composite primary key
+  @@unique([user_id, website_id], name: "user_id_website_id") //  Enables findUnique
 }
 
 
@@ -244,7 +243,7 @@ model brand_website_analysis {
   total_broken_links       Int?
   broken_links             Json?
   audit_details            Json?
-  revenue_loss_percent     Float?  // <-- ✅ Newly added field
+  revenue_loss_percent     Float?  // <--  Newly added field
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
 
@@ -306,7 +305,7 @@ model website_scraped_data {
 
   ai_response      String?  @db.LongText
 
-  // ✅ New fields
+  //  New fields
   status_code       Int?
   ip_address        String?
   response_time_ms  Int?
@@ -342,19 +341,7 @@ model brand_social_media_analysis {
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }  
 
-model competitor_analysis {
-  competitor_id           String   @id @default(uuid())
-  website_id              String
-  domain_authority        Int?
-  organic_traffic         Int?
-  top_keywords            Json?
-  backlink_profile        Json?
-  social_media_engagement Json?
-  created_at              DateTime @default(now())
-  updated_at              DateTime @default(now()) @updatedAt
 
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
-}
 
 model competitor_details {
   competitor_id    String   @id @default(uuid())
@@ -431,8 +418,8 @@ model llm_responses {
   
   brand_audit                               String?  @db.LongText
   geo_llm                                   String?  @db.LongText
-  competitor_analysis_ps_report             String?  @db.LongText
-  competitor_analysis_social_media_report   String?  @db.LongText
+  competitor_ps_report             String?  @db.LongText
+  competitor_social_media_report   String?  @db.LongText
   created_at                    DateTime @default(now())
   updated_at                    DateTime @default(now()) @updatedAt
 
@@ -477,17 +464,16 @@ model analysis_status {
   dashboard2            String?
   dashboard3            String?
   dashboard4            String?
-  pagespeed_analysis    String? 
-  broken_links          String? 
+  website_audit         String? 
+  seo_audit             String? 
+  technical_seo         String?
   geo_llm               String?
   social_media_analysis String? 
-  traffic_analysis      String? 
-  competitor_analysis   String?  
+  competitor_details   String?  
   recommendation_by_mo1 String? 
   recommendation_by_mo2 String?
   recommendation_by_mo3 String? 
   recommendation_by_cmo String? 
-  brand_audit           String?  
   
 
 created_at DateTime @default(now())

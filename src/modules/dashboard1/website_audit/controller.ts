@@ -130,12 +130,12 @@ const availability_tracker = {
     },
   },
   update: {
-    pagespeed_analysis: saved.website_analysis_id,
+    website_audit: saved.website_analysis_id,
   },
   create: {
     user_id,
     website_id,
-    pagespeed_analysis: saved.website_analysis_id,
+    website_audit: saved.website_analysis_id,
   },
 });
 

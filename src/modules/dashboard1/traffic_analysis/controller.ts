@@ -192,13 +192,13 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
         },
       },
       update: {
-        traffic_analysis: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
+        seo_audit: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
         updated_at: new Date(),
       },
       create: {
         user_id,
         website_id,
-        traffic_analysis: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
+        seo_audit: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -284,7 +284,25 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
     if (!llm_res) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-    
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id,
+        },
+      },
+      update: {
+        dashboard1: "true", 
+        updated_at: new Date(),
+      },
+      create: {
+        user_id,
+        website_id,
+        dashboard2: "true", 
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
     return res.status(200).json({  llm_response: llm_res });
   } catch (error: any) {
     console.error("Analytics save error:", error);

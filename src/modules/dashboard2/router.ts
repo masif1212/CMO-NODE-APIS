@@ -5,7 +5,7 @@ import { analyzeYouTubeController } from "./controller"; // <- make sure it's na
 
 const router = Router();
 
-// ✅ FIX: Just use "/" here since it's already under "/api/social_media/youtube"
+//   FIX: Just use "/" here since it's already under "/api/social_media/youtube"
 router.post("/", asyncHandler(analyzeYouTubeController));
 
 export default router;

@@ -82,16 +82,18 @@ function validateSchema(schema: Schema): { isValid: boolean; error?: string } {
 
 //   Main function
 export async function validateComprehensiveSchema(url: string, website_id: string): Promise<SchemaOutput> {
+  // console.log("validateComprehensiveSchema")
   try {
     const response: AxiosResponse = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SchemaValidator/1.0)' },
       timeout: 10000
     });
+    // console.log("response",response)
 
     const html = response.data;
     const $ = cheerio.load(html);
     const results: ValidationResult[] = [];
-
+  
     // JSON-LD
     $('script[type="application/ld+json"]').each((_, elem) => {
       const content = $(elem).html();
@@ -107,6 +109,7 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
           results.push({ type: schema['@type'] ?? null, format: 'JSON-LD', isValid, error });
         });
       } catch {
+        // console.log("results1",results)
         // Skip invalid JSON
       }
     });
@@ -118,6 +121,7 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
         const schema = transformMicrodataToJsonLd(item);
         const { isValid, error } = validateSchema(schema);
         results.push({ type: schema['@type'] ?? null, format: 'Microdata', isValid, error });
+        // console.log("results2",results)
       });
     }
 
@@ -125,12 +129,17 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
     const store = $rdf.graph();
     $rdf.parse(html, store, url, 'text/html');
     const types = store.each(null, $rdf.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'));
+    // console.log("types",types)
     types.forEach((typeQuad: any) => {
+
       const typeValue = typeQuad.object.value.split('/').pop();
+      // console.log("typeValue",typeValue)
       const schema = { '@context': 'https://schema.org', '@type': typeValue };
       const { isValid, error } = validateSchema(schema);
+      // console.log("schemafor url ",url ,"is",schema)
       results.push({ type: typeValue, format: 'RDFa', isValid, error });
     });
+   
 
     // Group results by type
     const groupedResults: GroupedResults = {};
@@ -138,8 +147,9 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
       const type = result.type || 'Unknown';
       if (!groupedResults[type]) groupedResults[type] = [];
       groupedResults[type].push(result);
+      // console.log("groupedResults",groupedResults)
     });
-
+  
     const message = results.length > 0 ? 'Structured data detected' : 'No structured data detected';
 
      const summary = results.map(({ type, format, isValid, error }) => ({
@@ -148,22 +158,22 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
       isValid,
       ...(isValid ? {} : { error })
     }));
+    // console.log("summary****",summary)
 
+// // Combine the groupedResults and summary
+//     const schemaAnalysisData = {
+//       grouped: groupedResults,
+//       summary: summary,
+//     };
 
-// Combine the groupedResults and summary
-    const schemaAnalysisData = {
-      grouped: groupedResults,
-      summary: summary,
-    };
-
-    await prisma.website_scraped_data.update({
-      where: {
-        website_id: website_id, // make sure this matches your primary key
-      },
-      data: {
-        schema_analysis: JSON.stringify(schemaAnalysisData),
-      },
-    });
+    // await prisma.website_scraped_data.update({
+    //   where: {
+    //     website_id: website_id, // make sure this matches your primary key
+    //   },
+    //   data: {
+    //     schema_analysis: JSON.stringify(schemaAnalysisData),
+    //   },
+    // });
     
 
 

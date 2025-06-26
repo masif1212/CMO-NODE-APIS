@@ -149,9 +149,25 @@ Format:
       return brandDomain === normalizedUserDomain;
     });
 
+
+   const response = websiteFound
+  ? {
+      website_found: true,
+      // message: "Awesome! Your brand has earned a spot among the top online performers."
+    }
+  : {
+      website_found: false,
+      
+        // summary: "Sorry, your brand does not appear in the top brands.",
+        // recommendation: "You need to improve your marketing strategy and website structuring for better online visibility."
+      
+    };
+    
+
     const saveData = JSON.stringify({
-      brands: parsedBrands,
-      user_website_found: websiteFound,
+      // brands: parsedBrands,
+      website_found: websiteFound,
+      
     });
 
     await prisma.llm_responses.upsert({
@@ -160,23 +176,34 @@ Format:
       create: { website_id, geo_llm: saveData },
     });
 
-    const message = websiteFound
-      ? 'Congratulations! Your brand is listed among the top brands.'
-      : 'Sorry, your brand does not appear in the top brands. You need to improve your marketing strategy and website struturing for better online visibility';
+  const  traffic =  await prisma.brand_traffic_analysis.findFirst({
+      where: { website_id },
+      orderBy: { created_at: "desc" },
+      select: {
+        top_sources: true,
+      },
+    })
 
-
-    // console.log("Schema Validation Result:", JSON.stringify(schemaResult, null, 2)); // Debug log
-    
-
-   
+  const sources = traffic?.top_sources as any[]; // assuming it's JSON array
+// const bingSource = sources?.find(
+//   (src) => src.name?.toLowerCase().includes("bing.com"||"bing")
+// );  
+  
+const bingSource = sources?.find((src) =>
+  ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
+) ?? { type: "source", name: "bing.com", sessions: 0 };
 return {
 
   
   AI_Discoverability: {
     // data: parsedBrands,
-    website_found: websiteFound,
-    message: message // make sure 'message' is defined
-  }
+    // website_found: websiteFound,
+    response
+     // make sure 'message' is defined
+  },
+  
+  bingSource : bingSource
+  
 };
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);

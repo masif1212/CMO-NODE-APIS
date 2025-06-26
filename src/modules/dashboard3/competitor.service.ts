@@ -7,8 +7,8 @@ import { getPageSpeedData } from './pagespeed';
 import OpenAI from 'openai';
 import 'dotenv/config';
 import * as cheerio from "cheerio";
-import { raw } from 'mysql2';
-import e from 'express';
+
+import axios from 'axios';
 
 
 export const openai = new OpenAI({
@@ -41,127 +41,169 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
+
+
 export class CompetitorService {
+  // Helper function to validate URLs (retained for other parts of the code)
+  static async isValidCompetitorUrl(url: string, competitorName?: string): Promise<boolean> {
+    try {
+      new URL(url);
+      if (!/^https?:\/\//.test(url)) return false;
+    } catch {
+      return false;
+    }
+
+    const blocklist = [
+      'facebook.com',
+      'twitter.com',
+      'google.com',
+      'youtube.com',
+      'instagram.com',
+      'linkedin.com',
+      'tiktok.com',
+      'example.com',
+      'nonexistent.com',
+    ];
+
+    const { hostname } = new URL(url);
+    if (blocklist.some(blocked => hostname.includes(blocked))) {
+      console.log(`URL ${url} is in blocklist`);
+      return false;
+    }
+
+    if (competitorName) {
+      const normalizedName = competitorName.toLowerCase().replace(/\s+/g, '');
+      if (!hostname.toLowerCase().includes(normalizedName)) {
+        console.log(`URL ${url} does not match competitor name ${competitorName}`);
+        return false;
+      }
+    }
+
+    try {
+      const response = await axios.head(url, { timeout: 5000 });
+      return response.status >= 200 && response.status < 400;
+    } catch (err) {
+      console.log(`URL ${url} is inaccessible: ${err instanceof Error ? err.message : err}`);
+      return false;
+    }
+  }
+
+  // Helper function to extract H1
+  static extractH1(rawHtml: string | null): string {
+    if (!rawHtml) return 'Not Found';
+    const $ = cheerio.load(rawHtml);
+    return $('h1').first().text().trim() || 'Not Found';
+  }
+
   static async process(website_id: string, user_id: string) {
     if (!website_id || !user_id) {
       throw new Error('website_id and user_id are required');
-    } 
+    }
 
-    console.log(`getting website url for user_id ${user_id}, website_id: ${website_id}`);
+    console.log(`Getting website URL for user_id ${user_id}, website_id: ${website_id}`);
     const website_url = await getWebsiteUrlById(user_id, website_id);
     if (!website_url) {
       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
-    }else (console.log("website url get ",website_url));
+    }
+    console.log('Website URL retrieved:', website_url);
 
-    
-    
-    
     const [scrapedMain, analysis] = await Promise.all([
-  prisma.website_scraped_data.findUnique({ where: { website_id } }),
-  prisma.brand_website_analysis.findFirst({
-    where: { website_id },
-    orderBy: { created_at: "desc" },
-  }),
-  prisma.brand_traffic_analysis.findFirst({
-    where: { website_id },
-    orderBy: { created_at: "desc" },
-  }),
-]);
+      prisma.website_scraped_data.findUnique({ where: { website_id } }),
+      prisma.brand_website_analysis.findFirst({
+        where: { website_id },
+        orderBy: { created_at: 'desc' },
+      }),
+    ]);
 
-// Extract H1
-let h1Text = "Not Found";
-if (scrapedMain?.raw_html) {
-  const $ = cheerio.load(scrapedMain.raw_html);
-  h1Text = $("h1").first().text().trim() || "Not Found";
-}
+    // Extract H1
+    const h1Text = this.extractH1(scrapedMain?.raw_html ?? null);
 
-// Only fetch and save PageSpeed data if it doesn't already exist
+    // Fetch and save PageSpeed data if it doesn't exist
+    if (!analysis?.performance_score) {
+      console.log(`Fetching PageSpeed data for ${website_url}`);
+      const pageSpeed = await getPageSpeedData(website_url);
+      if (pageSpeed) {
+        await prisma.brand_website_analysis.create({
+          data: {
+            website_id,
+            performance_score: pageSpeed.categories.performance || null,
+            seo_score: pageSpeed.categories.seo || null,
+            accessibility_score: pageSpeed.categories.accessibility || null,
+            best_practices_score: pageSpeed.categories.best_practices || null,
+            first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
+            largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
+            total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
+            speed_index: pageSpeed.audits?.speed_index?.display_value || null,
+            cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
+            time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
+          },
+        });
+      }
+    } else {
+      console.log(`PageSpeed data already exists for ${website_url}`);
+    }
 
-const pageSpeedExists = analysis?.performance_score !== null;
-if (pageSpeedExists) {
-  console.log(`PageSpeed data already exists for ${website_url}, skipping fetch.`);
-if (!pageSpeedExists) {
-  console.log(`PageSpeed data does not exist for ${website_url}, fetching...`);
-  const pageSpeed = await getPageSpeedData(website_url);
-
-  if (pageSpeed) {
-    await prisma.brand_website_analysis.create({
-      data: {
-        website_id,
-        performance_score: pageSpeed.categories.performance || null,
-        seo_score: pageSpeed.categories.seo || null,
-        accessibility_score: pageSpeed.categories.accessibility || null,
-        best_practices_score: pageSpeed.categories.best_practices || null,
-        first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
-        largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
-        total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
-        speed_index: pageSpeed.audits?.speed_index?.display_value || null,
-        cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
-        time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
-      },
+    const userRequirementRaw = await prisma.user_requirements.findFirst({
+      where: { website_id },
     });
-  }
-}
 
+    const userRequirement = {
+      industry: userRequirementRaw?.industry ?? 'Unknown',
+      region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
+      target_location: userRequirementRaw?.target_location ?? 'Unknown',
+      target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
+      primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
+      USP: userRequirementRaw?.USP ?? 'Unknown',
+      competitor_urls: userRequirementRaw?.competitor_urls ?? '',
+    };
 
-const userRequirementRaw = await prisma.user_requirements.findFirst({
-  where: { website_id },
-});
-
-const userRequirement = {
-  industry: userRequirementRaw?.industry ?? 'Unknown',
-  region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
-  target_location: userRequirementRaw?.target_location ?? 'Unknown',
-  target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
-  primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
-  USP: userRequirementRaw?.USP ?? 'Unknown',
-  competitor_urls: userRequirementRaw?.competitor_urls ?? '',
-};
-
-    const competitorUrls: string[] = userRequirement?.competitor_urls
+    const competitorUrls: string[] = userRequirement.competitor_urls
       ? userRequirement.competitor_urls.split(',').map(u => u.trim()).filter(Boolean)
       : [];
 
     const competitorResults = [];
+    const processedUrls = new Set<string>();
+    const processedNames = new Set<string>();
 
+    // Process user-provided competitor URLs
     const competitorPromises = competitorUrls.filter(u => u.startsWith('http')).map(async (compUrl) => {
       try {
         const scraped = await scrapeWebsitecompetitos(compUrl);
-        if (!scraped) throw new Error('Scrape failed');
-         // 👈 Add this line
-        
-       
+        if (!scraped || typeof scraped !== 'object') throw new Error('Scrape failed');
 
         const competitorData = await extractCompetitorDataFromLLM(scraped);
         if (!competitorData) throw new Error('LLM parsing failed');
+
+        const competitorName = competitorData.name || scraped.page_title || compUrl;
+
+        if (processedUrls.has(compUrl) || processedNames.has(competitorName)) {
+          console.log(`Skipping duplicate competitor: ${competitorName} (${compUrl})`);
+          return null;
+        }
 
         const competitor_id = uuidv4();
         const savedCompetitor = await prisma.competitor_details.create({
           data: {
             competitor_id,
             website_id,
-            name: competitorData.name || (typeof scraped === 'object' && scraped !== null ? scraped.page_title : null) || compUrl,
+            name: competitorName,
             competitor_website_url: compUrl,
-            industry: competitorData.industry || userRequirement?.industry || 'Unknown',
-            region: competitorData.region || userRequirement?.region_of_operation || 'Unknown',
-            target_audience: competitorData.target_audience || userRequirement?.target_audience || 'Unknown',
-            primary_offering: competitorData.primary_offering || userRequirement?.primary_offering || 'Unknown',
+            industry: competitorData.industry || userRequirement.industry || 'Unknown',
+            region: competitorData.region || userRequirement.region_of_operation || 'Unknown',
+            target_audience: competitorData.target_audience || userRequirement.target_audience || 'Unknown',
+            primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
             usp: competitorData.usp || 'No clear USP identified',
           },
         });
 
         await prisma.competitor_data.upsert({
           where: { competitor_id },
-          update: { ...(typeof scraped === 'object' && scraped !== null ? scraped : {}), updated_at: new Date() },
-          create: { 
-            competitor_id, 
-            website_id, 
-            ...(typeof scraped === 'object' && scraped !== null 
-                ? { 
-                    ...scraped, 
-                    website_url: scraped.website_url ?? compUrl // Ensure website_url is always a string
-                  } 
-                : { website_url: compUrl }) 
+          update: { ...scraped, updated_at: new Date() },
+          create: {
+            competitor_id,
+            website_id,
+            ...scraped,
+            website_url: scraped.website_url ?? compUrl,
           },
         });
 
@@ -173,45 +215,33 @@ const userRequirement = {
           });
         }
 
-        await prisma.competitor_data.update({
-          where: { competitor_id },
-          data: {
-            page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
-            meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
-            og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
-            og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
-            og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
-          },
-        });
+        const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+          ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+          : null;
 
-
-
-         let h1_Text = null;
-              if (scraped && typeof scraped === 'object' && 'raw_html' in scraped && scraped.raw_html) {
-                const $ = cheerio.load(scraped.raw_html);
-                // console.log('Scraped raw HTML:', scraped.raw_html);
-                h1_Text = $('h1').first().text().trim(); // gets the first <h1> tag text
-                console.log('H1:', h1_Text);
-              }  
+        processedUrls.add(compUrl);
+        processedNames.add(competitorName);
 
         return {
           ...savedCompetitor,
-          
           website_health: pageSpeedData || null,
-           
           website_scraped_data: {
-            h1_tag:h1_Text || null,
-           
+            h1_tag: h1_Text,
             page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
             meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
             og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
             og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
             og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
-            
+            facebook_handle: typeof scraped === 'object' && scraped !== null ? scraped.facebook_handle : null,
+            twitter_handle: typeof scraped === 'object' && scraped !== null ? scraped.twitter_handle : null,
+            tiktok_handle: typeof scraped === 'object' && scraped !== null ? scraped.tiktok_handle : null,
+            youtube_handle: typeof scraped === 'object' && scraped !== null ? scraped.youtube_handle : null,
+            linkedin_handle: typeof scraped === 'object' && scraped !== null ? scraped.linkedin_handle : null,
+            instagram_handle: typeof scraped === 'object' && scraped !== null ? scraped.instagram_handle : null,
           },
         };
-      } catch (err: any) {
-        console.error(`Failed processing competitor ${compUrl}: ${err.message}`);
+      } catch (err) {
+        console.error(`Failed processing competitor ${compUrl}: ${err instanceof Error ? err.message : err}`);
         return null;
       }
     });
@@ -223,10 +253,23 @@ const userRequirement = {
       }
     }
 
-    const competitorsToGenerate = Math.max(0, 3 - competitorResults.length);
-    if (competitorsToGenerate > 0) {
+    // Ensure at least 3 unique, valid competitors
+    const MIN_COMPETITORS = 3;
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
+
+    while (competitorResults.length < MIN_COMPETITORS && retryCount < MAX_RETRIES) {
       try {
-        const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, competitorsToGenerate);
+        const competitorsToGenerate = 6; // Fetch 6 to ensure enough valid ones
+        console.log(`Fetching ${competitorsToGenerate} additional competitors (Retry ${retryCount + 1})`);
+
+        const aiResponse = await fetchCompetitorsFromLLM(
+          scrapedMain,
+          userRequirement,
+          competitorsToGenerate,
+          Array.from(processedUrls),
+          Array.from(processedNames)
+        );
 
         await prisma.website_scraped_data.update({
           where: { website_id },
@@ -234,95 +277,102 @@ const userRequirement = {
         });
 
         const parsedCompetitors = parseCompetitorData(aiResponse);
-        for (const comp of parsedCompetitors) {
-          if (!comp.website_url?.startsWith('http')) continue;
-          if (
-            competitorUrls.includes(comp.website_url) ||
-            competitorResults.some(r => r.competitor_website_url === comp.website_url)
-          ) continue;
-
-          try {
-            const competitor_id = uuidv4();
-            const savedCompetitor = await prisma.competitor_details.create({
-              data: {
-                competitor_id,
-                website_id,
-                name: comp.name,
-                competitor_website_url: comp.website_url,
-                industry: comp.industry,
-                region: comp.region,
-                target_audience: comp.target_audience,
-                primary_offering: comp.primary_offering,
-                usp: comp.usp,
-              },
-            });
-
-            const scraped = await scrapeWebsitecompetitos(comp.website_url);
-            if (scraped) {
-              await prisma.competitor_data.upsert({
-                where: { competitor_id },
-                update: { ...(typeof scraped === 'object' && scraped !== null ? scraped : {}), updated_at: new Date() },
-                create: { 
-                  competitor_id, 
-                  website_id, 
-                  ...(typeof scraped === 'object' && scraped !== null 
-                      ? { 
-                          ...scraped, 
-                          website_url: scraped.website_url ?? comp.website_url // Ensure website_url is always a string
-                        } 
-                      : { website_url: comp.website_url }) 
-                },
-              });
-
-              const pageSpeedData = await getPageSpeedData(comp.website_url);
-              if (pageSpeedData) {
-                await prisma.competitor_data.update({
-                  where: { competitor_id },
-                  data: { page_speed: pageSpeedData },
-                });
-              }
-
-              let h1_Text = null;
-              if (scraped && typeof scraped === 'object' && 'raw_html' in scraped && scraped.raw_html) {
-                // console.log('Scraped raw HTML:');
-                const rawhtml = cheerio.load(scraped.raw_html);
-                // console.log('Scraped raw HTML:', scraped.raw_html);
-                h1_Text =rawhtml('h1').first().text().trim(); // gets the first <h1> tag text
-                console.log('H1:', h1_Text);
-              }  
-              competitorResults.push({
-                ...savedCompetitor,
-               
-                website_health: pageSpeedData || null,
-                website_scraped_data: {
-                  h1_tag:h1_Text || null,
-                  raw_html: typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped ? scraped.raw_html : null,
-                  page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
-                  meta_keywords: typeof scraped === 'object' && scraped !== null ? scraped.meta_keywords : null,
-                  meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
-                  og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
-                  og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
-                  og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
-                  facebook_handler: typeof scraped === 'object' && scraped !== null ? scraped.facebook_handle : null,
-                  twitter_handler: typeof scraped === 'object' && scraped !== null ? scraped.twitter_handle : null,
-                  tikok_handler: typeof scraped === 'object' && scraped !== null ? scraped.tiktok_handle : null,
-                  youtube_handler: typeof scraped === 'object' && scraped !== null ? scraped.youtube_handle : null,
-                  linkedin_handle: typeof scraped === 'object' && scraped !== null ? scraped.linkedin_handle : null,
-                  instagram_handle: typeof scraped === 'object' && scraped !== null ? scraped.instagram_handle : null,
-
-
-
-
-              
-                },
-              });
-            }
-          } catch (err: any) {
-            console.error(`AI fallback competitor error for ${comp.website_url}:`, err.message);
-          }
+        // Define a type for parsed competitor objects
+        interface ParsedCompetitor {
+          website_url: string;
+          name: string;
+          industry?: string;
+          region?: string;
+          target_audience?: string;
+          primary_offering?: string;
+          usp?: string;
         }
-      } catch (err: any) {
-        console.error(`Error during AI fallback competitor fetch: ${err.message}`);
+        
+                for (const comp of parsedCompetitors.slice(0, MIN_COMPETITORS - competitorResults.length) as ParsedCompetitor[]) {
+                  const url: string = (comp as ParsedCompetitor).website_url;
+                  const name = (comp as ParsedCompetitor).name;
+        
+                  if (processedUrls.has(url) || processedNames.has(name) || competitorUrls.includes(url) || competitorResults.some(r => r.competitor_website_url === url || r.name === name)) {
+                    console.log(`Skipping duplicate competitor: ${name} (${url})`);
+                    continue;
+                  }
+        
+                  try {
+                    const competitor_id = uuidv4();
+                    const savedCompetitor: any = await prisma.competitor_details.create({
+                      data: {
+                        competitor_id,
+                        website_id,
+                        name,
+                        competitor_website_url: url,
+                        industry: (comp as ParsedCompetitor).industry,
+                        region: (comp as ParsedCompetitor).region,
+                        target_audience: (comp as ParsedCompetitor).target_audience,
+                        primary_offering: (comp as ParsedCompetitor).primary_offering,
+                        usp: (comp as ParsedCompetitor).usp,
+                      },
+                    });
+        
+                    const scraped = await scrapeWebsitecompetitos(url);
+                    if (scraped) {
+                      await prisma.competitor_data.upsert({
+                        where: { competitor_id },
+                        update: { ...(typeof scraped === 'object' && scraped !== null ? scraped : {}), updated_at: new Date() },
+                        create: {
+                          competitor_id,
+                          website_id,
+                          ...(typeof scraped === 'object' && scraped !== null ? scraped : {}),
+                          website_url: (typeof scraped === 'object' && scraped !== null && 'website_url' in scraped) ? scraped.website_url : url,
+                        },
+                      });
+        
+                      const pageSpeedData = await getPageSpeedData(url);
+                      if (pageSpeedData) {
+                        await prisma.competitor_data.update({
+                          where: { competitor_id },
+                          data: { page_speed: pageSpeedData },
+                        });
+                      }
+        
+                      const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+                        ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+                        : null;
+        
+                      const competitorResult = {
+                        ...savedCompetitor,
+                        website_health: pageSpeedData || null,
+                        website_scraped_data: {
+                          h1_tag: h1_Text,
+                          page_title: typeof scraped === 'object' && scraped !== null ? scraped.page_title : null,
+                          meta_description: typeof scraped === 'object' && scraped !== null ? scraped.meta_description : null,
+                          og_description: typeof scraped === 'object' && scraped !== null ? scraped.og_description : null,
+                          og_title: typeof scraped === 'object' && scraped !== null ? scraped.og_title : null,
+                          og_image: typeof scraped === 'object' && scraped !== null ? scraped.og_image : null,
+                          facebook_handle: typeof scraped === 'object' && scraped !== null ? scraped.facebook_handle : null,
+                          twitter_handle: typeof scraped === 'object' && scraped !== null ? scraped.twitter_handle : null,
+                          tiktok_handle: typeof scraped === 'object' && scraped !== null ? scraped.tiktok_handle : null,
+                          youtube_handle: typeof scraped === 'object' && scraped !== null ? scraped.youtube_handle : null,
+                          linkedin_handle: typeof scraped === 'object' && scraped !== null ? scraped.linkedin_handle : null,
+                          instagram_handle: typeof scraped === 'object' && scraped !== null ? scraped.instagram_handle : null,
+                        },
+                      };
+        
+                      competitorResults.push(competitorResult);
+                      processedUrls.add(url);
+                      processedNames.add(name);
+                    }
+                  } catch (err) {
+                    console.error(`AI fallback competitor error for ${url}: ${err instanceof Error ? err.message : err}`);
+                  }
+                }
+
+        retryCount++;
+        if (competitorResults.length < MIN_COMPETITORS && retryCount >= MAX_RETRIES) {
+          console.warn(`Could not find ${MIN_COMPETITORS} unique, valid competitors after ${MAX_RETRIES} retries. Returning ${competitorResults.length} competitors.`);
+        }
+      } catch (err) {
+        console.error(`Error during AI fallback competitor fetch (Retry ${retryCount + 1}): ${err instanceof Error ? err.message : err}`);
+        retryCount++;
       }
     }
 
@@ -331,42 +381,26 @@ const userRequirement = {
       labeledResults[`competitor${idx + 1}`] = result;
     });
 
-    // ✅ Fetch and include brand website analysis
     const brandWebsiteAnalysis = await prisma.brand_website_analysis.findFirst({
       where: { website_id },
       orderBy: { created_at: 'desc' },
     });
-    const { raw_html,other_links,ctr_loss_percent,schema_analysis,sitemap_pages, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
+
+    const { raw_html, other_links, ctr_loss_percent, schema_analysis, sitemap_pages, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
 
     labeledResults['mainWebsite'] = {
-      h1_tag: h1Text, 
+      h1_tag: h1Text,
       website: scrapedMainWithoutRawHtml,
       brandWebsiteAnalysis: brandWebsiteAnalysis ?? null,
     };
 
+   
 
+    return labeledResults;
+  }
 
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      update: {
-        competitor_analysis: "1",
-      },
-      create: {
-        user_id,
-        website_id,
-        competitor_analysis: "1",
-      },
-    });
-
-return labeledResults;
-}}
-
-static async getComparisonRecommendations(website_id: string) {
+  
+    static async getComparisonRecommendations(website_id: string) {
   if (!website_id) {
     throw new Error('website_id is required');
   }else (console.log("website id get ",website_id));
@@ -386,6 +420,11 @@ static async getComparisonRecommendations(website_id: string) {
   if (!mainWebsite) {
     throw new Error('Website not found');
   }
+
+  // Fetch user requirements for use in the prompt
+  const userRequirementRaw = await prisma.user_requirements.findFirst({
+    where: { website_id },
+  });
 
   const competitors = await prisma.competitor_details.findMany({
     where: { website_id },
@@ -428,6 +467,7 @@ static async getComparisonRecommendations(website_id: string) {
     },
   };
   
+  console.log("main website data",main);
   const comps = competitors.map(comp => {
     const scraped = comp.competitor_data;
     let ps: any = scraped?.page_speed ?? {};
@@ -474,8 +514,8 @@ static async getComparisonRecommendations(website_id: string) {
       },
     };
   });
-
-  const prompt = createComparisonPrompt(main, comps);
+console.log("competitors data",comps);
+  const prompt = createComparisonPrompt(main, comps,userRequirementRaw);
   // console.log('Generated prompt for LLM:', prompt);
   if (!prompt) {
     throw new Error('Failed to generate prompt for LLM');
@@ -486,6 +526,7 @@ static async getComparisonRecommendations(website_id: string) {
     temperature: 0.7,
     max_tokens: 3000,
   });
+  console.log("prompt",prompt)
   if (response.choices.length === 0 || !response.choices[0].message.content) { 
     throw new Error('LLM response is empty or invalid');  
   } else {
@@ -496,7 +537,5 @@ static async getComparisonRecommendations(website_id: string) {
   };
 }
 
-
 }
-
 

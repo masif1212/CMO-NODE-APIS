@@ -262,7 +262,7 @@ export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
 
   const actionable_fix =
     (trafficMap["organic_search"] || 0) / total_visitors > 0.5
-      ? "✅ Organic traffic looks healthy."
+      ? "  Organic traffic looks healthy."
       : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
 
  

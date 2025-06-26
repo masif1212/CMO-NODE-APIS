@@ -2,8 +2,6 @@ import { Request, Response } from "express";
 import { checkBrokenLinks ,getWebsiteUrlById} from "./tech_service";
 import { saveBrokenLinkAnalysis} from "../technical_seo/brokenLink.service";
 import { PrismaClient } from "@prisma/client";
-import * as cheerio from "cheerio";
-import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 
 
 const prisma = new PrismaClient();
@@ -41,6 +39,8 @@ try {
   },
 });
 
+
+
 let user_access_readiness: any = "None";
 
 if (analysis?.audit_details) {
@@ -58,11 +58,14 @@ if (analysis?.audit_details) {
 }
 
    
-    
-    console.log("validating schema markup...");
-     const schemaResult: SchemaOutput = await validateComprehensiveSchema(website_url,website_id);
-    if (schemaResult) {
-      console.log("Schema validation completed successfully:");
+ const schema = await prisma.website_scraped_data.findUnique(
+  {
+    where : {website_id},
+    select: {
+      schema_analysis: true
+    }
+  }
+)   
 
         await prisma.analysis_status.upsert({
     where: {
@@ -72,19 +75,34 @@ if (analysis?.audit_details) {
     },
   },
   update: {
-    broken_links: saved.website_analysis_id,
+    technical_seo: saved.website_analysis_id,
   },
   create: {
     user_id,
     website_id,
-    broken_links: saved.website_analysis_id,
+    technical_seo: saved.website_analysis_id,
   },
+
+
+
 });
     return res.status(200).json({
       Technical_SEO: {
       Schema_Markup_Status: {
-          message: schemaResult.message,
-          valid: schemaResult.schemas.summary
+          message: schema && schema.schema_analysis
+            ? (typeof schema.schema_analysis === "string"
+                ? JSON.parse(schema.schema_analysis).message
+                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "message" in schema.schema_analysis
+                  ? (schema.schema_analysis as { message?: string }).message
+                  : undefined))
+            : "No schema data found.",
+          valid: schema?.schema_analysis
+            ? (typeof schema.schema_analysis === "string"
+                ? JSON.parse(schema.schema_analysis).schemas?.summary
+                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "schemas" in schema.schema_analysis
+                    ? (schema.schema_analysis as { schemas?: { summary?: any } }).schemas?.summary
+                    : null))
+            : null
       },
       User_Access_Readiness: {
           user_access_readiness: user_access_readiness,
@@ -100,11 +118,13 @@ if (analysis?.audit_details) {
     });
     }
   }
-} catch (err: any) {
+  // Removed extra closing brace here
+
+catch (err: any) {
     console.error("❌ handleBrokenLinks error:", err);
     return res.status(500).json({
       error: "Failed to check broken links.",
-      detail: err?.message || "Internal server error",
+      detail: (err && typeof err === "object" && "message" in err) ? (err as Error).message : "Internal server error",
     });
   }
 };

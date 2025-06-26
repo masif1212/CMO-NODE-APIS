@@ -5,4 +5,4 @@ import { recommendation_by_cmo } from "./controller";
 const router = Router();
 router.post("/", recommendation_by_cmo);
 
-export default router; // ✅ make sure you're exporting the router
+export default router; //   make sure you're exporting the router
