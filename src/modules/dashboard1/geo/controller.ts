@@ -9,13 +9,13 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
     if (!user_id || !website_id) {
       return res.status(400).json({ message: 'user_id and website_id are required' });
     }
-    
+
     const result = await fetchBrands(user_id, website_id);
-    if ( result) {
+    if (result) {
       console.log('Fetched brands successfully');
     }
     res.status(200).json(result);
   } catch (err: any) {
-    res.status(500).json({ message: err.message || 'Internal server error' });
+    res.status(500).json({ message: err.message || 'Internal server error' }); 
   }
 };

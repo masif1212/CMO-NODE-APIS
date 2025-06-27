@@ -21,7 +21,7 @@ export const fetchBrands = async (
       user_id_website_id: { user_id, website_id },
     },
   });
-  
+
   if (!websiteEntry) {
     throw new Error(`Website entry not found for this user and website.`);
   }
@@ -47,10 +47,10 @@ export const fetchBrands = async (
         region_of_operation: '',
         target_location: '',
         target_audience: '',
-        primary_offering:'',
+        primary_offering: '',
         USP: '',
-        
-        
+
+
       },
     });
   }
@@ -70,8 +70,8 @@ export const fetchBrands = async (
   if (region_of_operation) parts.push(`operating in ${region_of_operation}`);
   if (target_location) parts.push(`targeting users in ${target_location}`);
   if (target_audience) parts.push(`serving ${target_audience}`);
-  if(USP) parts.push(`, usp  :  ${USP}`);
-  if(primary_offering) parts.push(`and their brand primary_offering :   ${primary_offering}`);
+  if (USP) parts.push(`, usp  :  ${USP}`);
+  if (primary_offering) parts.push(`and their brand primary_offering :   ${primary_offering}`);
   const context = parts.length > 0 ? parts.join(', ') : '';
 
   const prompt = `
@@ -117,8 +117,8 @@ Format:
 
     let content = res.output_text?.trim();
     if (!content) throw new Error('Empty OpenAI response');
-       else ("OpenAI response received successfully");
-    
+    else ("OpenAI response received successfully");
+
     if (content.startsWith('```')) {
       content = content.replace(/```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
@@ -150,24 +150,24 @@ Format:
     });
 
 
-   const response = websiteFound
-  ? {
-      website_found: true,
-      // message: "Awesome! Your brand has earned a spot among the top online performers."
-    }
-  : {
-      website_found: false,
-      
+    const response = websiteFound
+      ? {
+        website_found: true,
+        // message: "Awesome! Your brand has earned a spot among the top online performers."
+      }
+      : {
+        website_found: false,
+
         // summary: "Sorry, your brand does not appear in the top brands.",
         // recommendation: "You need to improve your marketing strategy and website structuring for better online visibility."
-      
-    };
-    
 
-    const saveData = JSON.stringify({
+      };
+
+
+    const saveData = JSON.stringify({/*  */
       // brands: parsedBrands,
       website_found: websiteFound,
-      
+
     });
 
     await prisma.llm_responses.upsert({
@@ -176,7 +176,7 @@ Format:
       create: { website_id, geo_llm: saveData },
     });
 
-  const  traffic =  await prisma.brand_traffic_analysis.findFirst({
+    const traffic = await prisma.brand_traffic_analysis.findFirst({
       where: { website_id },
       orderBy: { created_at: "desc" },
       select: {
@@ -184,27 +184,53 @@ Format:
       },
     })
 
-  const sources = traffic?.top_sources as any[]; // assuming it's JSON array
-// const bingSource = sources?.find(
-//   (src) => src.name?.toLowerCase().includes("bing.com"||"bing")
-// );  
-  
-const bingSource = sources?.find((src) =>
-  ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
-) ?? { type: "source", name: "bing.com", sessions: 0 };
-return {
+    const sources = traffic?.top_sources as any[]; // assuming it's JSON array
+    // const bingSource = sources?.find(
+    //   (src) => src.name?.toLowerCase().includes("bing.com"||"bing")
+    // );  
 
-  
-  AI_Discoverability: {
-    // data: parsedBrands,
-    // website_found: websiteFound,
-    response
-     // make sure 'message' is defined
-  },
-  
-  bingSource : bingSource
-  
-};
+    const bingSource = sources?.find((src) =>
+      ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
+    ) ?? { type: "source", name: "bing.com", sessions: 0 };
+
+    const schema = await prisma.website_scraped_data.findUnique(
+  {
+    where : {website_id},
+    select: {
+      schema_analysis: true
+    }
+  }
+) 
+    return {
+
+
+      AI_Discoverability: {
+        // data: parsedBrands,
+        // website_found: websiteFound,
+        response
+        // make sure 'message' is defined
+      },
+
+      SearchBotcrawlability: {
+          message: schema && schema.schema_analysis
+            ? (typeof schema.schema_analysis === "string"
+                ? JSON.parse(schema.schema_analysis).message
+                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "message" in schema.schema_analysis
+                  ? (schema.schema_analysis as { message?: string }).message
+                  : undefined))
+            : "No schema data found.",
+          valid: schema?.schema_analysis
+            ? (typeof schema.schema_analysis === "string"
+                ? JSON.parse(schema.schema_analysis).schemas?.summary
+                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "schemas" in schema.schema_analysis
+                    ? (schema.schema_analysis as { schemas?: { summary?: any } }).schemas?.summary
+                    : null))
+            : null
+      },
+
+      bingSource: bingSource
+
+    };
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);
   }

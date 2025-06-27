@@ -123,18 +123,18 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   // }
 
   function extractTitleTags(): object {
-  const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
-  const status = titles.length === 0 ? "not found" : (titles.length === 1 ? "ok" : "multiple");
-  const message = titles.length > 1
-    ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-    : (titles[0] || "not found");
+    const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
+    const status = titles.length === 0 ? "not found" : (titles.length === 1 ? "ok" : "multiple");
+    const message = titles.length > 1
+      ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+      : (titles[0] || "not found");
 
-  return {
-    status,
-    titles,
-    message,
-  };
-}
+    return {
+      status,
+      titles,
+      message,
+    };
+  }
 
   const meta = {
     page_title: extractTitleTags(),
@@ -170,12 +170,12 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
 
   const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
   const logoSelectors = [
-  'link[rel="icon"]',
-  'link[rel="shortcut icon"]',
-  'link[rel="apple-touch-icon"]',
-  'img[alt*="logo"]',
-  'img[src*="logo"]'
-];
+    'link[rel="icon"]',
+    'link[rel="shortcut icon"]',
+    'link[rel="apple-touch-icon"]',
+    'img[alt*="logo"]',
+    'img[src*="logo"]'
+  ];
 
   let logoUrl = "not found";
   for (const selector of logoSelectors) {
@@ -193,7 +193,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
   const allUrls = new Set<string>([url, ...sitemapLinks.map(u => u.trim())]);
   const uniqueUrls = [...allUrls];
-  
+
   let affectedPagesCount = 0;
   const keyPages = await Promise.all(uniqueUrls.map(async (pageUrl) => {
     try {

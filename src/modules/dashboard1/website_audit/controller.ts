@@ -16,6 +16,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   }
 
   try {
+    (console.log("PageSpeed processing ..."))
     // Step 1: Get PageSpeed summary
     const summary = await getPageSpeedSummary(user_id, website_id);
 

@@ -22,36 +22,36 @@ export async function scrapeWebsitecompetitos(url: string) {
       .filter((href, idx, self) => self.indexOf(href) === idx);
 
 
-  const logoSelectors = [
-  'link[rel="icon"]',
-  'link[rel="shortcut icon"]',
-  'link[rel="apple-touch-icon"]',
-  'img[alt*="logo"]',
-  'img[src*="logo"]'
-];    
-  let logoUrl: string | undefined = undefined;
+    const logoSelectors = [
+      'link[rel="icon"]',
+      'link[rel="shortcut icon"]',
+      'link[rel="apple-touch-icon"]',
+      'img[alt*="logo"]',
+      'img[src*="logo"]'
+    ];
+    let logoUrl: string | undefined = undefined;
 
-   const imgTags = $("img");
-  const totalImages = imgTags.length;
-  const imagesWithAlt = imgTags.filter((_, el) => {
-    const alt = $(el).attr("alt");
-    return !!(alt && alt.trim().length > 0);
-  }).length;
+    const imgTags = $("img");
+    const totalImages = imgTags.length;
+    const imagesWithAlt = imgTags.filter((_, el) => {
+      const alt = $(el).attr("alt");
+      return !!(alt && alt.trim().length > 0);
+    }).length;
 
-  const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+    const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
-  for (const selector of logoSelectors) {
-    const el = $(selector).first();
-    let src = el.attr("href") || el.attr("src");
-    if (src) {
-      // Handle relative URLs
-      if (src.startsWith("//")) src = "https:" + src;
-      else if (src.startsWith("/")) src = new URL(src, url).href;
-      logoUrl = src;
-      console.log(`Found logo URL: ${logoUrl}`);
-      break;
+    for (const selector of logoSelectors) {
+      const el = $(selector).first();
+      let src = el.attr("href") || el.attr("src");
+      if (src) {
+        // Handle relative URLs
+        if (src.startsWith("//")) src = "https:" + src;
+        else if (src.startsWith("/")) src = new URL(src, url).href;
+        logoUrl = src;
+        console.log(`Found logo URL: ${logoUrl}`);
+        break;
+      }
     }
-  }
     return {
       website_url: url,
       page_title: $('title').text() || null,

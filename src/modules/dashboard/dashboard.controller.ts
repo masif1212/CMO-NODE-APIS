@@ -13,48 +13,48 @@ export const getUserDashboard = async (req: Request, res: Response) => {
 
   try {
     // Group 1: Any of the main 5 audits (check for non-null string values)
-  const brand_auditRaw = await prisma.analysis_status.findMany({
-    where: {
-      user_id: user_id as string,
-      OR: [
-        { website_audit: { not: null } },
-        { seo_audit: { not: null } },
-        {social_media_analysis:  {not:null}},
-        // { recommendation_by_mo1: { not: null } },
-        // { recommendation_by_mo2: { not: null } },
-        // {competitor_analysis:{not:null}},
-        // { recommendation_by_mo3: { not: null } },
-        {recommendation_by_cmo:  {not:null}}  
-      ]
-    },
-    orderBy: {
-      updated_at: 'desc' // ✅ ORDER BY MOST RECENT
-    },
-    select: {
-      id: true,
-      website_id: true,
-      updated_at: true,
-      website_audit: true,
-      seo_audit: true,
-      social_media_analysis:true,
-      competitor_details: true,
-      recommendation_by_mo1: true,
-      recommendation_by_mo2: true,
-      recommendation_by_mo3: true,
-      user_websites: {
-        select: {
-          website_url: true,
-          website_scraped_data: {
-            select: {
-              page_title: true,
-              // schema_analysis: true,
-              // meta_description: true
+    const brand_auditRaw = await prisma.analysis_status.findMany({
+      where: {
+        user_id: user_id as string,
+        OR: [
+          { website_audit: { not: null } },
+          { seo_audit: { not: null } },
+          { social_media_analysis: { not: null } },
+          // { recommendation_by_mo1: { not: null } },
+          // { recommendation_by_mo2: { not: null } },
+          // {competitor_analysis:{not:null}},
+          // { recommendation_by_mo3: { not: null } },
+          { recommendation_by_cmo: { not: null } }
+        ]
+      },
+      orderBy: {
+        updated_at: 'desc' // ✅ ORDER BY MOST RECENT
+      },
+      select: {
+        id: true,
+        website_id: true,
+        updated_at: true,
+        website_audit: true,
+        seo_audit: true,
+        social_media_analysis: true,
+        competitor_details: true,
+        recommendation_by_mo1: true,
+        recommendation_by_mo2: true,
+        recommendation_by_mo3: true,
+        user_websites: {
+          select: {
+            website_url: true,
+            website_scraped_data: {
+              select: {
+                page_title: true,
+                // schema_analysis: true,
+                // meta_description: true
+              }
             }
           }
         }
       }
-    }
-  });
+    });
 
     // Build analysis list based on non-null values
     const brand_audit = brand_auditRaw.map(site => {
@@ -77,13 +77,51 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       };
     });
 
-   const competitorWebsitesRaw = await prisma.analysis_status.findMany({
+    const competitorWebsitesRaw = await prisma.analysis_status.findMany({
+      where: {
+        user_id,
+        competitor_details: { not: null }
+      },
+      orderBy: {
+        updated_at: 'desc' // ✅ ORDER BY MOST RECENT
+      },
+      select: {
+        id: true,
+        website_id: true,
+        updated_at: true,
+        user_websites: {
+          select: {
+            website_url: true,
+            website_scraped_data: {
+              select: {
+                page_title: true,
+                schema_analysis: true,
+                meta_description: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+
+    const competitorWebsites = competitorWebsitesRaw.map(site => ({
+      id: site.id,
+      website_id: site.website_id,
+      updated_at: site.updated_at,
+      website_url: site.user_websites?.website_url || null,
+      page_title: site.user_websites?.website_scraped_data?.page_title || null
+    }));
+
+
+ // Fetch social media analysis websites
+const socialMediaAnalysisRaw = await prisma.analysis_status.findMany({
   where: {
     user_id,
-    competitor_details: { not: null }
+    social_media_analysis: { not: null }
   },
   orderBy: {
-    updated_at: 'desc' // ✅ ORDER BY MOST RECENT
+    updated_at: 'desc'
   },
   select: {
     id: true,
@@ -104,20 +142,57 @@ export const getUserDashboard = async (req: Request, res: Response) => {
   }
 });
 
+const socialMediaAnalysis = socialMediaAnalysisRaw.map(site => ({
+  id: site.id,
+  website_id: site.website_id,
+  updated_at: site.updated_at,
+  website_url: site.user_websites?.website_url || null,
+  page_title: site.user_websites?.website_scraped_data?.page_title || null
+}));
 
-    const competitorWebsites = competitorWebsitesRaw.map(site => ({
-      id: site.id,
-      website_id: site.website_id,
-      updated_at: site.updated_at,
-      website_url: site.user_websites?.website_url || null,
-      page_title: site.user_websites?.website_scraped_data?.page_title || null
-    }));
+// Fetch recommendation_by_cmo websites
+const cmoRecommendationsRaw = await prisma.analysis_status.findMany({
+  where: {
+    user_id,
+    recommendation_by_cmo: { not: null }
+  },
+  orderBy: {
+    updated_at: 'desc'
+  },
+  select: {
+    id: true,
+    website_id: true,
+    updated_at: true,
+    user_websites: {
+      select: {
+        website_url: true,
+        website_scraped_data: {
+          select: {
+            page_title: true,
+            schema_analysis: true,
+            meta_description: true
+          }
+        }
+      }
+    }
+  }
+});
 
+const cmoRecommendations = cmoRecommendationsRaw.map(site => ({
+  id: site.id,
+  website_id: site.website_id,
+  updated_at: site.updated_at,
+  website_url: site.user_websites?.website_url || null,
+  page_title: site.user_websites?.website_scraped_data?.page_title || null
+}));
+   
     return res.status(200).json({
       success: true,
       data: {
         brand_audit,
-        competitorWebsites
+        competitorWebsites,
+        socialMediaAnalysis,
+        cmoRecommendations
       }
     });
   } catch (error) {
@@ -125,6 +200,17 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
 
 
 interface GeoData {
@@ -228,45 +314,45 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
           best_practices: pageSpeedData.best_practices_score ?? 0,
         };
 
-    website_health.speed_health = {
-      total_blocking_time: {
-        display_value: pageSpeedData.total_blocking_time ?? "N/A",
-        score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
-      },
-      first_contentful_paint: {
-        display_value: pageSpeedData.first_contentful_paint ?? "N/A",
-        score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
-      },
-      speed_index: {
-        display_value: pageSpeedData.speed_index ?? "N/A",
-        score: auditDetails?.metrics?.speed_index?.score ?? null,
-      },
-      largest_contentful_paint: {
-        display_value: pageSpeedData.largest_contentful_paint ?? "N/A",
-        score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
-      },
-      interactive: {
-        display_value: pageSpeedData.time_to_interactive ?? "N/A",
-        score: auditDetails?.metrics?.interactive?.score ?? null,
-      },
-      cumulative_layout_shift: {
-        display_value: pageSpeedData.cumulative_layout_shift ?? "N/A",
-        score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
-      },
-    };
-  } // <-- Add this closing brace to properly close the try block
-}
-if (pageSpeedData?.audit_details) {
-  try {
-    const auditDetails =
-      typeof pageSpeedData.audit_details === "string"
-        ? JSON.parse(pageSpeedData.audit_details)
-        : pageSpeedData.audit_details;
-    website_health.optimization_opportunities = auditDetails?.optimization_opportinuties || "None";
-  } catch (error) {
-    console.error("Error parsing audit_details:", error);
-  }
-}
+        website_health.speed_health = {
+          total_blocking_time: {
+            display_value: pageSpeedData.total_blocking_time ?? "N/A",
+            score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
+          },
+          first_contentful_paint: {
+            display_value: pageSpeedData.first_contentful_paint ?? "N/A",
+            score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
+          },
+          speed_index: {
+            display_value: pageSpeedData.speed_index ?? "N/A",
+            score: auditDetails?.metrics?.speed_index?.score ?? null,
+          },
+          largest_contentful_paint: {
+            display_value: pageSpeedData.largest_contentful_paint ?? "N/A",
+            score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
+          },
+          interactive: {
+            display_value: pageSpeedData.time_to_interactive ?? "N/A",
+            score: auditDetails?.metrics?.interactive?.score ?? null,
+          },
+          cumulative_layout_shift: {
+            display_value: pageSpeedData.cumulative_layout_shift ?? "N/A",
+            score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
+          },
+        };
+      } // <-- Add this closing brace to properly close the try block
+    }
+    if (pageSpeedData?.audit_details) {
+      try {
+        const auditDetails =
+          typeof pageSpeedData.audit_details === "string"
+            ? JSON.parse(pageSpeedData.audit_details)
+            : pageSpeedData.audit_details;
+        website_health.optimization_opportunities = auditDetails?.optimization_opportinuties || "None";
+      } catch (error) {
+        console.error("Error parsing audit_details:", error);
+      }
+    }
 
     // ---------- Availability Tracker ----------
     if (scrapedData) {
@@ -293,8 +379,8 @@ if (pageSpeedData?.audit_details) {
           high_bounce_pages: true,
           top_countries: true,
           top_sources: true,
-          top_browsers:true,
-          top_devices:true,
+          top_browsers: true,
+          top_devices: true,
           overall_bounce_rate: true,
           actionable_fix: true,
         },
@@ -416,44 +502,44 @@ if (pageSpeedData?.audit_details) {
     }
 
     // ---------- Geo Data ----------
-// ---------- Geo Data ----------
-const geo: GeoData = {};
+    // ---------- Geo Data ----------
+    const geo: GeoData = {};
 
-// Parse geo_llm
-if (recommendation?.geo_llm) {
-  try {
-    geo.AI_Discoverability = typeof recommendation.geo_llm === "string"
-      ? JSON.parse(recommendation.geo_llm)
-      : recommendation.geo_llm;
-  } catch (error) {
-    console.error("Error parsing geo_llm:", error);
-    geo.AI_Discoverability = recommendation.geo_llm; // Fallback to raw string
-  }
-}
+    // Parse geo_llm
+    if (recommendation?.geo_llm) {
+      try {
+        geo.AI_Discoverability = typeof recommendation.geo_llm === "string"
+          ? JSON.parse(recommendation.geo_llm)
+          : recommendation.geo_llm;
+      } catch (error) {
+        console.error("Error parsing geo_llm:", error);
+        geo.AI_Discoverability = recommendation.geo_llm; // Fallback to raw string
+      }
+    }
 
-// Fetch top_sources from brand_traffic_analysis
-let sources: any[] = [];
-if (analysisStatus.seo_audit != null) {
-  const traffic = await prisma.brand_traffic_analysis.findUnique({
-    where: { traffic_analysis_id: analysisStatus.seo_audit },
-    select: {
-      top_sources: true, // Add top_sources to the select
-    },
-  });
+    // Fetch top_sources from brand_traffic_analysis
+    let sources: any[] = [];
+    if (analysisStatus.seo_audit != null) {
+      const traffic = await prisma.brand_traffic_analysis.findUnique({
+        where: { traffic_analysis_id: analysisStatus.seo_audit },
+        select: {
+          top_sources: true, // Add top_sources to the select
+        },
+      });
 
-  sources = traffic?.top_sources
-    ? (typeof traffic.top_sources === "string"
-        ? JSON.parse(traffic.top_sources)
-        : traffic.top_sources) // Parse if stored as a string
-    : [];
-}
+      sources = traffic?.top_sources
+        ? (typeof traffic.top_sources === "string"
+          ? JSON.parse(traffic.top_sources)
+          : traffic.top_sources) // Parse if stored as a string
+        : [];
+    }
 
-// Extract bing source
-const bingSource = sources?.find((src) =>
-  ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
-) ?? { type: "source", name: "bing.com", sessions: 0 };
+    // Extract bing source
+    const bingSource = sources?.find((src) =>
+      ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
+    ) ?? { type: "source", name: "bing.com", sessions: 0 };
 
-geo.bingSource = bingSource;
+    geo.bingSource = bingSource;
 
 
 
@@ -521,17 +607,17 @@ geo.bingSource = bingSource;
     }
 
     // ---------- Response Payload ----------
-    
+
 
     const responsePayload: Record<string, any> = {
       success: true,
       website_health,
-      seo_audit:{
-      seo_health,
-      onpage_opptimization,
+      seo_audit: {
+        seo_health,
+        onpage_opptimization,
 
       },
-      
+
       technical_seo,
       geo,
       moRecommendations,
