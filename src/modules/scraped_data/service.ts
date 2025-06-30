@@ -180,7 +180,7 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
 //     return !!(alt && alt.trim().length > 0);
 //   }).length;
 
-//   const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+//   const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 //   const logoSelectors = [
 //     'link[rel="icon"]',
 //     'link[rel="shortcut icon"]',
@@ -271,7 +271,7 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
 //         ctr_loss_percent: CTR_Loss_Percent,
 //         sitemap_pages: filteredPages,
 //         schema_analysis: JSON.stringify(schemaAnalysisData),
-//         homepage_alt_text_coverage: homepageAltTextCoverage,
+//         homepage_alt_text_coverage:   homepage_alt_text_coverage,
 //         other_links: otherLinks.length > 0 ? otherLinks : "not found",
 //         raw_html: html,
 //         status_code: statusCode,
@@ -418,7 +418,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
 
   const totalImages = $("img").length;
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
-  const homepageAltTextCoverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+  const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
   const logoSelectors = [
     'link[rel="icon"]',
@@ -512,7 +512,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
         ctr_loss_percent: CTR_Loss_Percent,
         sitemap_pages: filteredPages,
         schema_analysis: JSON.stringify(schemaAnalysisData),
-        homepage_alt_text_coverage: homepageAltTextCoverage,
+        homepage_alt_text_coverage:   homepage_alt_text_coverage,
         other_links: otherLinks.length > 0 ? otherLinks : "not found",
         raw_html: html,
         status_code: statusCode,

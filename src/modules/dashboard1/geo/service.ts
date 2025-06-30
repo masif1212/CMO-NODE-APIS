@@ -205,10 +205,9 @@ Format:
 
 
       AI_Discoverability: {
-        // data: parsedBrands,
-        // website_found: websiteFound,
-        response
-        // make sure 'message' is defined
+        
+        ...response 
+        
       },
 
       SearchBotcrawlability: {
