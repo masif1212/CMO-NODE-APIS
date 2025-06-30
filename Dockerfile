@@ -1,34 +1,52 @@
-# Dockerfile for Node.js Backend API (Handles migrations)
+# Dockerfile for Node.js Backend API (Handles migrations with better logging)
 
 # Stage 1: Build Stage (compiles TypeScript)
 FROM node:18-slim AS builder
 WORKDIR /app
+
+# Install openssl for Prisma CLI if needed
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
+
+# Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
+
+# Copy application code
 COPY . .
-# Generate the Prisma Client for your API
+
+# Generate Prisma client
 RUN npx prisma generate
-# Compile TypeScript to JavaScript in the /dist folder
+
+# Compile TypeScript to JavaScript
 RUN npm run build
 
-# Stage 2: Final Production Stage
+# Stage 2: Final Production Image
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy production dependencies, compiled code, and prisma folder
+# Copy required artifacts from builder stage
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
-# This is crucial: copy the prisma schema and migrations folder
 COPY --from=builder /app/prisma ./prisma
 
-# Create a secure, non-root user
+# Create non-root user
 RUN adduser --system --group nodejs
 USER nodejs
 
+# Expose API port
 EXPOSE 8080
 
-# This CMD can run the migration OR start the production server
-CMD ["sh", "-c", "if [ \"$TASK\" = \"migrate\" ]; then npx prisma migrate deploy; else node dist/server.js; fi"]
+# CMD handles both migration and normal run, with full logging
+CMD ["sh", "-c", "\
+echo '--- STARTING CONTAINER'; \
+echo 'TASK=$TASK'; \
+echo 'DATABASE_URL=${DATABASE_URL:-(not set)}'; \
+if [ \"$TASK\" = \"migrate\" ]; then \
+  echo '--- Starting Prisma migration...'; \
+  npx prisma migrate deploy || { echo '--- Prisma migration failed with exit code $?'; exit 1; }; \
+else \
+  echo '--- Starting app server...'; \
+  node dist/server.js; \
+fi"]
