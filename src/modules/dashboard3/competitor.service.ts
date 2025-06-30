@@ -528,16 +528,17 @@ export class CompetitorService {
       temperature: 0.7,
       max_tokens: 3000,
     });
-    console.log("prompt", prompt)
-    if (response.choices.length === 0 || !response.choices[0].message.content) {
-      throw new Error('LLM response is empty or invalid');
-    } else {
-      console.log("LLM response is valid");
-    }
-    return {
-      recommendations: response.choices[0].message.content,
-    };
-  }
 
+   const raw = response.choices?.[0]?.message?.content || '{}';
+
+let parsed;
+try {
+  parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+} catch (err) {
+  console.error("Error parsing JSON response:", err);
+  parsed = { recommendations: [] }; // fail-safe fallback
 }
 
+return parsed;
+  }
+}

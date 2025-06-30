@@ -441,10 +441,115 @@ If data is insufficient, return null.
 
 
 
-export function createComparisonPrompt(main: any, competitors: any[],userRequirementRaw: any) {
+// export function createComparisonPrompt(main: any, competitors: any[],userRequirementRaw: any) {
 
+//   return `
+// You are a digital strategy expert tasked with analyzing the website ${main.website_url} against its competitors to identify underperformance and provide actionable recommendations for improvement. The client may be from any industry (e.g., e-commerce, healthcare, government, services), so tailor recommendations to align with the provided data and general best practices. Use the competitor data to derive insights and benchmarks. Avoid generic suggestions like "improve SEO" or "enhance design." Instead, provide specific, measurable, and prioritized recommendations with clear examples, as if presenting to a client with moderate technical knowledge. Explain technical terms briefly to ensure clarity (e.g., "LCP, or Largest Contentful Paint, measures how fast the main content loads").
+
+// ### Input Data
+// - **Main Website**: 
+//   - URL: ${main.website_url}
+//   - Meta Title: ${main.meta?.title || 'N/A'}
+//   - Meta Description: ${main.meta?.meta_description || 'N/A'}
+//   - Meta Keywords: ${main.meta?.meta_keywords || 'N/A'}
+//   - Performance Metrics: 
+//     - LCP: ${main.page_speed?.largest_contentful_paint || 'N/A'} (Largest Contentful Paint, time to load main content)
+//     - CLS: ${main.page_speed?.cumulative_layout_shift || 'N/A'} (Cumulative Layout Shift, measures visual stability)
+//     - TTFB: ${main.page_speed?.time_to_interactive || 'N/A'} (Time to First Byte, server response time)
+//     -Speed Index: ${main.page_speed?.speed_index || 'N/A'} (how quickly content is visually populated)
+//     - First Contentful Paint: ${main.page_speed?.first_contentful_paint || 'N/A'} (time to first text or image)
+//     - Time to Interactive: ${main.page_speed?.time_to_interactive || 'N/A '} (time until the page is fully interactive)
+//     - Total Blocking Time: ${main.page_speed?.total_blocking_time || 'N/A'} (time the main thread is blocked)
+//     - SEO Score: ${main.page_speed?.seo_score || 'N/A'} (out of 100)
+//     - Accessibility Score: ${main.page_speed?.accessibility_score || 'N/A'} (out of 100)
+//   - Unique Selling Proposition (USP): ${userRequirementRaw.usp || 'N/A'}
+// - **Industry**: ${userRequirementRaw.industry || 'Unknown'}
+// - **Region of Operation**: ${userRequirementRaw.region_of_operation || 'Unknown'}
+// - **Target Location**: ${userRequirementRaw.target_location || 'Unknown'}
+// - **Target Audience**: ${userRequirementRaw.target_audience || 'Unknown'}
+// - **Primary Offering**: ${userRequirementRaw.primary_offering || 'Unknown'}
+
+
+// - **Competitors**:
+//   ${competitors.map((comp, index) => `
+//   - Competitor ${index + 1}:
+//     - URL: ${comp.website_url}
+//     - Meta Title: ${comp.meta?.title || 'N/A'}
+//     - Meta Description: ${comp.meta?.meta_description || 'N/A'}
+//     - Meta Keywords: ${comp.meta?.meta_keywords || 'N/A'}
+//     - Performance Metrics:
+//       - LCP: ${comp.page_speed?.largest_contentful_paint || 'N/A'}
+//       - CLS: ${comp.page_speed?.cumulative_layout_shift || 'N/A'}
+//       - TTFB: ${comp.page_speed?.time_to_first_byte || 'N/A'}
+//       - SEO Score: ${comp.page_speed?.seo_score || 'N/A'}
+//       - Accessibility Score: ${comp.page_speed?.accessibility_score || 'N/A'}
+//     - USP: ${comp.usp || 'N/A'}
+//   `).join('\n')}
+
+// ### Task
+// Generate a detailed report with the following sections. Use competitor data to set benchmarks and derive insights (e.g., keywords, messaging, performance standards). Provide exact rewrites, code snippets, or file size targets where applicable. If data is missing (e.g., 'N/A'), suggest industry-standard improvements based on best practices (e.g., Google’s Core Web Vitals: LCP < 2.5s, CLS < 0.1, TTFB < 600ms).
+
+// ur website, ${main.website_url}, has a compelling USP but lags in LCP (${main.page_speed?.largest_contentful_paint || 'N/A'}) compared to competitors like ${competitors[0]?.website_url} (${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}).”
+
+// 2. **Competitive Analysis (200-250 words)**:
+//    - Compare performance metrics (LCP, CLS, TTFB), SEO scores, accessibility scores, and messaging (meta title, description, keywords, USP).
+//    - Identify where ${main.website_url} underperforms or outperforms competitors. Use specific metrics (e.g., “${main.website_url}’s LCP of ${main.page_speed?.largest_contentful_paint || 'N/A'} is slower than ${competitors[0]?.website_url}’s ${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}”).
+//    - Highlight competitor strategies to emulate, such as strong keywords or concise meta descriptions.
+//    - Example: “${competitors[0]?.website_url} uses keywords like '${competitors[0]?.meta?.meta_keywords || 'N/A'}' to target [audience], improving SEO. ${main.website_url}’s keywords (${main.meta?.meta_keywords || 'N/A'}) are less focused.”
+
+// 3. **Underperformance Analysis (150-200 words)**:
+//    - Pinpoint specific issues causing underperformance (e.g., large image sizes, unoptimized scripts, weak meta tags, accessibility barriers).
+//    - Explain impacts in client-friendly terms (e.g., “A high LCP increases bounce rates, meaning users leave before engaging”).
+//    - Prioritize issues based on severity (e.g., LCP > 2.5s is critical per Google’s standards).
+//    - Example: “Your LCP of ${main.page_speed?.largest_contentful_paint || 'N/A'} exceeds Google’s recommended 2.5s, likely due to a ${main.hero_image_size || 'large'} hero image, causing 10-15% higher bounce rates.”
+
+// 4. **Recommendations (300-350 words, bullet points)**:
+//    - Provide 5-7 specific, prioritized recommendations to address underperformance in performance, SEO, accessibility, and messaging.
+//    - Include exact actions, measurable goals, and competitor-inspired strategies. For example:
+//      - **Performance**: “Compress hero image to <100KB using WebP to reduce LCP to <2.5s, matching ${competitors[0]?.website_url} (${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}).”
+//      - **SEO**: “Rewrite meta description to '[${main.usp || 'Your Service'}] for [target audience]' to align with ${competitors[0]?.meta?.meta_description || 'competitor messaging'}.”
+//      - **Accessibility**: “Add alt text to ${main.image_count || 'all'} images to improve accessibility score to >90/100, like ${competitors[1]?.website_url}.”
+//      - **Messaging**: “Incorporate keywords like '${competitors[0]?.meta?.meta_keywords || 'relevant terms'}' into homepage content to boost SEO.”
+//    - Suggest adding schema markup (e.g., FAQ or Product schema) to enhance search visibility, inspired by competitors if applicable.
+
+// 5. **Implementation Plan (150-200 words)**:
+//    - Outline a prioritized timeline for applying recommendations (e.g., “Week 1: Compress images; Week 2: Update meta tags”).
+//    - Specify tools or services (e.g., TinyPNG for image compression, Lighthouse for performance audits).
+//    - Highlight quick wins (e.g., “Reducing LCP can improve user retention in 1-2 weeks”).
+//    - Example: “Start by compressing images using TinyPNG to cut LCP to <2.5s in Week 1, matching ${competitors[0]?.website_url}. Update meta tags in Week 2 to boost SEO.”
+
+// ### Output Format
+
+
+// ## Section Title
+
+// ### Recommendation
+// - Point 1
+// - Point 2
+// - ...
+
+// ## Next Section Title
+
+// ### Recommendation
+// - Point 1
+// - ...
+
+// ### Constraints
+// - Do not invent data beyond what’s provided or implied by best practices.
+// - Avoid technical jargon without explanation (e.g., define CLS as “visual stability”).
+// - Ensure recommendations are practical for a small team with limited resources.
+// - Do not suggest paid tools unless free alternatives exist (e.g., Lighthouse over SEMrush).
+
+// Generate the report now, ensuring it’s professional, client-ready, and inspired by competitor benchmarks.
+// `;
+// }
+
+export function createComparisonPrompt(main: any = {}, competitors: any[] = [], userRequirementRaw: any = {}) {
+  main = main || {};
+  competitors = Array.isArray(competitors) ? competitors : [];
+  userRequirementRaw = userRequirementRaw || {};
   return `
-You are a digital strategy expert tasked with analyzing the website ${main.website_url} against its competitors to identify underperformance and provide actionable recommendations for improvement. The client may be from any industry (e.g., e-commerce, healthcare, government, services), so tailor recommendations to align with the provided data and general best practices. Use the competitor data to derive insights and benchmarks. Avoid generic suggestions like "improve SEO" or "enhance design." Instead, provide specific, measurable, and prioritized recommendations with clear examples, as if presenting to a client with moderate technical knowledge. Explain technical terms briefly to ensure clarity (e.g., "LCP, or Largest Contentful Paint, measures how fast the main content loads").
+You are a digital strategy expert tasked with analyzing the website ${main.website_url} against its competitors to identify underperformance and provide actionable recommendations to close the performance gap. The client may be from any industry (e.g., e-commerce, healthcare, government, services), so tailor recommendations to align with the provided data and general best practices. Use competitor data to set benchmarks and derive insights (e.g., keywords, messaging, performance standards). Avoid generic suggestions like "improve SEO" or "enhance design." Instead, provide specific, measurable, and prioritized recommendations with clear examples, as if presenting to a client with moderate technical knowledge. Explain technical terms briefly to ensure clarity (e.g., "LCP, or Largest Contentful Paint, measures how fast the main content loads").
 
 ### Input Data
 - **Main Website**: 
@@ -455,11 +560,11 @@ You are a digital strategy expert tasked with analyzing the website ${main.websi
   - Performance Metrics: 
     - LCP: ${main.page_speed?.largest_contentful_paint || 'N/A'} (Largest Contentful Paint, time to load main content)
     - CLS: ${main.page_speed?.cumulative_layout_shift || 'N/A'} (Cumulative Layout Shift, measures visual stability)
-    - TTFB: ${main.page_speed?.time_to_interactive || 'N/A'} (Time to First Byte, server response time)
-    -Speed Index: ${main.page_speed?.speed_index || 'N/A'} (how quickly content is visually populated)
-    - First Contentful Paint: ${main.page_speed?.first_contentful_paint || 'N/A'} (time to first text or image)
-    - Time to Interactive: ${main.page_speed?.time_to_interactive || 'N/A '} (time until the page is fully interactive)
-    - Total Blocking Time: ${main.page_speed?.total_blocking_time || 'N/A'} (time the main thread is blocked)
+    - TTFB: ${main.page_speed?.time_to_first_byte || 'N/A'} (Time to First Byte, server response time)
+    - Speed Index: ${main.page_speed?.speed_index || 'N/A'} (how quickly content is visually populated)
+    - FCP: ${main.page_speed?.first_contentful_paint || 'N/A'} (First Contentful Paint, time to first text or image)
+    - TTI: ${main.page_speed?.time_to_interactive || 'N/A'} (Time to Interactive, time until the page is fully interactive)
+    - TBT: ${main.page_speed?.total_blocking_time || 'N/A'} (Total Blocking Time, time the main thread is blocked)
     - SEO Score: ${main.page_speed?.seo_score || 'N/A'} (out of 100)
     - Accessibility Score: ${main.page_speed?.accessibility_score || 'N/A'} (out of 100)
   - Unique Selling Proposition (USP): ${userRequirementRaw.usp || 'N/A'}
@@ -468,7 +573,6 @@ You are a digital strategy expert tasked with analyzing the website ${main.websi
 - **Target Location**: ${userRequirementRaw.target_location || 'Unknown'}
 - **Target Audience**: ${userRequirementRaw.target_audience || 'Unknown'}
 - **Primary Offering**: ${userRequirementRaw.primary_offering || 'Unknown'}
-
 
 - **Competitors**:
   ${competitors.map((comp, index) => `
@@ -483,70 +587,51 @@ You are a digital strategy expert tasked with analyzing the website ${main.websi
       - TTFB: ${comp.page_speed?.time_to_first_byte || 'N/A'}
       - SEO Score: ${comp.page_speed?.seo_score || 'N/A'}
       - Accessibility Score: ${comp.page_speed?.accessibility_score || 'N/A'}
-    - USP: ${comp.usp || 'N/A'}
+    - Unique Selling Proposition (USP): ${userRequirementRaw?.usp || 'N/A'}
   `).join('\n')}
 
 ### Task
-Generate a detailed report with the following sections. Use competitor data to set benchmarks and derive insights (e.g., keywords, messaging, performance standards). Provide exact rewrites, code snippets, or file size targets where applicable. If data is missing (e.g., 'N/A'), suggest industry-standard improvements based on best practices (e.g., Google’s Core Web Vitals: LCP < 2.5s, CLS < 0.1, TTFB < 600ms).
+Generate a JSON response with a single key, \`recommendations\`, containing an array of objects. Each object represents an underperforming area for ${main.website_url} compared to competitors, with specific actions to close the performance gap. Use competitor data to set benchmarks and derive insights (e.g., faster LCP, stronger keywords). If data is missing (e.g., 'N/A'), suggest industry-standard improvements based on best practices (e.g., Google’s Core Web Vitals: LCP < 2.5s, CLS < 0.1, TTFB < 600ms).
 
-1. **Introduction (100-150 words)**:
-   - Summarize the purpose: to analyze ${main.website_url} against competitors and recommend improvements.
-   - Highlight the main website’s strengths (e.g., strong USP, high accessibility score) and key areas for improvement based on provided metrics.
-   - Mention competitors’ strengths (e.g., faster LCP, better SEO) to set context for recommendations.
-   - Example: “Your website, ${main.website_url}, has a compelling USP but lags in LCP (${main.page_speed?.largest_contentful_paint || 'N/A'}) compared to competitors like ${competitors[0]?.website_url} (${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}).”
-
-2. **Competitive Analysis (200-250 words)**:
-   - Compare performance metrics (LCP, CLS, TTFB), SEO scores, accessibility scores, and messaging (meta title, description, keywords, USP).
-   - Identify where ${main.website_url} underperforms or outperforms competitors. Use specific metrics (e.g., “${main.website_url}’s LCP of ${main.page_speed?.largest_contentful_paint || 'N/A'} is slower than ${competitors[0]?.website_url}’s ${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}”).
-   - Highlight competitor strategies to emulate, such as strong keywords or concise meta descriptions.
-   - Example: “${competitors[0]?.website_url} uses keywords like '${competitors[0]?.meta?.meta_keywords || 'N/A'}' to target [audience], improving SEO. ${main.website_url}’s keywords (${main.meta?.meta_keywords || 'N/A'}) are less focused.”
-
-3. **Underperformance Analysis (150-200 words)**:
-   - Pinpoint specific issues causing underperformance (e.g., large image sizes, unoptimized scripts, weak meta tags, accessibility barriers).
-   - Explain impacts in client-friendly terms (e.g., “A high LCP increases bounce rates, meaning users leave before engaging”).
-   - Prioritize issues based on severity (e.g., LCP > 2.5s is critical per Google’s standards).
-   - Example: “Your LCP of ${main.page_speed?.largest_contentful_paint || 'N/A'} exceeds Google’s recommended 2.5s, likely due to a ${main.hero_image_size || 'large'} hero image, causing 10-15% higher bounce rates.”
-
-4. **Recommendations (300-350 words, bullet points)**:
-   - Provide 5-7 specific, prioritized recommendations to address underperformance in performance, SEO, accessibility, and messaging.
-   - Include exact actions, measurable goals, and competitor-inspired strategies. For example:
-     - **Performance**: “Compress hero image to <100KB using WebP to reduce LCP to <2.5s, matching ${competitors[0]?.website_url} (${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}).”
-     - **SEO**: “Rewrite meta description to '[${main.usp || 'Your Service'}] for [target audience]' to align with ${competitors[0]?.meta?.meta_description || 'competitor messaging'}.”
-     - **Accessibility**: “Add alt text to ${main.image_count || 'all'} images to improve accessibility score to >90/100, like ${competitors[1]?.website_url}.”
-     - **Messaging**: “Incorporate keywords like '${competitors[0]?.meta?.meta_keywords || 'relevant terms'}' into homepage content to boost SEO.”
-   - Suggest adding schema markup (e.g., FAQ or Product schema) to enhance search visibility, inspired by competitors if applicable.
-
-5. **Implementation Plan (150-200 words)**:
-   - Outline a prioritized timeline for applying recommendations (e.g., “Week 1: Compress images; Week 2: Update meta tags”).
-   - Specify tools or services (e.g., TinyPNG for image compression, Lighthouse for performance audits).
-   - Highlight quick wins (e.g., “Reducing LCP can improve user retention in 1-2 weeks”).
-   - Example: “Start by compressing images using TinyPNG to cut LCP to <2.5s in Week 1, matching ${competitors[0]?.website_url}. Update meta tags in Week 2 to boost SEO.”
+Each recommendation object must include:
+- **tag**: A concise label identifying the issue (e.g., "LCP", "Meta Description", "Accessibility Score").
+- **how_to_close_the_gap**: A detailed, actionable plan (3-4 sentences) to address the issue, inspired by competitor performance or best practices. Include specific actions (e.g., code snippets, file size targets), measurable goals (e.g., "reduce LCP to <2.5s"), and manual validation steps (e.g., "check server response time in browser developer tools"). Explain impacts in client-friendly terms (e.g., "A high LCP increases bounce rates, meaning users leave before engaging").
 
 ### Output Format
+{
+  "recommendations": [
+    {
+      "tag": "string",
+      "how_to_close_the_gap": "string"
+    },
+    ...
+  ]
+}
 
+### Example Output
+{
+  "recommendations": [
+    {
+      "tag": "LCP",
+      "how_to_close_the_gap": "Compress the hero image to <100KB using WebP format to reduce LCP to <2.5s, matching ${competitors[0]?.website_url}'s LCP of ${competitors[0]?.page_speed?.largest_contentful_paint || 'N/A'}. Optimize server response by enabling caching and using a CDN to lower TTFB. This will decrease bounce rates by 10-15% as users see content faster. Verify improvements by checking LCP in browser developer tools."
+    },
 
-## Section Title
-
-### Recommendation
-- Point 1
-- Point 2
-- ...
-
-## Next Section Title
-
-### Recommendation
-- Point 1
-- ...
+    {
+      "tag": "Meta Keywords",
+      "how_to_close_the_gap": "Update meta keywords to include targeted terms like '${competitors[0]?.website_url}'s (${competitors[0]?.meta?.meta_keywords || 'N/A'}) to better align with ${userRequirementRaw.target_audience || 'target audience'}. This improves search engine relevance and click-through rates. Add meta keywords."
+    }
+  ]
+}
 
 ### Constraints
 - Do not invent data beyond what’s provided or implied by best practices.
 - Avoid technical jargon without explanation (e.g., define CLS as “visual stability”).
 - Ensure recommendations are practical for a small team with limited resources.
 - Do not suggest paid tools unless free alternatives exist (e.g., Lighthouse over SEMrush).
+- Prioritize recommendations based on severity (e.g., LCP > 2.5s is critical).
+- Never mention any external tool like light house or axe DevTools etc.
 
-Generate the report now, ensuring it’s professional, client-ready, and inspired by competitor benchmarks.
+Output only valid JSON.
 `;
 }
-
-
 

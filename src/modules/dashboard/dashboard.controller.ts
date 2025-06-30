@@ -216,7 +216,9 @@ const cmoRecommendations = cmoRecommendationsRaw.map(site => ({
 interface GeoData {
   AI_Discoverability?: any; // Flexible type, replace with specific structure if known
   bingSource?: { type: string; name: string; sessions: number };
-  schema_analysis?: any; // Flexible type, replace with specific structure if known
+  SearchBotcrawlability?: any;
+  // schema_analysis?: any; // Flexible type, replace with specific structure if known
+  // Schema_Markup_Status?: any; // Added to fix compile error
 }
 
 interface MoRecommendation {
@@ -256,7 +258,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
     const responseData: Record<string, any> = {};
     const website_health: Record<string, any> = {};
-    const seo_health: Record<string, any> = {};
+    let traffic_anaylsis: Record<string, any> = {};
     let pageSpeedData: any = undefined;
 
     const scrapedData = await prisma.website_scraped_data.findUnique({
@@ -270,6 +272,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
         ctr_loss_percent: true,
         schema_analysis: true,
         meta_description: true,
+        meta_keywords: true,
         page_title: true,
         homepage_alt_text_coverage: true,
         raw_html: true,
@@ -348,7 +351,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
           typeof pageSpeedData.audit_details === "string"
             ? JSON.parse(pageSpeedData.audit_details)
             : pageSpeedData.audit_details;
-        website_health.optimization_opportunities = auditDetails?.optimization_opportinuties || "None";
+        website_health.optimization_opportunities = auditDetails?.optimization_opportunities || "None";
       } catch (error) {
         console.error("Error parsing audit_details:", error);
       }
@@ -366,43 +369,55 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     }
 
     // ---------- SEO Health (Traffic Analysis) ----------
-    if (analysisStatus.seo_audit != null) {
-      const traffic = await prisma.brand_traffic_analysis.findUnique({
-        where: { traffic_analysis_id: analysisStatus.seo_audit },
-        select: {
-          total_visitors: true,
-          organic_search: true,
-          direct: true,
-          referral: true,
-          organic_social: true,
-          unassigned: true,
-          high_bounce_pages: true,
-          top_countries: true,
-          top_sources: true,
-          top_browsers: true,
-          top_devices: true,
-          overall_bounce_rate: true,
-          actionable_fix: true,
-        },
-      });
+    // if (analysisStatus.seo_audit != null) {
+    //   const traffic = await prisma.brand_traffic_analysis.findUnique({
+    //     where: { traffic_analysis_id: analysisStatus.seo_audit },
+    //     select: {
+    //       total_visitors: true,
+    //       organic_search: true,
+    //       direct: true,
+    //       referral: true,
+    //       organic_social: true,
+    //       unassigned: true,
+    //       high_bounce_pages: true,
+    //       top_countries: true,
+    //       top_sources: true,
+    //       top_browsers: true,
+    //       top_devices: true,
+    //       overall_bounce_rate: true,
+    //       actionable_fix: true,
+    //     },
+    //   });
 
-      if (traffic) {
-        seo_health.traffic = {
-          total_visitors: traffic.total_visitors ?? "N/A",
-          unique_visitors: traffic.unassigned ?? "N/A",
-          sources: {
-            organic: traffic.organic_search ?? "N/A",
-            direct: traffic.direct ?? "N/A",
-            referral: traffic.referral ?? "N/A",
-            social: traffic.organic_social ?? "N/A",
-          },
-          top_countries: traffic.top_countries ?? "N/A",
-          bounce_rate: traffic.overall_bounce_rate ?? "N/A",
-          high_bounce_pages: traffic.high_bounce_pages ?? [],
-          actionable_fix: traffic.actionable_fix ?? [],
-        };
-      }
-    }
+    //   if (traffic) {
+    //     traffic_anaylsis = {
+    //       total_visitors: traffic.total_visitors ?? "N/A",
+    //       unique_visitors: traffic.unassigned ?? "N/A",
+    //       sources: {
+    //         organic: traffic.organic_search ?? "N/A",
+    //         direct: traffic.direct ?? "N/A",
+    //         referral: traffic.referral ?? "N/A",
+    //         social: traffic.organic_social ?? "N/A",
+    //       },
+    //       top_countries: traffic.top_countries ?? "N/A",
+    //       bounce_rate: traffic.overall_bounce_rate ?? "N/A",
+    //       high_bounce_pages: traffic.high_bounce_pages ?? [],
+    //       actionable_fix: traffic.actionable_fix ?? [],
+    //     };
+    //   }
+    // }
+
+
+    if (analysisStatus.seo_audit != null) {
+  const traffic = await prisma.brand_traffic_analysis.findUnique({
+    where: { traffic_analysis_id: analysisStatus.seo_audit },
+    // Select all columns by default
+  });
+
+  if (traffic) {
+    traffic_anaylsis = traffic;
+  }
+}
 
     // ---------- Social Media Analysis ----------
     let socialMediaData: any[] = [];
@@ -501,8 +516,40 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       }
     }
 
-    // ---------- Geo Data ----------
-    // ---------- Geo Data ----------
+
+
+
+    // ---------- On Page Optimization ----------
+    const onpage_opptimization: Record<string, any> = {};
+    if (scrapedData) {
+      onpage_opptimization.metaDataWithoutRawHtml = {
+        page_title: scrapedData.page_title || "N/A",
+        meta_description: scrapedData.meta_description || "N/A",
+        meta_keywords: scrapedData.meta_keywords || "N/A",
+        homepage_alt_text_coverage : scrapedData.homepage_alt_text_coverage || "N/A",
+        status_message : scrapedData.status_code,
+        ip_address:scrapedData.ip_address,
+        response_time_ms:scrapedData.response_time_ms,
+        status_code : scrapedData.status_code
+      };
+      try {
+        let h1Text = "Not Found";
+        if (scrapedData?.raw_html) {
+          const $ = cheerio.load(scrapedData.raw_html);
+          h1Text = $("h1").first().text().trim() || "Not Found";
+        }
+        onpage_opptimization.h1Text = { h1Text };
+      } catch (error) {
+        console.error("Error extracting <h1> from raw_html:", error);
+        onpage_opptimization.h1Text = { h1: [], count: 0 };
+      }
+    }
+
+    // ---------- Technical SEO ----------
+
+
+
+      // ---------- Geo Data ----------
     const geo: GeoData = {};
 
     // Parse geo_llm
@@ -513,9 +560,12 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
           : recommendation.geo_llm;
       } catch (error) {
         console.error("Error parsing geo_llm:", error);
-        geo.AI_Discoverability = recommendation.geo_llm; // Fallback to raw string
+        geo.AI_Discoverability = recommendation.geo_llm;
+        // geo.Schema_Markup_Status = scrapedData ? scrapedData.schema_analysis : undefined;
+         // Fallback to raw string
       }
-    }
+    }  
+
 
     // Fetch top_sources from brand_traffic_analysis
     let sources: any[] = [];
@@ -543,29 +593,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
 
 
-    // ---------- On Page Optimization ----------
-    const onpage_opptimization: Record<string, any> = {};
-    if (scrapedData) {
-      onpage_opptimization.meta = {
-        title: scrapedData.page_title || "N/A",
-        meta_description: scrapedData.meta_description || "N/A",
-      };
-
-      try {
-        let h1Text = "Not Found";
-        if (scrapedData?.raw_html) {
-          const $ = cheerio.load(scrapedData.raw_html);
-          h1Text = $("h1").first().text().trim() || "Not Found";
-        }
-        onpage_opptimization.h1_text = { h1Text };
-      } catch (error) {
-        console.error("Error extracting <h1> from raw_html:", error);
-        onpage_opptimization.h1_text = { h1: [], count: 0 };
-      }
-    }
-
-    // ---------- Technical SEO ----------
-    const technical_seo: Record<string, any> = {};
+      const technical_seo: Record<string, any> = {};
     if (pageSpeedData?.audit_details) {
       try {
         const auditDetails =
@@ -580,56 +608,91 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
     if (scrapedData?.schema_analysis) {
       try {
-        technical_seo.schema_analysis = typeof scrapedData.schema_analysis === "string"
+        technical_seo.Schema_Markup_Status = typeof scrapedData.schema_analysis === "string"
           ? JSON.parse(scrapedData.schema_analysis)
           : scrapedData.schema_analysis;
+      
+          geo.SearchBotcrawlability = technical_seo.Schema_Markup_Status;
+
       } catch (error) {
         console.error("Error parsing schema_analysis:", error);
-        technical_seo.schema_analysis = scrapedData.schema_analysis;
+        technical_seo.Schema_Markup_Status = scrapedData.schema_analysis;
+        geo.SearchBotcrawlability = scrapedData.schema_analysis;
+
       }
     }
 
     if (pageSpeedData?.broken_links) {
-      try {
-        const Link_Health = typeof pageSpeedData.broken_links === "string"
-          ? JSON.parse(pageSpeedData.broken_links)
-          : pageSpeedData.broken_links;
-        technical_seo.total_broken_links = pageSpeedData.total_broken_links ?? 0;
-        technical_seo.broken_links = Link_Health?.broken_links ?? [];
-      } catch (error) {
-        console.error("Error parsing broken_links from pageSpeedData:", error);
-        technical_seo.broken_links = [];
-        technical_seo.total_broken_links = pageSpeedData.total_broken_links ?? 0;
-      }
-    } else {
-      technical_seo.total_broken_links = pageSpeedData?.total_broken_links ?? 0;
-      technical_seo.broken_links = [];
-    }
+  try {
+    const parsedBrokenLinks = typeof pageSpeedData.broken_links === "string"
+      ? JSON.parse(pageSpeedData.broken_links)
+      : pageSpeedData.broken_links;
+
+    const totalBroken = pageSpeedData.total_broken_links ?? parsedBrokenLinks?.broken_links?.length ?? 0;
+    const brokenLinksResult = parsedBrokenLinks?.broken_links ?? [];
+
+    technical_seo.Link_Health = {
+      message: totalBroken ? "Broken links found and saved." : "No broken links found.",
+      totalBroken,
+      brokenLinks: brokenLinksResult,
+    };
+  } catch (error) {
+    console.error("Error parsing broken_links from pageSpeedData:", error);
+    const totalBroken = pageSpeedData.total_broken_links ?? 0;
+    technical_seo.Link_Health = {
+      message: totalBroken ? "Broken links found and saved." : "No broken links found.",
+      totalBroken,
+      brokenLinks: [],
+    };
+  }
+} else {
+  const totalBroken = pageSpeedData?.total_broken_links ?? 0;
+  technical_seo.Link_Health = {
+    message: totalBroken ? "Broken links found and saved." : "No broken links found.",
+    totalBroken,
+    brokenLinks: [],
+  };
+}
+
 
     // ---------- Response Payload ----------
 
 
-    const responsePayload: Record<string, any> = {
-      success: true,
-      website_health,
-      seo_audit: {
-        seo_health,
-        onpage_opptimization,
+// ---------- Response Payload ----------
 
-      },
+const onlyWebsiteAudit = analysisStatus.website_audit != null &&
+  !analysisStatus.seo_audit &&
+  !analysisStatus.social_media_analysis &&
+  !analysisStatus.recommendation_by_mo1 &&
+  !analysisStatus.recommendation_by_mo2 &&
+  !analysisStatus.recommendation_by_mo3 &&
+  !analysisStatus.recommendation_by_cmo;
 
-      technical_seo,
-      geo,
-      moRecommendations,
-    };
+if (onlyWebsiteAudit) {
+  return res.status(200).json({
+    success: true,
+    website_health,
+  });
+}
 
-    if (cmoRecommendation != null) {
-      responsePayload.cmoRecommendation = cmoRecommendation;
-    }
+const responsePayload: Record<string, any> = {
+  success: true,
+  website_health,
+  traffic_anaylsis,
+    
+  onpage_opptimization,
+  technical_seo,
+  geo,
+  moRecommendations,
+};
 
-    return res.status(200).json(responsePayload);
-  } catch (error) {
-    console.error("Error fetching website detailed analysis:", error);
-    return res.status(500).json({ error: "Server error" });
-  }
+if (cmoRecommendation != null) {
+  responsePayload.cmoRecommendation = cmoRecommendation;
+}
+
+return res.status(200).json(responsePayload);
+} catch (error) {
+  console.error("Error fetching website detailed analysis:", error);
+  return res.status(500).json({ error: "Server error" });
+}
 };

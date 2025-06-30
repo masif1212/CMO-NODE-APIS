@@ -1,261 +1,138 @@
+import { PrismaClient } from '@prisma/client';
+import { OpenAI } from 'openai';
+import { v4 as uuidv4 } from 'uuid';
 
-import { PrismaClient } from "@prisma/client";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const model = process.env.OPENAI_MODEL || "gpt-4.1";
-const prisma = new PrismaClient();
-
-interface CMOReport {
+interface CMORecommendationInput {
+  user_id: string;
   website_id: string;
-  // executive_summary: string;
-  // website_performance: string;
-  // social_media_insights: string;
-  // competitive_positioning: string;
-  // strategic_recommendations: string;
-  // reportContent: string;
-  
-  // created_at: Date;
-  // updated_at: Date;
-  reportContent: string;
 }
 
-export async function generateCMOReport(website_id: string): Promise<CMOReport> {
-  try {
-    // Fetch website audit data
-    const websiteAudit = await prisma.brand_traffic_analysis.findFirst({
+interface DashboardRecommendations {
+  dashboard1?: string; // Website analytics recommendations
+  dashboard2?: string; // Social media analysis recommendations
+  dashboard3?: string; // Competitor analysis recommendations
+}
+
+interface CMORecommendationOutput {
+  recommendation_by_cmo: string;
+}
+
+export class CMORecommendationService {
+  private prisma: PrismaClient;
+  private openai: OpenAI;
+  private model: string;
+
+  constructor(prisma: PrismaClient, openai: OpenAI, model: string = 'gpt-4o') {
+    this.prisma = prisma;
+    this.openai = openai;
+    this.model = model;
+  }
+
+  // Fetch existing recommendations for a website
+  private async fetchRecommendations(user_id: string, website_id: string): Promise<DashboardRecommendations> {
+    const llmResponse = await this.prisma.llm_responses.findUnique({
       where: { website_id },
       select: {
-        total_visitors: true,
-        organic_search: true,
-        direct: true,
-        referral: true,
-        organic_social: true,
-        overall_bounce_rate: true,
-        avg_session_duration: true,
-        engagement_rate: true,
-        top_countries: true,
-        top_devices: true,
-        top_sources: true,
-        actionable_fix: true,
+        recommendation_by_mo_dashboard1: true,
+        recommendation_by_mo_dashboard2: true,
+        recommendation_by_mo_dashboard3: true,
       },
     });
 
-    const websiteScrapedData = await prisma.website_scraped_data.findFirst({
-      where: { website_id },
-      select: {
-        page_title: true,
-        meta_description: true,
-        meta_keywords: true,
-        ctr_loss_percent: true,
-        homepage_alt_text_coverage: true,
-        status_code: true,
-        response_time_ms: true,
-        schema_analysis: true,
-      },
+    if (!llmResponse) {
+      return {};
+    }
+
+    // Verify user_id matches the website's user_id
+    const website = await this.prisma.user_websites.findUnique({
+      where: { website_id: website_id },
+      select: { user_id: true },
     });
 
-    // Fetch social media audit data
-    const socialMediaAnalysis = await prisma.brand_social_media_analysis.findMany({
-      where: { website_id },
-      select: {
-        platform_name: true,
-        followers: true,
-        engagement_rate: true,
-        engagementToFollowerRatio: true,
-        postingFrequency: true,
-        posts_count: true,
-      },
-    });
-
-    // Fetch competitor analysis data
-    const competitorAnalysis = await prisma.competitor_data.findMany({
-      where: { website_id },
-      select: {
-        // domain_authority: true, // Removed because it does not exist in the schema
-        website_id: true,
-        website_url: true,
-        meta_keywords: true,
-        meta_description: true,
-        page_title: true,
-        page_speed: true,
-        linkedin_handle: true,
-        facebook_handle: true,
-        instagram_handle: true,
-        twitter_handle: true,
-        youtube_handle: true,
-        tiktok_handle: true,
-        og_image: true,
-        og_description: true,
-        og_title: true,
-
-      },
-    });
-
-    const competitorDetails = await prisma.competitor_details.findMany({
-      where: { website_id },
-      select: {
-        name: true,
-         competitor_website_url: true,
-        industry: true,
-        region: true,
-        target_audience: true,
-        usp: true,
-        primary_offering: true,
-      },
-    });
-
-    // Fetch existing recommendations
-    const existingRecommendations = await prisma.llm_responses.findFirst({
-      where: { website_id },
-      select: {
-        dashboard1_what_working: true,
-        dashboard2_what_working: true,
-        dashboard3_competi_camparison: true,
-      },
-    });
-
-    // Prepare data for OpenAI prompt
-    const prompt = `
-      You are a Chief Marketing Officer (CMO) tasked with generating a comprehensive strategic report based on the following data for a website (ID: ${website_id}). Create a detailed report with the following sections: Executive Summary, Website Performance Analysis, Social Media Insights, Competitive Positioning, and Strategic Recommendations. Use the provided data and existing recommendations to craft actionable, high-level insights suitable for a CMO.
-
-      **Website Audit Data:**
-      - Total Visitors: ${websiteAudit?.total_visitors ?? 'N/A'}
-      - Organic Search: ${websiteAudit?.organic_search ?? 'N/A'}
-      - Direct Traffic: ${websiteAudit?.direct ?? 'N/A'}
-      - Referral Traffic: ${websiteAudit?.referral ?? 'N/A'}
-      - Organic Social: ${websiteAudit?.organic_social ?? 'N/A'}
-      - Bounce Rate: ${websiteAudit?.overall_bounce_rate ?? 'N/A'}%
-      - Avg Session Duration: ${websiteAudit?.avg_session_duration ?? 'N/A'} seconds
-      - Engagement Rate: ${websiteAudit?.engagement_rate ?? 'N/A'}%
-      - Top Countries: ${JSON.stringify(websiteAudit?.top_countries) ?? 'N/A'}
-      - Top Devices: ${JSON.stringify(websiteAudit?.top_devices) ?? 'N/A'}
-      - Top Sources: ${JSON.stringify(websiteAudit?.top_sources) ?? 'N/A'}
-      - Actionable Fixes: ${websiteAudit?.actionable_fix ?? 'N/A'}
-      - Page Title: ${websiteScrapedData?.page_title ?? 'N/A'}
-      
-      - Meta Description: ${websiteScrapedData?.meta_description ?? 'N/A'}
-      - Meta Keywords: ${websiteScrapedData?.meta_keywords ?? 'N/A'}
-      
-    
-      - CTR Loss: ${JSON.stringify(websiteScrapedData?.ctr_loss_percent) ?? 'N/A'}
-      - Homepage Alt Text Coverage: ${websiteScrapedData?.homepage_alt_text_coverage ?? 'N/A'}%
-
-      **Social Media Audit Data:**
-      ${socialMediaAnalysis
-        .map(
-          (platform) => `
-        - Platform: ${platform.platform_name}
-          - Followers: ${platform.followers ?? 'N/A'}
-          - Engagement Rate: ${platform.engagement_rate ?? 'N/A'}%
-          - Engagement to Follower Ratio: ${platform.engagementToFollowerRatio ?? 'N/A'}
-          - Posting Frequency: ${platform.postingFrequency ?? 'N/A'} posts/day
-          - Total Posts: ${platform.posts_count ?? 'N/A'}`
-        )
-        .join('\n')}
-
-      **Competitor Analysis Data:**
-      ${competitorAnalysis
-        .map(
-          (comp, index) => `
-        - Competitor ${index + 1}:
-          - competitor_website_url: ${comp.website_url ?? 'N/A'}
-          - page_title: ${comp.page_title ?? 'N/A'}
-          - meta_keywords: ${comp.meta_keywords ?? 'N/A'}
-          - meta_description: ${comp.meta_description ?? 'N/A'}
-          - og_image: ${comp.og_image ?? 'N/A'}
-          - og_title: ${comp.og_title ?? 'N/A'}
-          - og_description: ${comp.og_description ?? 'N/A'}
-          - linkedin_handle: ${comp.linkedin_handle ?? 'N/A'}
-          - facebook_handle: ${comp.facebook_handle ?? 'N/A'}
-          - instagram_handle: ${comp.instagram_handle ?? 'N/A'}
-          - twitter_handle: ${comp.twitter_handle ?? 'N/A'}
-          - youtube_handle: ${comp.youtube_handle ?? 'N/A'}
-          - tiktok_handle: ${comp.tiktok_handle ?? 'N/A'}
-          - page_speed: ${comp.page_speed ?? 'N/A'}
-          
-         
-          
-          
-        `
-        )
-        .join('\n')}
-      
-      **Competitor Details:**
-      ${competitorDetails
-        .map(
-          (comp) => `
-        - Name: ${comp.name ?? 'N/A'}
-          - Website: ${comp.competitor_website_url ?? 'N/A'}
-          - Industry: ${comp.industry ?? 'N/A'}
-          - USP: ${comp.usp ?? 'N/A'}`
-        )
-        .join('\n')}
-
-      **Existing Recommendations:**
-      - Website Audit Recommendations: ${existingRecommendations?.dashboard1_what_working ?? 'N/A'}
-      - Social Media Recommendations: ${existingRecommendations?.dashboard2_what_working ?? 'N/A'}
-      - Competitor Analysis Recommendations: ${existingRecommendations?.dashboard3_competi_camparison ?? 'N/A'}
-
-      **Instructions:**
-      - Executive Summary: Summarize key findings and strategic priorities.
-      - Website Performance Analysis: Highlight strengths, weaknesses, and opportunities based on traffic, engagement, and technical metrics.
-      - Social Media Insights: Analyze performance across platforms, focusing on engagement and growth potential.
-      - Competitive Positioning: Compare the website's performance against competitors and identify gaps.
-      - Strategic Recommendations: Provide 3-5 high-level, actionable recommendations for the CMO, integrating insights from all dashboards and existing recommendations.
-      - Use a professional tone suitable for a C-level executive.
-    `;
-
-    // Call OpenAI to generate the report
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "system",
-          content: "You are a strategic marketing consultant generating a CMO-level report.",
-        },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 4000,
-      temperature: 0.7,
-    });
-
-    const reportContent = completion.choices[0].message.content ?? "Error generating report";
-
-    // Parse the report into sections (assuming OpenAI returns structured markdown)
-   
-   console.log("prompt:", prompt)
-
-    // Store or update the report in the database
-    const report = await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        recommendation_by_cmo: reportContent,
-        updated_at: new Date(),
-      },
-      create: {
-        website_id,
-        recommendation_by_cmo: reportContent,
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+    if (!website || website.user_id !== user_id) {
+      throw new Error('Invalid user_id or website_id');
+    }
 
     return {
-      website_id: report.website_id,
-      reportContent : reportContent
-      // created_at: report.created_at,
-      // updated_at: report.updated_at,
+      dashboard1: llmResponse.recommendation_by_mo_dashboard1 || undefined,
+      dashboard2: llmResponse.recommendation_by_mo_dashboard2 || undefined,
+      dashboard3: llmResponse.recommendation_by_mo_dashboard3 || undefined,
     };
-  } catch (error) {
-    console.error("Error generating CMO report:", error);
-    throw new Error("Failed to generate CMO report");
-  } finally {
-    await prisma.$disconnect();
+  }
+
+  // Generate CMO-level recommendation
+  public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
+    try {
+      // Fetch existing recommendations
+      const recommendations = await this.fetchRecommendations(input.user_id, input.website_id);
+
+      // Prepare data for the prompt
+      const allData = {
+        website_analytics: recommendations.dashboard1 || null,
+        social_media: recommendations.dashboard2 || null,
+        competitor_analysis: recommendations.dashboard3 || null,
+      };
+
+      // System prompt for all combinations
+      const systemPrompt = `
+        You are a Chief Marketing Officer (CMO) tasked with generating a high-level strategic recommendation for a business. Based on the provided data, synthesize a concise, actionable CMO-level recommendation in a single paragraph, focusing on maximizing ROI, brand visibility, and competitive advantage. Use only the available data (website analytics, social media, or competitor analysis) and avoid referencing external tools. Output in JSON format with a single field "recommendation_by_cmo". If no specific data is available, provide a general marketing strategy.
+        Example output: {"recommendation_by_cmo": "Optimize website performance and align social media campaigns to boost engagement."}
+      `;
+
+      // Log for debugging
+      console.log("Generating LLM response...");
+
+      // Call OpenAI directly, mimicking your snippet
+      const llmResponse = await this.openai.chat.completions.create({
+        model: this.model,
+        temperature: 0.5,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: JSON.stringify(allData) },
+        ],
+        max_tokens: 500,
+      });
+
+      // Extract and validate response
+      const responseContent = llmResponse.choices[0]?.message?.content;
+      if (!responseContent) {
+        throw new Error('No valid response from OpenAI');
+      }
+
+      let recommendation: CMORecommendationOutput;
+      try {
+        recommendation = JSON.parse(responseContent);
+        if (!recommendation.recommendation_by_cmo) {
+          throw new Error('Invalid OpenAI response: missing recommendation_by_cmo');
+        }
+      } catch (error) {
+        console.error('Failed to parse OpenAI response:', error);
+        recommendation = {
+          recommendation_by_cmo: 'Unable to generate specific recommendation due to processing error. Focus on integrated marketing strategies to enhance brand visibility.',
+        };
+      }
+
+      // Save recommendation to database
+      await this.prisma.llm_responses.upsert({
+        where: { website_id: input.website_id },
+        update: {
+          recommendation_by_cmo: recommendation.recommendation_by_cmo,
+          updated_at: new Date(),
+        },
+        create: {
+          id: uuidv4(),
+          website_id: input.website_id,
+          recommendation_by_cmo: recommendation.recommendation_by_cmo,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+
+      return recommendation;
+    } catch (error) {
+      console.error('Error generating CMO recommendation:', error);
+      throw new Error('Failed to generate CMO recommendation');
+    }
   }
 }
-
-
-

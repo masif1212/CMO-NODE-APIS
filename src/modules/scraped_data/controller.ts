@@ -20,8 +20,11 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
     //   console.log("Schema validation completed successfully:");
     
     return res.status(200).json({
-      message: "Website scraped successfully",
-      data,
+      success:data.success,
+      // message: "Website scraped successfully",
+      website_id:data.website_id,
+      logo_url:data.logo_url
+
     });
   } catch (error) {
     console.error("Scrape handler error:", error);

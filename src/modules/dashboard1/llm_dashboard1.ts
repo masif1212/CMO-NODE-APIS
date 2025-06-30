@@ -359,7 +359,7 @@
 //           typeof analysis.audit_details === "string"
 //             ? JSON.parse(analysis.audit_details)
 //             : analysis.audit_details;
-//         optimization_opportunities = auditDetails?.optimization_opportinuties || "None";
+//         optimization_opportunities = auditDetails?.optimization_opportunities || "None";
 //       } catch (error) {
 //         console.error("Error parsing audit_details:", error);
 //         optimization_opportunities = "None";
@@ -1047,7 +1047,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
           typeof analysis.audit_details === "string"
             ? JSON.parse(analysis.audit_details)
             : analysis.audit_details;
-        optimization_opportunities = auditDetails?.optimization_opportinuties || "None";
+        optimization_opportunities = auditDetails?.optimization_opportunities || "None";
       } catch (error) {
         console.error("Error parsing audit_details:", error);
         optimization_opportunities = "None";
@@ -1163,7 +1163,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     // Generate LLM response with ratings
     console.log("Generating LLM response...");
     const llmResponse = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: model,
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [

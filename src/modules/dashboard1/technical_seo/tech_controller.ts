@@ -104,10 +104,8 @@ if (analysis?.audit_details) {
                     : null))
             : null
       },
-      User_Access_Readiness: {
           user_access_readiness: user_access_readiness,
         
-      },
       Link_Health: {
           message: totalBroken ? "Broken links found and saved." : "No broken links found.",
           // website_id: website_id,

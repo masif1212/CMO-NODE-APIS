@@ -357,7 +357,7 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
 
       audit_details: {
         allAudits: summary.audits,
-        optimization_opportinuties: summary.bestPracticeGroups,
+        optimization_opportunities: summary.bestPracticeGroups,
         user_access_readiness: summary.userAccessReadiness,
       },
 
