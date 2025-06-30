@@ -34,7 +34,7 @@ export class CMORecommendationController {
       // Send success response
       res.status(200).json({
         success: true,
-        data: result,
+        cmo_recommendation: result,
       });
     } catch (error) {
       console.error('Error in generateRecommendation:', error);

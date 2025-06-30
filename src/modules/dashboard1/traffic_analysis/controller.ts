@@ -298,12 +298,35 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
       create: {
         user_id,
         website_id,
-        dashboard2: "true", 
+        dashboard1: "true", 
         created_at: new Date(),
         updated_at: new Date(),
       },
     });
-    return res.status(200).json({  llm_response: llm_res });
+    let recommendation = null;
+          console.log("in ana")
+          recommendation = await prisma.llm_responses.findUnique({
+            where: { website_id: website_id }, // Updated to use website_id
+            select: {
+              id: true,
+              website_id: true,
+              recommendation_by_mo_dashboard1: true,
+              // recommendation_by_mo_dashboard2:true,
+              // recommendation_by_mo_dashboard3:true,
+              // geo_llm:true,
+              // recommendation_by_cmo: true,
+            },
+          });
+          function safeParse(jsonStr: any) {
+  try {
+    return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+  } catch (e) {
+    console.error("JSON parse failed:", e);
+    return jsonStr; // fallback to raw string
+  }
+}
+      const recommendation_by_mo_dashboard1 = safeParse(recommendation?.recommendation_by_mo_dashboard1);
+return res.status(200).json({ recommendation_by_mo_dashboard1 });
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

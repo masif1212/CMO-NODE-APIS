@@ -446,75 +446,110 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     }
 
     // ---------- Recommendations ----------
-    const moRecommendations: MoRecommendation[] = [];
-    const recommendation = await prisma.llm_responses.findUnique({
-      where: { website_id: website_id },
-      select: {
-        id: true,
-        website_id: true,
-        recommendation_by_mo_dashboard1: true,
-        recommendation_by_mo_dashboard2: true,
-        recommendation_by_mo_dashboard3: true,
-        dashboard3_competi_camparison: true,
-        geo_llm: true, // Include geo_llm in the query
-      },
-    });
+    // const moRecommendations: MoRecommendation[] = [];
+    // const recommendation = await prisma.llm_responses.findUnique({
+    //   where: { website_id: website_id },
+    //   select: {
+    //     id: true,
+    //     website_id: true,
+    //     recommendation_by_mo_dashboard1: true,
+    //     recommendation_by_mo_dashboard2: true,
+    //     recommendation_by_mo_dashboard3: true,
+    //     dashboard3_competi_camparison: true,
+    //     geo_llm: true, // Include geo_llm in the query
+    //   },
+    // });
 
-    if (recommendation) {
-      const moFieldMap: { [key: string]: any } = {
-        recommendation_by_mo1: recommendation.recommendation_by_mo_dashboard1,
-        recommendation_by_mo2: recommendation.recommendation_by_mo_dashboard2,
-        recommendation_by_mo3: recommendation.recommendation_by_mo_dashboard3,
-      };
+    // if (recommendation) {
+    //   const moFieldMap: { [key: string]: any } = {
+    //     recommendation_by_mo1: recommendation.recommendation_by_mo_dashboard1,
+    //     recommendation_by_mo2: recommendation.recommendation_by_mo_dashboard2,
+    //     recommendation_by_mo3: recommendation.recommendation_by_mo_dashboard3,
+    //   };
 
-      for (const moField of ["recommendation_by_mo1", "recommendation_by_mo2", "recommendation_by_mo3"] as const) {
-        if (analysisStatus[moField] && moFieldMap[moField]) {
-          let parsedRecommendation: any = moFieldMap[moField];
-          try {
-            if (typeof parsedRecommendation === "string") {
-              parsedRecommendation = JSON.parse(parsedRecommendation);
-            }
-          } catch (error) {
-            console.error(`Error parsing ${moField}:`, error);
-            // Keep as string if parsing fails
-          }
+    //   for (const moField of ["recommendation_by_mo1", "recommendation_by_mo2", "recommendation_by_mo3"] as const) {
+    //     if (analysisStatus[moField] && moFieldMap[moField]) {
+    //       let parsedRecommendation: any = moFieldMap[moField];
+    //       try {
+    //         if (typeof parsedRecommendation === "string") {
+    //           parsedRecommendation = JSON.parse(parsedRecommendation);
+    //         }
+    //       } catch (error) {
+    //         console.error(`Error parsing ${moField}:`, error);
+    //         // Keep as string if parsing fails
+    //       }
 
-          moRecommendations.push({
-            id: recommendation.id,
-            website_id: recommendation.website_id,
-            recommendation_by_mo_dashboard1: moField === "recommendation_by_mo1" ? parsedRecommendation : null,
-            recommendation_by_mo_dashboard2: moField === "recommendation_by_mo2" ? parsedRecommendation : null,
-            recommendation_by_mo_dashboard3: moField === "recommendation_by_mo3" ? parsedRecommendation : null,
-            dashboard3_competi_camparison: recommendation.dashboard3_competi_camparison,
-          });
-        }
-      }
-    }
+    //       moRecommendations.push({
+    //         id: recommendation.id,
+    //         website_id: recommendation.website_id,
+    //         recommendation_by_mo_dashboard1: moField === "recommendation_by_mo1" ? parsedRecommendation : null,
+    //         recommendation_by_mo_dashboard2: moField === "recommendation_by_mo2" ? parsedRecommendation : null,
+    //         recommendation_by_mo_dashboard3: moField === "recommendation_by_mo3" ? parsedRecommendation : null,
+    //         dashboard3_competi_camparison: recommendation.dashboard3_competi_camparison,
+    //       });
+    //     }
+    //   }
+    // }
+    console.log("nnn")
 
-    // ---------- CMO Recommendation ----------
-    let cmoRecommendation = null;
-    if (analysisStatus.recommendation_by_cmo) {
-      cmoRecommendation = await prisma.llm_responses.findUnique({
+     let recommendation = null;
+      console.log("in ana")
+      recommendation = await prisma.llm_responses.findUnique({
         where: { website_id: website_id }, // Updated to use website_id
         select: {
           id: true,
           website_id: true,
+          recommendation_by_mo_dashboard1:true,
+          recommendation_by_mo_dashboard2:true,
+          recommendation_by_mo_dashboard3:true,
+          geo_llm:true,
           recommendation_by_cmo: true,
         },
       });
+// console.log("Fetched recommendation object:", recommendation);
 
-      if (cmoRecommendation?.recommendation_by_cmo) {
-        try {
-          cmoRecommendation.recommendation_by_cmo =
-            typeof cmoRecommendation.recommendation_by_cmo === "string"
-              ? JSON.parse(cmoRecommendation.recommendation_by_cmo)
-              : cmoRecommendation.recommendation_by_cmo;
-        } catch (error) {
-          console.error("Error parsing recommendation_by_cmo:", error);
-          // Keep as string if parsing fails
-        }
-      }
-    }
+  // // ✅ Check each field explicitly
+  // console.log("Dashboard 1:", recommendation?.recommendation_by_mo_dashboard1);
+  // console.log("Dashboard 2:", recommendation?.recommendation_by_mo_dashboard2);
+  // console.log("Dashboard 3:", recommendation?.recommendation_by_mo_dashboard3);
+  // console.log("Geo LLM:", recommendation?.geo_llm);
+  // console.log("CMO Recommendation:", recommendation?.recommendation_by_cmo);
+    
+    
+
+    function safeParse(jsonStr: any) {
+  try {
+    return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+  } catch (e) {
+    console.error("JSON parse failed:", e);
+    return jsonStr; // fallback to raw string
+  }
+}
+
+    // ---------- CMO Recommendation ----------
+    // let cmo_recommendation = null;
+    // if (analysisStatus.recommendation_by_cmo) {
+    //   cmo_recommendation = await prisma.llm_responses.findUnique({
+    //     where: { website_id: website_id }, // Updated to use website_id
+    //     select: {
+    //       id: true,
+    //       website_id: true,
+    //       recommendation_by_cmo: true,
+    //     },
+    //   });
+
+    //   if (cmo_recommendation?.recommendation_by_cmo) {
+    //     try {
+    //       cmo_recommendation.recommendation_by_cmo =
+    //         typeof cmo_recommendation.recommendation_by_cmo === "string"
+    //           ? JSON.parse(cmo_recommendation.recommendation_by_cmo)
+    //           : cmo_recommendation.recommendation_by_cmo;
+    //     } catch (error) {
+    //       console.error("Error parsing recommendation_by_cmo:", error);
+    //       // Keep as string if parsing fails
+    //     }
+    //   }
+    // }
 
 
 
@@ -544,6 +579,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
         onpage_opptimization.h1Text = { h1: [], count: 0 };
       }
     }
+
 
     // ---------- Technical SEO ----------
 
@@ -683,12 +719,40 @@ const responsePayload: Record<string, any> = {
   onpage_opptimization,
   technical_seo,
   geo,
-  moRecommendations,
+  
 };
+// if (recommendation && recommendation.recommendation_by_mo_dashboard1 != null) {
+//   responsePayload.recommendation_by_mo_dashboard1 = recommendation.recommendation_by_mo_dashboard1;
+// }
 
-if (cmoRecommendation != null) {
-  responsePayload.cmoRecommendation = cmoRecommendation;
+// if (recommendation && recommendation.recommendation_by_mo_dashboard2 != null) {
+//   responsePayload.recommendation_by_mo_dashboard2 = recommendation.recommendation_by_mo_dashboard2;
+// }
+
+// if (recommendation && recommendation.recommendation_by_mo_dashboard3 != null) {
+// responsePayload.recommendation_by_mo_dashboard3 = recommendation.recommendation_by_mo_dashboard3;
+// }
+
+if (recommendation?.recommendation_by_mo_dashboard1 != null) {
+  responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);
 }
+
+if (recommendation?.recommendation_by_mo_dashboard2 != null) {
+  responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
+}
+
+if (recommendation?.recommendation_by_mo_dashboard3 != null) {
+  responsePayload.recommendation_by_mo_dashboard3 = safeParse(recommendation.recommendation_by_mo_dashboard3);
+}
+
+
+if (recommendation && recommendation.recommendation_by_cmo != null) {
+responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
+}
+
+// if (cmo_recommendation != null) {
+//   responsePayload.cmo_recommendation = cmo_recommendation;
+// }
 
 return res.status(200).json(responsePayload);
 } catch (error) {

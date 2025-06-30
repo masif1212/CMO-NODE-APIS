@@ -534,6 +534,34 @@ export class CompetitorService {
 let parsed;
 try {
   parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  // console.log("parsed",parsed)
+  await prisma.llm_responses.upsert({
+      where: { website_id },
+      update: {
+        recommendation_by_mo_dashboard3: JSON.stringify(parsed),
+      },
+      create: {
+        website_id,
+        recommendation_by_mo_dashboard3: JSON.stringify(parsed),
+      },
+    });
+   await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id: userRequirementRaw?.user_id ?? '',
+          website_id: website_id,
+        },
+      },
+      update: {
+        recommendation_by_mo3: "true",
+      },
+      create: {
+        website_id: website_id,
+        user_id: userRequirementRaw?.user_id ?? '', // Provide the correct user_id here
+        recommendation_by_mo3: "true",
+      },
+    });
+    console.log("LLM response saved successfully for website_id:", website_id);
 } catch (err) {
   console.error("Error parsing JSON response:", err);
   parsed = { recommendations: [] }; // fail-safe fallback

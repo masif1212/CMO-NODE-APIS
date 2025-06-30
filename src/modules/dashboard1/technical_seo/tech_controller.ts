@@ -87,7 +87,7 @@ if (analysis?.audit_details) {
 
 });
     return res.status(200).json({
-      Technical_SEO: {
+      technical_seo: {
       Schema_Markup_Status: {
           message: schema && schema.schema_analysis
             ? (typeof schema.schema_analysis === "string"

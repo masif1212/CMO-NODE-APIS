@@ -338,6 +338,26 @@ Use only the non-null data provided. If all fields are null, generate a general 
         },
       });
 
+          await this.prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id: input.user_id,
+          website_id: input.website_id,
+        },
+      },
+      update: {
+        recommendation_by_cmo: "true", 
+        updated_at: new Date(),
+      },
+      create: {
+        website_id: input.website_id,
+        user_id: input.user_id,
+        recommendation_by_cmo: "true", 
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
       return {
         recommendation_by_cmo: responseContent || ''
       };

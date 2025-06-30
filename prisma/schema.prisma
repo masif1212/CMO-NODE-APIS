@@ -378,6 +378,7 @@ model competitor_data {
   facebook_handle  String? @db.LongText
   instagram_handle String? @db.LongText
   linkedin_handle  String? @db.LongText
+  homepage_alt_text_coverage Int? 
   youtube_handle   String? @db.LongText
   tiktok_handle    String? @db.LongText
 

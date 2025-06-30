@@ -46,7 +46,7 @@ competitorRouter.post('/recommendations', async (req, res, next) => {
         recommendation_by_mo3: "true",
       },
     });
-    res.status(200).json({ recommendations: data });
+    res.status(200).json({ recommendation_by_mo_dashboard3: data });
   } catch (e) {
     next(e);
   }
