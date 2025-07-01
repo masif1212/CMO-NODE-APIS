@@ -33,6 +33,11 @@ COPY --from=builder /app/prisma ./prisma
 
 # Create non-root user
 RUN adduser --system --group nodejs
+
+# ✅ Fix: ensure all files are owned by the app user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
 USER nodejs
 
 # Expose API port
