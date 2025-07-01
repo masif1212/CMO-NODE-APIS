@@ -59,6 +59,7 @@ steps:
       - "--wait"
 
   # Step 5: Deploy backend service
+  # Step 5: Deploy backend service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"
@@ -91,8 +92,8 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --no-allow-unauthenticated \
-          --port=3001  # Use whatever your server exposes internally
+          --port=3001 \
+          --no-allow-unauthenticated
 
 availableSecrets:
   secretManager:
