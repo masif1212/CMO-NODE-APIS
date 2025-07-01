@@ -18,23 +18,19 @@ FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy compiled app, Prisma client, and schema
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts # In case your seed file is here
 
-# ✅ Install only what's needed for seeding
+# Include dev tools needed for seed
 RUN npm install -g prisma ts-node typescript
 
-# Create non-root user and assign file permissions
 RUN adduser --system --group nodejs && chown -R nodejs:nodejs /app
 USER nodejs
 
 EXPOSE 8080
 
-# ✅ Universal CMD supporting multiple TASKs
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo 'TASK=$TASK'; \
