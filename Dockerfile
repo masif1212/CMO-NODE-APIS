@@ -1,58 +1,63 @@
-# Dockerfile for Node.js Backend API with migration + seed
+# Dockerfile for Node.js Backend API with migration + seed support
 
-# Stage 1: Build Stage
+# Stage 1: Build
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install OpenSSL for Prisma
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
 # Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Copy source and build
+# Copy app source code
 COPY . .
+
+# Generate Prisma client
 RUN npx prisma generate
+
+# Build the app
 RUN npm run build
 
-# Stage 2: Production Image
+# Stage 2: Production
 FROM node:18-slim AS final
 WORKDIR /app
+
 ENV NODE_ENV=production
 
-# Copy files from builder
+# Install minimal runtime dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# ✅ Install ts-node, typescript, and prisma to run seed
-RUN npm install ts-node typescript prisma
+# ✅ Required for seeding with TypeScript
+RUN npm install -g prisma ts-node typescript
 
-# Add secure user
+# Set user and permissions
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Expose backend port
+# Don't hardcode port — Cloud Run provides it
 EXPOSE 8080
 
-# Entry point for container
+# Start logic
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo \"TASK=\$TASK\"; \
 echo \"DATABASE_URL=\${DATABASE_URL:-(not set)}\"; \
+echo \"PORT=\${PORT}\"; \
 if [ \"\$TASK\" = \"migrate\" ]; then \
-  echo '--- Running migrations and seed...'; \
-  npx prisma migrate deploy && npx prisma db seed || echo '❌ Seed failed (continuing)'; \
-  exit 0; \
+  echo '--- Running Prisma migration and seed...'; \
+  npx prisma migrate deploy && npx prisma db seed || { echo '❌ Migration or seed failed'; exit 1; }; \
 elif [ \"\$TASK\" = \"start\" ]; then \
-  echo '--- Running app seed (if needed)...'; \
-  npx prisma db seed || echo '❌ Seed failed (continuing)'; \
-  echo '--- Starting server...'; \
+  echo '--- Running Prisma seed...'; \
+  npx prisma db seed || echo '⚠️ Seed script failed or skipped'; \
+  echo '--- Launching Node server...'; \
   node dist/server.js; \
 else \
-  echo '❌ Invalid TASK specified. Use migrate or start'; \
+  echo '❌ Invalid TASK specified. Use TASK=migrate or TASK=start'; \
   exit 1; \
 fi"]
