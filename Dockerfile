@@ -44,17 +44,19 @@ USER nodejs
 EXPOSE 3001
 
 # Start logic
-CMD ["sh", "-c", "\
-  echo '--- STARTING CONTAINER'; \
-  echo \"PORT=\$PORT\"; \
-  if [ \"\$TASK\" = \"migrate\" ]; then \
-    echo '--- Running migrations and seed...'; \
-    npx prisma migrate deploy && npx prisma db seed || echo '❌ Seed failed (continuing)'; \
-    exit 0; \
-  elif [ \"\$TASK\" = \"start\" ]; then \
-    echo '--- Starting server...'; \
-    node dist/server.js; \
-  else \
-    echo '❌ Invalid TASK specified. Use migrate or start'; \
-    exit 1; \
-  fi"]
+CMD ["node", "dist/server.js"]
+
+# CMD ["sh", "-c", "\
+#   echo '--- STARTING CONTAINER'; \
+#   echo \"PORT=\$PORT\"; \
+#   if [ \"\$TASK\" = \"migrate\" ]; then \
+#     echo '--- Running migrations and seed...'; \
+#     npx prisma migrate deploy && npx prisma db seed || echo '❌ Seed failed (continuing)'; \
+#     exit 0; \
+#   elif [ \"\$TASK\" = \"start\" ]; then \
+#     echo '--- Starting server...'; \
+#     node dist/server.js; \
+#   else \
+#     echo '❌ Invalid TASK specified. Use migrate or start'; \
+#     exit 1; \
+#   fi"]
