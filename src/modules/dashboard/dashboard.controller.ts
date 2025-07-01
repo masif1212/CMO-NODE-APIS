@@ -202,33 +202,41 @@ const cmoRecommendations = cmoRecommendationsRaw.map(site => ({
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
 interface GeoData {
   AI_Discoverability?: any; // Flexible type, replace with specific structure if known
   bingSource?: { type: string; name: string; sessions: number };
   SearchBotcrawlability?: any;
-  // schema_analysis?: any; // Flexible type, replace with specific structure if known
-  // Schema_Markup_Status?: any; // Added to fix compile error
+ 
 }
 
-interface MoRecommendation {
-  id: string;
-  website_id: string;
-  recommendation_by_mo_dashboard1?: any;
-  recommendation_by_mo_dashboard2?: any;
-  recommendation_by_mo_dashboard3?: any;
-  dashboard3_competi_camparison?: any;
+interface CompetitorAnalysis {
+  competitor_id: string;
+  name: string | null;
+  website_url: string | null;
+  industry: string | null;
+  region: string | null;
+  target_audience: string | null;
+  primary_offering: string | null;
+  usp: string | null;
+  page_title: string | null;
+  logo_url: string | null;
+  meta_description: string | null;
+  meta_keywords: string | null;
+  social_handles: {
+    twitter: string | null;
+    facebook: string | null;
+    instagram: string | null;
+    linkedin: string | null;
+    youtube: string | null;
+    tiktok: string | null;
+  };
+  ctr_loss_percent: any;
+  revenue_loss_percent: number | null;
+  schema_analysis: any;
+  page_speed: any;
+  other_links: any;
 }
+
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const { website_id } = req.query;
@@ -446,54 +454,9 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     }
 
     // ---------- Recommendations ----------
-    // const moRecommendations: MoRecommendation[] = [];
-    // const recommendation = await prisma.llm_responses.findUnique({
-    //   where: { website_id: website_id },
-    //   select: {
-    //     id: true,
-    //     website_id: true,
-    //     recommendation_by_mo_dashboard1: true,
-    //     recommendation_by_mo_dashboard2: true,
-    //     recommendation_by_mo_dashboard3: true,
-    //     dashboard3_competi_camparison: true,
-    //     geo_llm: true, // Include geo_llm in the query
-    //   },
-    // });
-
-    // if (recommendation) {
-    //   const moFieldMap: { [key: string]: any } = {
-    //     recommendation_by_mo1: recommendation.recommendation_by_mo_dashboard1,
-    //     recommendation_by_mo2: recommendation.recommendation_by_mo_dashboard2,
-    //     recommendation_by_mo3: recommendation.recommendation_by_mo_dashboard3,
-    //   };
-
-    //   for (const moField of ["recommendation_by_mo1", "recommendation_by_mo2", "recommendation_by_mo3"] as const) {
-    //     if (analysisStatus[moField] && moFieldMap[moField]) {
-    //       let parsedRecommendation: any = moFieldMap[moField];
-    //       try {
-    //         if (typeof parsedRecommendation === "string") {
-    //           parsedRecommendation = JSON.parse(parsedRecommendation);
-    //         }
-    //       } catch (error) {
-    //         console.error(`Error parsing ${moField}:`, error);
-    //         // Keep as string if parsing fails
-    //       }
-
-    //       moRecommendations.push({
-    //         id: recommendation.id,
-    //         website_id: recommendation.website_id,
-    //         recommendation_by_mo_dashboard1: moField === "recommendation_by_mo1" ? parsedRecommendation : null,
-    //         recommendation_by_mo_dashboard2: moField === "recommendation_by_mo2" ? parsedRecommendation : null,
-    //         recommendation_by_mo_dashboard3: moField === "recommendation_by_mo3" ? parsedRecommendation : null,
-    //         dashboard3_competi_camparison: recommendation.dashboard3_competi_camparison,
-    //       });
-    //     }
-    //   }
-    // }
-    console.log("nnn")
+   
 
      let recommendation = null;
-      console.log("in ana")
       recommendation = await prisma.llm_responses.findUnique({
         where: { website_id: website_id }, // Updated to use website_id
         select: {
@@ -506,16 +469,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
           recommendation_by_cmo: true,
         },
       });
-// console.log("Fetched recommendation object:", recommendation);
 
-  // // ✅ Check each field explicitly
-  // console.log("Dashboard 1:", recommendation?.recommendation_by_mo_dashboard1);
-  // console.log("Dashboard 2:", recommendation?.recommendation_by_mo_dashboard2);
-  // console.log("Dashboard 3:", recommendation?.recommendation_by_mo_dashboard3);
-  // console.log("Geo LLM:", recommendation?.geo_llm);
-  // console.log("CMO Recommendation:", recommendation?.recommendation_by_cmo);
-    
-    
 
     function safeParse(jsonStr: any) {
   try {
@@ -526,35 +480,203 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
   }
 }
 
-    // ---------- CMO Recommendation ----------
-    // let cmo_recommendation = null;
-    // if (analysisStatus.recommendation_by_cmo) {
-    //   cmo_recommendation = await prisma.llm_responses.findUnique({
-    //     where: { website_id: website_id }, // Updated to use website_id
+
+
+
+    // ---------- Competitor Analysis ----------
+    // let competitorAnalysis: CompetitorAnalysis[] = [];
+    // if (analysisStatus.competitor_details) {
+    //   const competitors = await prisma.competitor_details.findMany({
+    //     where: { website_id },
     //     select: {
-    //       id: true,
-    //       website_id: true,
-    //       recommendation_by_cmo: true,
+    //       competitor_id: true,
+    //       name: true,
+    //       competitor_website_url: true,
+    //       industry: true,
+    //       region: true,
+    //       target_audience: true,
+    //       primary_offering: true,
+    //       usp: true,
+    //       competitor_data: {
+    //         select: {
+    //           website_url: true,
+    //           page_title: true,
+    //           logo_url: true,
+    //           meta_description: true,
+    //           meta_keywords: true,
+    //           og_title: true,
+    //           og_description: true,
+    //           og_image: true,
+    //           twitter_handle: true,
+    //           facebook_handle: true,
+    //           instagram_handle: true,
+    //           linkedin_handle: true,
+    //           youtube_handle: true,
+    //           tiktok_handle: true,
+    //           homepage_alt_text_coverage: true,
+    //           ctr_loss_percent: true,
+    //           revenue_loss_percent: true,
+    //           schema_analysis: true,
+    //           page_speed: true,
+    //           other_links: true,
+    //         },
+    //       },
     //     },
+    //     take: 3, // Limit to 3 competitors
     //   });
 
-    //   if (cmo_recommendation?.recommendation_by_cmo) {
-    //     try {
-    //       cmo_recommendation.recommendation_by_cmo =
-    //         typeof cmo_recommendation.recommendation_by_cmo === "string"
-    //           ? JSON.parse(cmo_recommendation.recommendation_by_cmo)
-    //           : cmo_recommendation.recommendation_by_cmo;
-    //     } catch (error) {
-    //       console.error("Error parsing recommendation_by_cmo:", error);
-    //       // Keep as string if parsing fails
-    //     }
-    //   }
+    //   competitorAnalysis = competitors.map((comp) => ({
+    //     competitor_id: comp.competitor_id,
+    //     name: comp.name ?? null,
+    //     website_url: comp.competitor_website_url ?? comp.competitor_data?.website_url ?? null,
+    //     industry: comp.industry ?? null,
+    //     region: comp.region ?? null,
+    //     target_audience: comp.target_audience ?? null,
+    //     primary_offering: comp.primary_offering ?? null,
+    //     usp: comp.usp ?? null,
+    //     page_title: comp.competitor_data?.page_title ?? null,
+    //     logo_url: comp.competitor_data?.logo_url ?? null,
+    //     meta_description: comp.competitor_data?.meta_description ?? null,
+    //     meta_keywords: comp.competitor_data?.meta_keywords ?? null,
+    //     social_handles: {
+    //       twitter: comp.competitor_data?.twitter_handle ?? null,
+    //       facebook: comp.competitor_data?.facebook_handle ?? null,
+    //       instagram: comp.competitor_data?.instagram_handle ?? null,
+    //       linkedin: comp.competitor_data?.linkedin_handle ?? null,
+    //       youtube: comp.competitor_data?.youtube_handle ?? null,
+    //       tiktok: comp.competitor_data?.tiktok_handle ?? null,
+    //     },
+    //     ctr_loss_percent: safeParse(comp.competitor_data?.ctr_loss_percent) ?? null,
+    //     revenue_loss_percent: comp.competitor_data?.revenue_loss_percent ?? null,
+    //     schema_analysis: safeParse(comp.competitor_data?.schema_analysis) ?? null,
+    //     page_speed: safeParse(comp.competitor_data?.page_speed) ?? null,
+    //     other_links: safeParse(comp.competitor_data?.other_links) ?? null,
+    //   }));
     // }
 
 
+    let competitorAnalysis: any[] = [];
 
+if (analysisStatus.competitor_details) {
+  const competitors = await prisma.competitor_details.findMany({
+    where: { website_id },
+    select: {
+      competitor_id: true,
+      name: true,
+      competitor_website_url: true,
+      industry: true,
+      region: true,
+      target_audience: true,
+      primary_offering: true,
+      usp: true,
+      created_at: true,
+      updated_at: true,
+      competitor_data: {
+        select: {
+          website_url: true,
+          page_title: true,
+          logo_url: true,
+          meta_description: true,
+          meta_keywords: true,
+          og_title: true,
+          og_description: true,
+          og_image: true,
+          twitter_handle: true,
+          facebook_handle: true,
+          instagram_handle: true,
+          linkedin_handle: true,
+          youtube_handle: true,
+          tiktok_handle: true,
+          homepage_alt_text_coverage: true,
+          ctr_loss_percent: true,
+          revenue_loss_percent: true,
+          schema_analysis: true,
+          page_speed: true,
+          other_links: true,
+        },
+      },
+    },
+    take: 3,
+  });
 
-    // ---------- On Page Optimization ----------
+  competitorAnalysis = competitors.map((comp) => ({
+    competitor_id: comp.competitor_id,
+    name: comp.name ?? null,
+    website_url: comp.competitor_website_url ?? comp.competitor_data?.website_url ?? null,
+    industry: comp.industry ?? null,
+    region: comp.region ?? null,
+    target_audience: comp.target_audience ?? null,
+    primary_offering: comp.primary_offering ?? null,
+    usp: comp.usp ?? null,
+    created_at: comp.created_at,
+    updated_at: comp.updated_at,
+    page_title: comp.competitor_data?.page_title ?? null,
+    logo_url: comp.competitor_data?.logo_url ?? null,
+    meta_description: comp.competitor_data?.meta_description ?? null,
+    meta_keywords: comp.competitor_data?.meta_keywords ?? null,
+    og_description: comp.competitor_data?.og_description ?? null,
+    og_title: comp.competitor_data?.og_title ?? null,
+    og_image: comp.competitor_data?.og_image ?? null,
+    social_handles: {
+      twitter: comp.competitor_data?.twitter_handle ?? null,
+      facebook: comp.competitor_data?.facebook_handle ?? null,
+      instagram: comp.competitor_data?.instagram_handle ?? null,
+      linkedin: comp.competitor_data?.linkedin_handle ?? null,
+      youtube: comp.competitor_data?.youtube_handle ?? null,
+      tiktok: comp.competitor_data?.tiktok_handle ?? null,
+    },
+    ctr_loss_percent: safeParse(comp.competitor_data?.ctr_loss_percent),
+    revenue_loss_percent: comp.competitor_data?.revenue_loss_percent ?? null,
+    schema_analysis: safeParse(comp.competitor_data?.schema_analysis),
+    page_speed: safeParse(comp.competitor_data?.page_speed),
+    other_links: safeParse(comp.competitor_data?.other_links),
+  }));
+}
+
+// Transform into your final shape
+const competitorsData = competitorAnalysis.reduce((acc, comp, i) => {
+  acc[`competitor${i + 1}`] = {
+    competitor_id: comp.competitor_id,
+    website_id,
+    name: comp.name,
+    website_url: comp.website_url,
+    industry: comp.industry,
+    region: comp.region,
+    target_audience: comp.target_audience,
+    primary_offering: comp.primary_offering,
+    usp: comp.usp,
+    created_at: comp.created_at,
+    updated_at: comp.updated_at,
+    page_speed: comp.page_speed,
+    meta_data: {
+      page_title: comp.page_title,
+      meta_keywords: comp.meta_keywords,
+      meta_description: comp.meta_description,
+      og_description: comp.og_description,
+      og_title: comp.og_title,
+      og_image: comp.og_image,
+    },
+    social_handles: comp.social_handles,
+  };
+  return acc;
+}, {} as Record<string, any>);
+
+// Fetch brand's own website data
+// const [mainWebsiteScrapedData, mainWebsiteAnalysisData] = await Promise.all([
+//   prisma.scraped_data.findFirst({ where: { website_id } }),
+//   prisma.website_analysis.findFirst({ where: { website_id } }),
+// ]);
+
+// if (mainWebsiteScrapedData && mainWebsiteAnalysisData) {
+//   competitorsData["mainWebsite"] = {
+//     website: mainWebsiteScrapedData,
+//     brandWebsiteAnalysis: mainWebsiteAnalysisData,
+//   };
+// }
+
+    
+
+       // ---------- On Page Optimization ----------
     const onpage_opptimization: Record<string, any> = {};
     if (scrapedData) {
       onpage_opptimization.metaDataWithoutRawHtml = {
@@ -719,19 +841,11 @@ const responsePayload: Record<string, any> = {
   onpage_opptimization,
   technical_seo,
   geo,
-  
+  // competitor_analysis: competitorAnalysis.length > 0 ? competitorAnalysis : undefined,
+
+  competitors: Object.keys(competitorsData).length ? competitorsData : undefined,
 };
-// if (recommendation && recommendation.recommendation_by_mo_dashboard1 != null) {
-//   responsePayload.recommendation_by_mo_dashboard1 = recommendation.recommendation_by_mo_dashboard1;
-// }
 
-// if (recommendation && recommendation.recommendation_by_mo_dashboard2 != null) {
-//   responsePayload.recommendation_by_mo_dashboard2 = recommendation.recommendation_by_mo_dashboard2;
-// }
-
-// if (recommendation && recommendation.recommendation_by_mo_dashboard3 != null) {
-// responsePayload.recommendation_by_mo_dashboard3 = recommendation.recommendation_by_mo_dashboard3;
-// }
 
 if (recommendation?.recommendation_by_mo_dashboard1 != null) {
   responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);

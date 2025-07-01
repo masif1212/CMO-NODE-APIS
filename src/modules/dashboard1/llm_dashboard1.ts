@@ -595,7 +595,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
       },
     });
-
+    
     // Update analysis status
     await prisma.analysis_status.upsert({
       where: {

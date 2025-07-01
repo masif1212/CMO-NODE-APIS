@@ -10,6 +10,7 @@ export const createBrandProfile = async (
     industry?: string;
     location?: string;
     target_audience?: string;
+    competitor_urls?:string
     
   
   }
@@ -31,6 +32,7 @@ export const createBrandProfile = async (
   if (data.target_audience) saveData.target_audience = data.target_audience;
   if (data.brand_offering) saveData.primary_offering = data.brand_offering;
   if (data.usp) saveData.USP = data.usp;
+  if (data.competitor_urls) saveData.competitor_urls = data.competitor_urls;
 
   if (existing) {
     return await prisma.user_requirements.update({

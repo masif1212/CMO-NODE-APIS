@@ -38,7 +38,7 @@ export async function scrapeWebsitecompetitos(url: string) {
       return !!(alt && alt.trim().length > 0);
     }).length;
 
-    const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+    const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
     for (const selector of logoSelectors) {
       const el = $(selector).first();
@@ -66,7 +66,7 @@ export async function scrapeWebsitecompetitos(url: string) {
       instagram_handle: extractHandle('instagram') || null,
       linkedin_handle: extractHandle('linkedin') || null,
       youtube_handle: extractHandle('youtube') || null,
-        homepage_alt_text_coverage:   homepage_alt_text_coverage,
+      homepage_alt_text_coverage:   homepage_alt_text_coverage,
       tiktok_handle: extractHandle('tiktok') || null,
       other_links: otherLinks,
       raw_html: html,

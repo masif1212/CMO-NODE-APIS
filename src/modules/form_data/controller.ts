@@ -11,7 +11,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       industry,
       location,
       target_audience,
-      
+      competitor_urls,
       user_id,
       website_id,
     } = req.body;
@@ -30,6 +30,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       industry,
       location,
       target_audience,
+      competitor_urls
       
     });
 
