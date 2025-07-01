@@ -30,6 +30,10 @@ app.get("/", (_req, res) => {
   res.send("Hello");
 });
 
+app.get("/healthz", (req, res) => {
+  res.status(200).send("OK");
+});
+
 app.use(
   cors({
     origin: process.env.NEXT_PUBLIC_BASE_URL, // Frontend URL

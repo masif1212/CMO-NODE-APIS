@@ -39,11 +39,15 @@ echo \"TASK=\$TASK\"; \
 echo \"DATABASE_URL=\${DATABASE_URL:-(not set)}\"; \
 if [ \"\$TASK\" = \"migrate\" ]; then \
   echo '--- Running migrations and seed...'; \
-  npx prisma migrate deploy && npx prisma db seed || echo '--- Seed skipped or failed'; \
+  npx prisma migrate deploy && npx prisma db seed || echo '❌ Seed failed (continuing)'; \
+  exit 0; \
 elif [ \"\$TASK\" = \"start\" ]; then \
-  echo '--- Starting app server...'; \
+  echo '--- Running app seed (if needed)...'; \
+  npx prisma db seed || echo '❌ Seed failed (continuing)'; \
+  echo '--- Starting server...'; \
   node dist/server.js; \
 else \
   echo '❌ Invalid TASK specified. Use migrate or start'; \
   exit 1; \
 fi"]
+
