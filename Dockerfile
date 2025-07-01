@@ -41,23 +41,20 @@ RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 # Don't hardcode port — Cloud Run provides it
-EXPOSE 8080
+EXPOSE 3001
 
 # Start logic
 CMD ["sh", "-c", "\
-echo '--- STARTING CONTAINER'; \
-echo \"TASK=\$TASK\"; \
-echo \"DATABASE_URL=\${DATABASE_URL:-(not set)}\"; \
-echo \"PORT=\${PORT}\"; \
-if [ \"\$TASK\" = \"migrate\" ]; then \
-  echo '--- Running Prisma migration and seed...'; \
-  npx prisma migrate deploy && npx prisma db seed || { echo '❌ Migration or seed failed'; exit 1; }; \
-elif [ \"\$TASK\" = \"start\" ]; then \
-  echo '--- Running Prisma seed...'; \
-  npx prisma db seed || echo '⚠️ Seed script failed or skipped'; \
-  echo '--- Launching Node server...'; \
-  node dist/server.js; \
-else \
-  echo '❌ Invalid TASK specified. Use TASK=migrate or TASK=start'; \
-  exit 1; \
-fi"]
+  echo '--- STARTING CONTAINER'; \
+  echo \"PORT=\$PORT\"; \
+  if [ \"\$TASK\" = \"migrate\" ]; then \
+    echo '--- Running migrations and seed...'; \
+    npx prisma migrate deploy && npx prisma db seed || echo '❌ Seed failed (continuing)'; \
+    exit 0; \
+  elif [ \"\$TASK\" = \"start\" ]; then \
+    echo '--- Starting server...'; \
+    node dist/server.js; \
+  else \
+    echo '❌ Invalid TASK specified. Use migrate or start'; \
+    exit 1; \
+  fi"]
