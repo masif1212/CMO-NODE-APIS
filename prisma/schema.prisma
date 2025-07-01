@@ -438,7 +438,7 @@ model user_requirements {
   fetched_properties  Json?
   summary_status      String? // e.g., "pending", "success", "error"
   summary_data        Json?
-  competitor_urls     String? @db.LongText
+  competitor_urls     Json?
   ip_address          String? @db.LongText
   user_agent          String? @db.LongText
   industry            String? @db.LongText

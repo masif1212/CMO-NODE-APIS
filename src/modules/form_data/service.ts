@@ -10,7 +10,7 @@ export const createBrandProfile = async (
     industry?: string;
     location?: string;
     target_audience?: string;
-    competitor_urls?:string
+    competitor_urls?: string[];
     
   
   }

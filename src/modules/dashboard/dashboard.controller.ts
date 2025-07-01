@@ -462,6 +462,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
         select: {
           id: true,
           website_id: true,
+          dashboard3_competi_camparison:true,
           recommendation_by_mo_dashboard1:true,
           recommendation_by_mo_dashboard2:true,
           recommendation_by_mo_dashboard3:true,
@@ -483,183 +484,9 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
 
 
-    // ---------- Competitor Analysis ----------
-    // let competitorAnalysis: CompetitorAnalysis[] = [];
-    // if (analysisStatus.competitor_details) {
-    //   const competitors = await prisma.competitor_details.findMany({
-    //     where: { website_id },
-    //     select: {
-    //       competitor_id: true,
-    //       name: true,
-    //       competitor_website_url: true,
-    //       industry: true,
-    //       region: true,
-    //       target_audience: true,
-    //       primary_offering: true,
-    //       usp: true,
-    //       competitor_data: {
-    //         select: {
-    //           website_url: true,
-    //           page_title: true,
-    //           logo_url: true,
-    //           meta_description: true,
-    //           meta_keywords: true,
-    //           og_title: true,
-    //           og_description: true,
-    //           og_image: true,
-    //           twitter_handle: true,
-    //           facebook_handle: true,
-    //           instagram_handle: true,
-    //           linkedin_handle: true,
-    //           youtube_handle: true,
-    //           tiktok_handle: true,
-    //           homepage_alt_text_coverage: true,
-    //           ctr_loss_percent: true,
-    //           revenue_loss_percent: true,
-    //           schema_analysis: true,
-    //           page_speed: true,
-    //           other_links: true,
-    //         },
-    //       },
-    //     },
-    //     take: 3, // Limit to 3 competitors
-    //   });
-
-    //   competitorAnalysis = competitors.map((comp) => ({
-    //     competitor_id: comp.competitor_id,
-    //     name: comp.name ?? null,
-    //     website_url: comp.competitor_website_url ?? comp.competitor_data?.website_url ?? null,
-    //     industry: comp.industry ?? null,
-    //     region: comp.region ?? null,
-    //     target_audience: comp.target_audience ?? null,
-    //     primary_offering: comp.primary_offering ?? null,
-    //     usp: comp.usp ?? null,
-    //     page_title: comp.competitor_data?.page_title ?? null,
-    //     logo_url: comp.competitor_data?.logo_url ?? null,
-    //     meta_description: comp.competitor_data?.meta_description ?? null,
-    //     meta_keywords: comp.competitor_data?.meta_keywords ?? null,
-    //     social_handles: {
-    //       twitter: comp.competitor_data?.twitter_handle ?? null,
-    //       facebook: comp.competitor_data?.facebook_handle ?? null,
-    //       instagram: comp.competitor_data?.instagram_handle ?? null,
-    //       linkedin: comp.competitor_data?.linkedin_handle ?? null,
-    //       youtube: comp.competitor_data?.youtube_handle ?? null,
-    //       tiktok: comp.competitor_data?.tiktok_handle ?? null,
-    //     },
-    //     ctr_loss_percent: safeParse(comp.competitor_data?.ctr_loss_percent) ?? null,
-    //     revenue_loss_percent: comp.competitor_data?.revenue_loss_percent ?? null,
-    //     schema_analysis: safeParse(comp.competitor_data?.schema_analysis) ?? null,
-    //     page_speed: safeParse(comp.competitor_data?.page_speed) ?? null,
-    //     other_links: safeParse(comp.competitor_data?.other_links) ?? null,
-    //   }));
-    // }
+   
 
 
-    let competitorAnalysis: any[] = [];
-
-if (analysisStatus.competitor_details) {
-  const competitors = await prisma.competitor_details.findMany({
-    where: { website_id },
-    select: {
-      competitor_id: true,
-      name: true,
-      competitor_website_url: true,
-      industry: true,
-      region: true,
-      target_audience: true,
-      primary_offering: true,
-      usp: true,
-      created_at: true,
-      updated_at: true,
-      competitor_data: {
-        select: {
-          website_url: true,
-          page_title: true,
-          logo_url: true,
-          meta_description: true,
-          meta_keywords: true,
-          og_title: true,
-          og_description: true,
-          og_image: true,
-          twitter_handle: true,
-          facebook_handle: true,
-          instagram_handle: true,
-          linkedin_handle: true,
-          youtube_handle: true,
-          tiktok_handle: true,
-          homepage_alt_text_coverage: true,
-          ctr_loss_percent: true,
-          revenue_loss_percent: true,
-          schema_analysis: true,
-          page_speed: true,
-          other_links: true,
-        },
-      },
-    },
-    take: 3,
-  });
-
-  competitorAnalysis = competitors.map((comp) => ({
-    competitor_id: comp.competitor_id,
-    name: comp.name ?? null,
-    website_url: comp.competitor_website_url ?? comp.competitor_data?.website_url ?? null,
-    industry: comp.industry ?? null,
-    region: comp.region ?? null,
-    target_audience: comp.target_audience ?? null,
-    primary_offering: comp.primary_offering ?? null,
-    usp: comp.usp ?? null,
-    created_at: comp.created_at,
-    updated_at: comp.updated_at,
-    page_title: comp.competitor_data?.page_title ?? null,
-    logo_url: comp.competitor_data?.logo_url ?? null,
-    meta_description: comp.competitor_data?.meta_description ?? null,
-    meta_keywords: comp.competitor_data?.meta_keywords ?? null,
-    og_description: comp.competitor_data?.og_description ?? null,
-    og_title: comp.competitor_data?.og_title ?? null,
-    og_image: comp.competitor_data?.og_image ?? null,
-    social_handles: {
-      twitter: comp.competitor_data?.twitter_handle ?? null,
-      facebook: comp.competitor_data?.facebook_handle ?? null,
-      instagram: comp.competitor_data?.instagram_handle ?? null,
-      linkedin: comp.competitor_data?.linkedin_handle ?? null,
-      youtube: comp.competitor_data?.youtube_handle ?? null,
-      tiktok: comp.competitor_data?.tiktok_handle ?? null,
-    },
-    ctr_loss_percent: safeParse(comp.competitor_data?.ctr_loss_percent),
-    revenue_loss_percent: comp.competitor_data?.revenue_loss_percent ?? null,
-    schema_analysis: safeParse(comp.competitor_data?.schema_analysis),
-    page_speed: safeParse(comp.competitor_data?.page_speed),
-    other_links: safeParse(comp.competitor_data?.other_links),
-  }));
-}
-
-// Transform into your final shape
-const competitorsData = competitorAnalysis.reduce((acc, comp, i) => {
-  acc[`competitor${i + 1}`] = {
-    competitor_id: comp.competitor_id,
-    website_id,
-    name: comp.name,
-    website_url: comp.website_url,
-    industry: comp.industry,
-    region: comp.region,
-    target_audience: comp.target_audience,
-    primary_offering: comp.primary_offering,
-    usp: comp.usp,
-    created_at: comp.created_at,
-    updated_at: comp.updated_at,
-    page_speed: comp.page_speed,
-    meta_data: {
-      page_title: comp.page_title,
-      meta_keywords: comp.meta_keywords,
-      meta_description: comp.meta_description,
-      og_description: comp.og_description,
-      og_title: comp.og_title,
-      og_image: comp.og_image,
-    },
-    social_handles: comp.social_handles,
-  };
-  return acc;
-}, {} as Record<string, any>);
 
 // Fetch brand's own website data
 // const [mainWebsiteScrapedData, mainWebsiteAnalysisData] = await Promise.all([
@@ -843,8 +670,10 @@ const responsePayload: Record<string, any> = {
   geo,
   // competitor_analysis: competitorAnalysis.length > 0 ? competitorAnalysis : undefined,
 
-  competitors: Object.keys(competitorsData).length ? competitorsData : undefined,
+  // competitors: Object.keys(competitorsData).length ? competitorsData : undefined,
 };
+if (analysisStatus.competitor_details !=null)
+responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
 
 
 if (recommendation?.recommendation_by_mo_dashboard1 != null) {
@@ -864,9 +693,6 @@ if (recommendation && recommendation.recommendation_by_cmo != null) {
 responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
 }
 
-// if (cmo_recommendation != null) {
-//   responsePayload.cmo_recommendation = cmo_recommendation;
-// }
 
 return res.status(200).json(responsePayload);
 } catch (error) {

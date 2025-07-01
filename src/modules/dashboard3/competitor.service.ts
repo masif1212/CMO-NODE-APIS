@@ -514,20 +514,37 @@ export class CompetitorService {
       console.log(`PageSpeed data already exists for ${website_url}`);
     }
 
-    const userRequirement = {
+    // const userRequirement = {
+    //   industry: userRequirementRaw?.industry ?? 'Unknown',
+    //   region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
+    //   target_location: userRequirementRaw?.target_location ?? 'Unknown',
+    //   target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
+    //   primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
+    //   USP: userRequirementRaw?.USP ?? 'Unknown',
+    //   competitor_urls: userRequirementRaw?.competitor_urls ?? '',
+    // };
+
+    // const competitorUrls: string[] = userRequirement.competitor_urls
+    //   ? userRequirement.competitor_urls.split(',').map(u => u.trim()).filter(Boolean)
+    //   : [];
+
+
+
+        const userRequirement = {
       industry: userRequirementRaw?.industry ?? 'Unknown',
       region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
       target_location: userRequirementRaw?.target_location ?? 'Unknown',
       target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
       primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
       USP: userRequirementRaw?.USP ?? 'Unknown',
-      competitor_urls: userRequirementRaw?.competitor_urls ?? '',
+      competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
+        ? userRequirementRaw.competitor_urls
+        : [],
     };
 
-    const competitorUrls: string[] = userRequirement.competitor_urls
-      ? userRequirement.competitor_urls.split(',').map(u => u.trim()).filter(Boolean)
-      : [];
-
+    const competitorUrls: string[] = Array.isArray(userRequirement.competitor_urls)
+  ? (userRequirement.competitor_urls.filter((url): url is string => typeof url === 'string'))
+  : [];
     const competitorResults = [];
     const processedUrls = new Set<string>();
     const processedNames = new Set<string>();
@@ -869,7 +886,29 @@ export class CompetitorService {
         schema_markup_status: Schema_Markup_Status,
       },
     };
-
+    await prisma.llm_responses.upsert({
+      where: { website_id },
+      update: {
+        dashboard3_competi_camparison: JSON.stringify(labeledResults),
+      },
+      create: {
+        website_id,
+        dashboard3_competi_camparison: JSON.stringify(labeledResults),
+      },
+    });
+   await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id: userRequirementRaw?.user_id ?? '',
+          website_id: website_id,
+        },
+      },
+      update: {},
+      create: {
+        website_id: website_id,
+        user_id: userRequirementRaw?.user_id ?? '',
+      },
+    });
     return labeledResults;
   }
 
