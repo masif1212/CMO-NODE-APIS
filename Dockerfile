@@ -1,23 +1,16 @@
-# Dockerfile for Node.js Backend API (Handles migrations and seeding with better logging)
+# Dockerfile for Node.js Backend API with migration + seed
 
-# Stage 1: Build Stage (compiles TypeScript)
+# Stage 1: Build Stage
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install openssl for Prisma CLI if needed
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
-# Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Copy application code
 COPY . .
-
-# Generate Prisma client
 RUN npx prisma generate
-
-# Compile TypeScript to JavaScript
 RUN npm run build
 
 # Stage 2: Final Production Image
@@ -25,35 +18,35 @@ FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy required artifacts from builder stage
+# Copy compiled app, Prisma client, and schema
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts # In case your seed file is here
 
-# Create non-root user
-RUN adduser --system --group nodejs
+# ✅ Install only what's needed for seeding
+RUN npm install -g prisma ts-node typescript
 
-# ✅ Fix: ensure all files are owned by the app user
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
+# Create non-root user and assign file permissions
+RUN adduser --system --group nodejs && chown -R nodejs:nodejs /app
 USER nodejs
 
-# Expose API port
 EXPOSE 8080
 
-# ✅ CMD handles both migration and normal run, including seeding if applicable
+# ✅ Universal CMD supporting multiple TASKs
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo 'TASK=$TASK'; \
 echo 'DATABASE_URL=${DATABASE_URL:-(not set)}'; \
 if [ \"$TASK\" = \"migrate\" ]; then \
-  echo '--- Starting Prisma migration...'; \
-  npx prisma migrate deploy || { echo '--- Prisma migration failed with exit code $?'; exit 1; }; \
-else \
-  echo '--- Running Prisma generate and seeding system data...'; \
-  npx prisma generate && npx prisma db seed || echo '--- Seed failed (possibly already seeded)'; \
-  echo '--- Starting app server...'; \
+  echo '--- Running Prisma migration...'; \
+  npx prisma migrate deploy && npx prisma db seed || echo '--- Seed failed or already executed'; \
+elif [ \"$TASK\" = \"start\" ]; then \
+  echo '--- Starting app with seeding check...'; \
+  npx prisma db seed || echo '--- Seed already executed or failed'; \
   node dist/server.js; \
+else \
+  echo '❌ Invalid TASK specified (use migrate or start)'; \
+  exit 1; \
 fi"]

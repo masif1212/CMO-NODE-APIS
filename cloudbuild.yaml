@@ -1,4 +1,5 @@
-# cloudbuild.yaml for Node.js Backend API (WITH migrations)
+# cloudbuild.yaml for Node.js Backend API (WITH migrations + seeding)
+
 steps:
   # 1. Build the all-purpose application image.
   - name: "gcr.io/cloud-builders/docker"
@@ -10,11 +11,21 @@ steps:
     id: "Push Backend Image"
     args: ["push", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA"]
 
-  # 3. Deploy the migration Job definition.
+  # 3. Deploy the migration + seed Job definition.
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Migration Job"
     entrypoint: "bash"
-    secretEnv: ["DB_INSTANCE_NAME", "DATABASE_URL_SECRET", "PAGESPEED_API_KEY_SECRET", "GOOGLE_CLIENT_ID_SECRET", "GOOGLE_CLIENT_SECRET_SECRET", "GOOGLE_CALLBACK_URL_SECRET", "SESSION_SECRET_SECRET", "YOUTUBE_API_KEY_SECRET", "OPENAI_API_KEY_SECRET", "NEXT_PUBLIC_BASE_URL_SECRET"]
+    secretEnv:
+      - DB_INSTANCE_NAME
+      - DATABASE_URL_SECRET
+      - PAGESPEED_API_KEY_SECRET
+      - GOOGLE_CLIENT_ID_SECRET
+      - GOOGLE_CLIENT_SECRET_SECRET
+      - GOOGLE_CALLBACK_URL_SECRET
+      - SESSION_SECRET_SECRET
+      - YOUTUBE_API_KEY_SECRET
+      - OPENAI_API_KEY_SECRET
+      - NEXT_PUBLIC_BASE_URL_SECRET
     args:
       - "-c"
       - |
@@ -31,11 +42,9 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --command=sh \
-          --args='-c,if [ "$$TASK" = "migrate" ]; then npx prisma migrate deploy; else exit 1; fi' \
           --set-env-vars=TASK=migrate
 
-  # 4. Execute the migration Job and wait for it to complete.
+  # 4. Execute the migration + seed Job and wait for it to complete.
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Execute Migration Job"
     entrypoint: "gcloud"
@@ -45,7 +54,17 @@ steps:
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"
-    secretEnv: ["DB_INSTANCE_NAME", "DATABASE_URL_SECRET", "PAGESPEED_API_KEY_SECRET", "GOOGLE_CLIENT_ID_SECRET", "GOOGLE_CLIENT_SECRET_SECRET", "GOOGLE_CALLBACK_URL_SECRET", "SESSION_SECRET_SECRET", "YOUTUBE_API_KEY_SECRET", "OPENAI_API_KEY_SECRET", "NEXT_PUBLIC_BASE_URL_SECRET"]
+    secretEnv:
+      - DB_INSTANCE_NAME
+      - DATABASE_URL_SECRET
+      - PAGESPEED_API_KEY_SECRET
+      - GOOGLE_CLIENT_ID_SECRET
+      - GOOGLE_CLIENT_SECRET_SECRET
+      - GOOGLE_CALLBACK_URL_SECRET
+      - SESSION_SECRET_SECRET
+      - YOUTUBE_API_KEY_SECRET
+      - OPENAI_API_KEY_SECRET
+      - NEXT_PUBLIC_BASE_URL_SECRET
     args:
       - "-c"
       - |
