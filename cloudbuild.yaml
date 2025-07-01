@@ -1,17 +1,16 @@
-# cloudbuild.yaml for Node.js Backend API (WITH migrations + seeding)
-
+# cloudbuild.yaml for Node.js Backend API (WITH migrations and seeding)
 steps:
-  # 1. Build the all-purpose application image.
+  # 1. Build the backend Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: "Build Backend Image"
     args: ["build", "-t", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA", "."]
 
-  # 2. Push the application image.
+  # 2. Push the Docker image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
     id: "Push Backend Image"
     args: ["push", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA"]
 
-  # 3. Deploy the migration + seed Job definition.
+  # 3. Deploy Cloud Run Job for migration + seed
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Migration Job"
     entrypoint: "bash"
@@ -42,15 +41,23 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --set-env-vars=TASK=migrate
+          --set-env-vars=TASK=migrate \
+          --command=sh \
+          --args='-c,npx prisma migrate deploy && npx prisma db seed'
 
-  # 4. Execute the migration + seed Job and wait for it to complete.
+  # 4. Execute the migration + seed job
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Execute Migration Job"
     entrypoint: "gcloud"
-    args: ["run", "jobs", "execute", "cmo-db-migration-job", "--region=us-central1", "--wait"]
+    args:
+      - "run"
+      - "jobs"
+      - "execute"
+      - "cmo-db-migration-job"
+      - "--region=us-central1"
+      - "--wait"
 
-  # 5. Deploy the main backend service if the migration job was successful.
+  # 5. Deploy the backend service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"
@@ -82,6 +89,7 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
+          --set-env-vars=TASK=start \
           --no-allow-unauthenticated
 
 availableSecrets:

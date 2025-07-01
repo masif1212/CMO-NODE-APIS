@@ -23,26 +23,27 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Include dev tools needed for seed
-RUN npm install -g prisma ts-node typescript
+# Install dev tools globally to support seed script
+RUN npm install -g ts-node typescript prisma
 
-RUN adduser --system --group nodejs && chown -R nodejs:nodejs /app
+RUN adduser --system --group nodejs
+RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 EXPOSE 8080
 
+# Entrypoint with conditional logic
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
-echo 'TASK=$TASK'; \
-echo 'DATABASE_URL=${DATABASE_URL:-(not set)}'; \
-if [ \"$TASK\" = \"migrate\" ]; then \
-  echo '--- Running Prisma migration...'; \
-  npx prisma migrate deploy && npx prisma db seed || echo '--- Seed failed or already executed'; \
-elif [ \"$TASK\" = \"start\" ]; then \
-  echo '--- Starting app with seeding check...'; \
-  npx prisma db seed || echo '--- Seed already executed or failed'; \
+echo \"TASK=\$TASK\"; \
+echo \"DATABASE_URL=\${DATABASE_URL:-(not set)}\"; \
+if [ \"\$TASK\" = \"migrate\" ]; then \
+  echo '--- Running migrations and seed...'; \
+  npx prisma migrate deploy && npx prisma db seed || echo '--- Seed skipped or failed'; \
+elif [ \"\$TASK\" = \"start\" ]; then \
+  echo '--- Starting app server...'; \
   node dist/server.js; \
 else \
-  echo '❌ Invalid TASK specified (use migrate or start)'; \
+  echo '❌ Invalid TASK specified. Use migrate or start'; \
   exit 1; \
 fi"]
