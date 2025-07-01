@@ -2,49 +2,48 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install openssl for Prisma engine checksum verification
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
-# Install dependencies including prisma CLI
+# Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Install Prisma CLI globally to avoid runtime writes
-RUN npm install -g prisma
-
-# Copy code and build
+# Copy application code
 COPY . .
+
+# Generate Prisma Client
 RUN npx prisma generate
+
+# Build TypeScript
 RUN npm run build
 
-# Stage 2: Final
+# Stage 2: Production image
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install global Prisma CLI here too
-RUN npm install -g prisma
-
-# Copy artifacts
+# Install only production dependencies (excluding dev dependencies like prisma)
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Create secure non-root user and ensure permissions
+# Create non-root user for security
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
 EXPOSE 8080
 
-# Reliable, verbose CMD
+# Start app or run migrations
 CMD ["sh", "-c", "\
 echo '--- TASK='$TASK; \
 echo '--- DATABASE_URL='${DATABASE_URL:-(not set)}; \
 if [ \"$TASK\" = \"migrate\" ]; then \
   echo '--- Running Prisma migration...'; \
-  prisma migrate deploy || { echo '--- Migration failed'; exit 1; }; \
+  npx prisma migrate deploy || { echo '--- Migration failed'; exit 1; }; \
 else \
   echo '--- Starting app...'; \
   node dist/server.js; \
