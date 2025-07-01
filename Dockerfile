@@ -5,46 +5,38 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
-# Install dependencies
+# Copy package files and install
 COPY package.json package-lock.json* ./
 RUN npm install
 
-# Copy application code
+# Copy the rest of your code
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma client (DO NOT RUN MIGRATIONS)
 RUN npx prisma generate
 
-# Build TypeScript
+# Build Next.js app
 RUN npm run build
 
-# Stage 2: Production image
+# Stage 2: Final production image
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install only production dependencies (excluding dev dependencies like prisma)
+# Install only production dependencies
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Create non-root user for security
-RUN adduser --system --group nodejs
-RUN chown -R nodejs:nodejs /app
-USER nodejs
+# Secure runtime user
+RUN adduser --system --group nextjs
+RUN chown -R nextjs:nextjs /app
+USER nextjs
 
 EXPOSE 8080
 
-# Start app or run migrations
-CMD ["sh", "-c", "\
-echo '--- TASK='$TASK; \
-echo '--- DATABASE_URL='${DATABASE_URL:-(not set)}; \
-if [ \"$TASK\" = \"migrate\" ]; then \
-  echo '--- Running Prisma migration...'; \
-  npx prisma migrate deploy || { echo '--- Migration failed'; exit 1; }; \
-else \
-  echo '--- Starting app...'; \
-  node dist/server.js; \
-fi"]
+# Start Next.js app (this assumes next.config.js is set correctly)
+CMD ["node_modules/.bin/next", "start", "-p", "8080"]
