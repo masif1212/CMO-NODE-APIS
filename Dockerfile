@@ -30,7 +30,7 @@ RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-EXPOSE 8080
+EXPOSE 3001
 
 # Entrypoint with conditional logic
 CMD ["sh", "-c", "\
