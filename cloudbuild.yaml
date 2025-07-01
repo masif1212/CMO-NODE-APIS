@@ -1,17 +1,16 @@
-# cloudbuild.yaml for Node.js Backend API (with migration + seed)
-
+# cloudbuild.yaml for Node.js Backend API with migration + seed
 steps:
-  # Step 1: Build Docker image
+  # Step 1: Build the Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: "Build Backend Image"
     args: ["build", "-t", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA", "."]
 
-  # Step 2: Push to Container Registry
+  # Step 2: Push the Docker image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
     id: "Push Backend Image"
     args: ["push", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA"]
 
-  # Step 3: Deploy Cloud Run Job for migration + seed
+  # Step 3: Deploy Cloud Run Job for DB migration and seeding
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Migration Job"
     entrypoint: "bash"
@@ -34,8 +33,6 @@ steps:
           --region=us-central1 \
           --set-cloudsql-instances=$$DB_INSTANCE_NAME \
           --set-env-vars=TASK=migrate \
-          --command=sh \
-          --args='-c,npx prisma migrate deploy && npx prisma db seed' \
           --set-secrets=DATABASE_URL=DATABASE_URL_SECRET:latest \
           --set-secrets=PAGESPEED_API_KEY=pagespeed-api-key:latest \
           --set-secrets=GOOGLE_CLIENT_ID=backend-google-client-id:latest \
@@ -44,9 +41,11 @@ steps:
           --set-secrets=SESSION_SECRET=session-secret:latest \
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
-          --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest
+          --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
+          --command=sh \
+          --args='-c,npx prisma migrate deploy && npx prisma db seed'
 
-  # Step 4: Execute migration + seed job
+  # Step 4: Execute the migration job
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Execute Migration Job"
     entrypoint: "gcloud"
@@ -58,8 +57,7 @@ steps:
       - "--region=us-central1"
       - "--wait"
 
-  # Step 5: Deploy backend service
-  # Step 5: Deploy backend service
+  # Step 5: Deploy the backend Cloud Run service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"
@@ -92,8 +90,8 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --port=3001 \
-          --no-allow-unauthenticated
+          --no-allow-unauthenticated \
+          --port=3001
 
 availableSecrets:
   secretManager:

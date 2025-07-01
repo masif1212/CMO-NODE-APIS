@@ -1,6 +1,3 @@
-# Dockerfile for Node.js Backend API with Prisma migration + seed
-
-# Stage 1: Build
 FROM node:18-slim AS builder
 WORKDIR /app
 
@@ -13,7 +10,6 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Stage 2: Runtime
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
@@ -23,27 +19,26 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Install ts-node for seeding (if seed.ts is in TypeScript)
+# Support for seed.ts
 RUN npm install -g ts-node typescript prisma
 
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Match Cloud Run assigned port
+# Do NOT hardcode the port – Cloud Run will inject it
 EXPOSE 3001
 
 CMD ["sh", "-c", "\
-echo '--- STARTING CONTAINER'; \
-echo \"PORT=\$PORT | TASK=\$TASK\"; \
+echo 'TASK: $TASK'; \
 if [ \"$TASK\" = \"migrate\" ]; then \
-  echo '🔁 Running migration and seed'; \
+  echo 'Running migrate + seed'; \
   npx prisma migrate deploy && npx prisma db seed; \
 elif [ \"$TASK\" = \"start\" ]; then \
-  echo '🚀 Starting application'; \
-  npx prisma db seed || echo '⚠️ Seed failed/skipped'; \
+  echo 'Running seed and starting app'; \
+  npx prisma db seed || echo 'Seed skipped or failed'; \
   node dist/server.js; \
 else \
-  echo '❌ Invalid TASK specified (use migrate or start)'; \
+  echo '❌ Invalid TASK. Use TASK=migrate or TASK=start'; \
   exit 1; \
 fi"]
