@@ -1,4 +1,4 @@
-# Dockerfile for Node.js Backend API (Handles migrations with better logging)
+# Dockerfile for Node.js Backend API (Handles migrations and seeding with better logging)
 
 # Stage 1: Build Stage (compiles TypeScript)
 FROM node:18-slim AS builder
@@ -43,7 +43,7 @@ USER nodejs
 # Expose API port
 EXPOSE 8080
 
-# CMD handles both migration and normal run, with full logging
+# ✅ CMD handles both migration and normal run, including seeding if applicable
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo 'TASK=$TASK'; \
@@ -52,6 +52,8 @@ if [ \"$TASK\" = \"migrate\" ]; then \
   echo '--- Starting Prisma migration...'; \
   npx prisma migrate deploy || { echo '--- Prisma migration failed with exit code $?'; exit 1; }; \
 else \
+  echo '--- Running Prisma generate and seeding system data...'; \
+  npx prisma generate && npx prisma db seed || echo '--- Seed failed (possibly already seeded)'; \
   echo '--- Starting app server...'; \
   node dist/server.js; \
 fi"]
