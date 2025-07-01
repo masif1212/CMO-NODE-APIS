@@ -23,16 +23,16 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Install dev tools globally to support seed script
-RUN npm install -g ts-node typescript prisma
+# Install tools for seed (safe local install)
+RUN npm install --only=prod && \
+    npm install ts-node typescript prisma --save-dev
 
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-EXPOSE 3001
+EXPOSE 8080
 
-# Entrypoint with conditional logic
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo \"TASK=\$TASK\"; \
@@ -50,4 +50,3 @@ else \
   echo '❌ Invalid TASK specified. Use migrate or start'; \
   exit 1; \
 fi"]
-

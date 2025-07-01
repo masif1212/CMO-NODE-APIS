@@ -1,16 +1,13 @@
 # cloudbuild.yaml for Node.js Backend API (WITH migrations and seeding)
 steps:
-  # 1. Build the backend Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: "Build Backend Image"
     args: ["build", "-t", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA", "."]
 
-  # 2. Push the Docker image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
     id: "Push Backend Image"
     args: ["push", "gcr.io/$PROJECT_ID/cmo-backend-api:$COMMIT_SHA"]
 
-  # 3. Deploy Cloud Run Job for migration + seed
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Migration Job"
     entrypoint: "bash"
@@ -45,7 +42,6 @@ steps:
           --command=sh \
           --args='-c,npx prisma migrate deploy && npx prisma db seed'
 
-  # 4. Execute the migration + seed job
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Execute Migration Job"
     entrypoint: "gcloud"
@@ -57,7 +53,6 @@ steps:
       - "--region=us-central1"
       - "--wait"
 
-  # 5. Deploy the backend service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"

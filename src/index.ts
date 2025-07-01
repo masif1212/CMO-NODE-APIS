@@ -4,7 +4,7 @@ import app from "./app"; // Import the app from app.ts
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 
 // Optional: Keep the /users route if needed
 app.get("/users", async (req, res) => {
