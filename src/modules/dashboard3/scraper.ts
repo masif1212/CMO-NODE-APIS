@@ -1,6 +1,8 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { PrismaClient } from '@prisma/client';
+import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
+
 
 
 
@@ -39,7 +41,7 @@ export async function scrapeWebsitecompetitos(url: string) {
     }).length;
 
     const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
-
+    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url);
     for (const selector of logoSelectors) {
       const el = $(selector).first();
       let src = el.attr("href") || el.attr("src");
@@ -69,6 +71,7 @@ export async function scrapeWebsitecompetitos(url: string) {
       homepage_alt_text_coverage:   homepage_alt_text_coverage,
       tiktok_handle: extractHandle('tiktok') || null,
       other_links: otherLinks,
+      schema_analysis:schemaAnalysisData || null,
       raw_html: html,
     };
   } catch (err) {

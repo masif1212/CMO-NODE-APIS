@@ -81,7 +81,7 @@ function validateSchema(schema: Schema): { isValid: boolean; error?: string } {
 }
 
 //   Main function
-export async function validateComprehensiveSchema(url: string, website_id: string): Promise<SchemaOutput> {
+export async function validateComprehensiveSchema(url: string): Promise<SchemaOutput> {
   try {
     const response: AxiosResponse = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SchemaValidator/1.0)' },
@@ -156,14 +156,14 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
       summary: summary,
     };
 
-    await prisma.website_scraped_data.update({
-      where: {
-        website_id: website_id, // make sure this matches your primary key
-      },
-      data: {
-        schema_analysis: JSON.stringify(schemaAnalysisData),
-      },
-    });
+    // await prisma.website_scraped_data.update({
+    //   where: {
+    //     website_id: website_id, // make sure this matches your primary key
+    //   },
+    //   data: {
+    //     schema_analysis: JSON.stringify(schemaAnalysisData),
+    //   },
+    // });
     
 
 
