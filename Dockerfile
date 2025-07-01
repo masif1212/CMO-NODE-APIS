@@ -4,35 +4,41 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
+# Install OpenSSL for Prisma
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
+# Install dependencies
 COPY package.json package-lock.json* ./
 RUN npm install
 
+# Copy source and build
 COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Stage 2: Final Production Image
+# Stage 2: Production Image
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Copy files from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Install tools for seed (safe local install)
-RUN npm install --only=prod && \
-    npm install ts-node typescript prisma --save-dev
+# ✅ Install ts-node, typescript, and prisma to run seed
+RUN npm install ts-node typescript prisma
 
+# Add secure user
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
+# Expose backend port
 EXPOSE 8080
 
+# Entry point for container
 CMD ["sh", "-c", "\
 echo '--- STARTING CONTAINER'; \
 echo \"TASK=\$TASK\"; \
