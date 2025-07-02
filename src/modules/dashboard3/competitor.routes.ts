@@ -16,7 +16,7 @@ competitorRouter.post('/identification', async (req, res, next) => {
       update: { competitor_details: 'true' },
       create: { user_id, website_id, competitor_details: 'true' },
     });
-
+    console.log("competitors identification complete ")
     res.status(200).json({ competitors: data });
   } catch (e) {
     next(e);
@@ -46,6 +46,7 @@ competitorRouter.post('/recommendations', async (req, res, next) => {
         recommendation_by_mo3: "true",
       },
     });
+    console.log("competitors recommendations complete ")
     res.status(200).json({ recommendation_by_mo_dashboard3: data });
   } catch (e) {
     next(e);

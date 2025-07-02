@@ -1,13 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
-import { scrapeWebsitecompetitos } from './scraper';
+import { scrapeWebsitecompetitos ,fetchBrands} from './scraper';
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM, createComparisonPrompt } from './llm';
 import { parseCompetitorData } from './parser';
 import { getPageSpeedData } from './pagespeed';
 import OpenAI from 'openai';
 import 'dotenv/config';
 import * as cheerio from "cheerio";
-
 import axios from 'axios';
 
 
@@ -94,8 +93,8 @@ export class CompetitorService {
     const $ = cheerio.load(rawHtml);
     return $('h1').first().text().trim() || 'Not Found';
   }
+ 
 
-  
 
   static async process(website_id: string, user_id: string) {
     if (!website_id || !user_id) {
@@ -146,23 +145,7 @@ export class CompetitorService {
       console.log(`PageSpeed data already exists for ${website_url}`);
     }
 
-    // const userRequirement = {
-    //   industry: userRequirementRaw?.industry ?? 'Unknown',
-    //   region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
-    //   target_location: userRequirementRaw?.target_location ?? 'Unknown',
-    //   target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
-    //   primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
-    //   USP: userRequirementRaw?.USP ?? 'Unknown',
-    //   competitor_urls: userRequirementRaw?.competitor_urls ?? '',
-    // };
-
-    // const competitorUrls: string[] = userRequirement.competitor_urls
-    //   ? userRequirement.competitor_urls.split(',').map(u => u.trim()).filter(Boolean)
-    //   : [];
-
-
-
-        const userRequirement = {
+    const userRequirement = {
       industry: userRequirementRaw?.industry ?? 'Unknown',
       region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
       target_location: userRequirementRaw?.target_location ?? 'Unknown',
@@ -175,16 +158,65 @@ export class CompetitorService {
     };
 
     const competitorUrls: string[] = Array.isArray(userRequirement.competitor_urls)
-  ? (userRequirement.competitor_urls.filter((url): url is string => typeof url === 'string'))
-  : [];
+      ? (userRequirement.competitor_urls.filter((url): url is string => typeof url === 'string'))
+      : [];
     const competitorResults = [];
     const processedUrls = new Set<string>();
     const processedNames = new Set<string>();
 
+    // Helper function to handle schema_markup_status
+    const getSchemaMarkupStatus = (scraped: any) => {
+      if (typeof scraped === 'object' && scraped !== null && 'schema_analysis' in scraped) {
+        const schema = scraped.schema_analysis;
+        if (typeof schema === 'string') {
+          try {
+            return JSON.parse(schema);
+          } catch (error) {
+            console.error(`Failed to parse schema_analysis for ${scraped.website_url}: ${error instanceof Error ? error.message : String(error)}`);
+            return schema;
+          }
+        } else if (schema !== undefined && schema !== null) {
+          return schema;
+        }
+      }
+      return null;
+    };
+
+    
+    // const result = await fetchBrands(user_id, website_id);
+   const llmResponse = await prisma.llm_responses.findUnique({
+    where: { website_id: website_id },
+    select:{
+    geo_llm : true
+    }
+  });
+
+  let result: any;
+  if (llmResponse?.geo_llm === null) {
+    console.log("no geo llm response found")
+    result = await fetchBrands(user_id, website_id);
+    await prisma.llm_responses.update({
+      where: { website_id: website_id },
+      data: { geo_llm: result },
+    });
+    await prisma.analysis_status.update({
+      where: {
+        user_id_website_id: {
+          user_id: userRequirementRaw?.user_id ?? '',
+          website_id: website_id,
+        },
+      },
+      data: { geo_llm: result },
+    });
+  } else {
+    result = llmResponse?.geo_llm;
+  }
+   
+  
     // Process user-provided competitor URLs
     const competitorPromises = competitorUrls.filter(u => u.startsWith('http')).map(async (compUrl) => {
       try {
-        const scraped = await scrapeWebsitecompetitos(compUrl,);
+        const scraped = await scrapeWebsitecompetitos(compUrl);
         if (!scraped || typeof scraped !== 'object') throw new Error('Scrape failed');
 
         const competitorData = await extractCompetitorDataFromLLM(scraped);
@@ -264,42 +296,46 @@ export class CompetitorService {
             unique_selling_point: competitorData.usp || 'No clear USP identified',
             primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
             logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
+            competitor_website_url:competitorData.competitor_website_url || '', 
           },
-          website_audit: {
-            performance_insights: pageSpeedData ? {
-              categories: {
-                performance: pageSpeedData.categories.performance || null,
-                seo: pageSpeedData.categories.seo || null,
-                accessibility: pageSpeedData.categories.accessibility || null,
-                best_practices: pageSpeedData.categories.best_practices || null,
-              },
-              audits: {
-                total_blocking_time: {
-                  display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-                  score: pageSpeedData.audits?.total_blocking_time?.score || null,
+          website_audit: pageSpeedData ? {
+                performance_insights: {
+                  performance: pageSpeedData.categories.performance || null,
+                  seo: pageSpeedData.categories.seo || null,
+                  accessibility: pageSpeedData.categories.accessibility || null,
+                  best_practices: pageSpeedData.categories.best_practices || null,
                 },
-                first_contentful_paint: {
-                  display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-                  score: pageSpeedData.audits?.first_contentful_paint?.score || null,
+                website_health_matrix: {
+                  speed_index: {
+                      display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.speed_index?.score || null,
+                    },
+                  total_blocking_time: {
+                    display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
+                    score: pageSpeedData.audits?.total_blocking_time?.score || null,
+                  },
+                  first_contentful_paint: {
+                    display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
+                    score: pageSpeedData.audits?.first_contentful_paint?.score || null,
+                  },
+                  largest_contentful_paint: {
+                    display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
+                    score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
+                  },
+                  cumulative_layout_shift: {
+                    display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
+                    score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
+                  },
                 },
-                largest_contentful_paint: {
-                  display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-                  score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
-                },
-                cumulative_layout_shift: {
-                  display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-                  score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
-                },
-              },
-            } : null,
-            seo_audit: {
-              h1_heading: h1_Text,
-              meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
-              meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-              alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-              Schema_Markup_Status: (typeof scraped === 'object' && scraped !== null && 'Schema_Markup_Status' in scraped) ? scraped.schema_analysis : null,
-
-            },
+              }
+            : null,
+          seo_audit: {
+            h1_heading: h1_Text,
+            meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
+            meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
+            alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
+            schema_markup_status: getSchemaMarkupStatus(scraped),
+            AI_Discoverability: "true"
           },
         };
       } catch (err) {
@@ -341,6 +377,7 @@ export class CompetitorService {
         const parsedCompetitors = parseCompetitorData(aiResponse);
 
         interface ParsedCompetitor {
+          competitor_website_url: string;
           website_url: string;
           name: string;
           industry?: string;
@@ -425,43 +462,49 @@ export class CompetitorService {
                   unique_selling_point: comp.usp || 'No clear USP identified',
                   primary_offering: comp.primary_offering || userRequirement.primary_offering || 'Unknown',
                   logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
+                  competitor_website_url:comp.website_url || '', 
                 },
-                website_audit: {
-                  performance_insights: pageSpeedData ? {
-                    categories: {
-                      performance: pageSpeedData.categories.performance || null,
-                      seo: pageSpeedData.categories.seo || null,
-                      accessibility: pageSpeedData.categories.accessibility || null,
-                      best_practices: pageSpeedData.categories.best_practices || null,
+                website_audit: pageSpeedData ? {
+                  performance_insights: {
+                    performance: pageSpeedData.categories.performance || null,
+                    seo: pageSpeedData.categories.seo || null,
+                    accessibility: pageSpeedData.categories.accessibility || null,
+                    best_practices: pageSpeedData.categories.best_practices || null,
+                  },
+                  website_health_matrix: {
+                    speed_index: {
+                      display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.speed_index?.score || null,
                     },
-                    audits: {
-                      total_blocking_time: {
-                        display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-                        score: pageSpeedData.audits?.total_blocking_time?.score || null,
-                      },
-                      first_contentful_paint: {
-                        display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-                        score: pageSpeedData.audits?.first_contentful_paint?.score || null,
-                      },
-                      largest_contentful_paint: {
-                        display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-                        score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
-                      },
-                      cumulative_layout_shift: {
-                        display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-                        score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
-                      },
+
+                    total_blocking_time: {
+                      display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.total_blocking_time?.score || null,
                     },
-                  } : null,
+                    first_contentful_paint: {
+                      display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.first_contentful_paint?.score || null,
+                    },
+
+                    
+                    largest_contentful_paint: {
+                      display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
+                    },
+                    cumulative_layout_shift: {
+                      display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
+                      score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
+                    },
+                  },  } : null,
                   seo_audit: {
                     h1_heading: h1_Text,
                     meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
                     meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
                     alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-                    Schema_Markup_Status: (typeof scraped === 'object' && scraped !== null && 'Schema_Markup_Status' in scraped) ? scraped.schema_analysis : null,
-
+                    schema_markup_status: getSchemaMarkupStatus(scraped),
+                    AI_Discoverability: "true"
                   },
-                },
+              
               });
 
               processedUrls.add(url);
@@ -492,14 +535,14 @@ export class CompetitorService {
       orderBy: { created_at: 'desc' },
     });
 
-    let Schema_Markup_Status = null;
+    let schema_markup_status = null;
     if (scrapedMain?.schema_analysis) {
-      Schema_Markup_Status = typeof scrapedMain.schema_analysis === "string"
+      schema_markup_status = typeof scrapedMain.schema_analysis === "string"
         ? JSON.parse(scrapedMain.schema_analysis)
         : scrapedMain.schema_analysis;
     }
 
-    let categories = {
+    let performance_insight = {
       performance: brandWebsiteAnalysis?.performance_score ?? 0,
       seo: brandWebsiteAnalysis?.seo_score ?? 0,
       accessibility: brandWebsiteAnalysis?.accessibility_score ?? 0,
@@ -515,7 +558,13 @@ export class CompetitorService {
       }
     }
 
-    let audits = {
+    let website_health_matrix = {
+
+      speed_index: {
+        display_value: brandWebsiteAnalysis?.speed_index ?? "N/A",
+        score: auditDetails?.metrics?.speed_index?.score ?? null,
+      },
+      
       total_blocking_time: {
         display_value: brandWebsiteAnalysis?.total_blocking_time ?? "N/A",
         score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
@@ -535,7 +584,7 @@ export class CompetitorService {
     };
 
     const { raw_html, other_links, ctr_loss_percent, sitemap_pages, ai_response, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
-    
+
     labeledResults['mainWebsite'] = {
       brand_profile: {
         title: 'page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title
@@ -545,23 +594,24 @@ export class CompetitorService {
         unique_selling_point: userRequirement.USP || 'Unknown',
         primary_offering: userRequirement.primary_offering || 'Unknown',
         logo_url: scrapedMain?.logo_url || null,
+        
       },
       website_audit: {
-        performance_insights: {
-          categories,
-          audits,
+        
+          performance_insight,
+          website_health_matrix,
         },
-        seo_audit: {
+      seo_audit: {
           h1_heading: h1Text,
           meta_title: ('page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title) ? scrapedMainWithoutRawHtml.page_title : null,
           meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
           alt_text_coverage: 'homepage_alt_text_coverage' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.homepage_alt_text_coverage : null,
-          schema_markup_status: Schema_Markup_Status,
-          
-
+          schema_markup_status: schema_markup_status,
+          AI_Discoverability: result
         },
-      },
+      
     };
+
     await prisma.llm_responses.upsert({
       where: { website_id },
       update: {
@@ -572,21 +622,26 @@ export class CompetitorService {
         dashboard3_competi_camparison: JSON.stringify(labeledResults),
       },
     });
-   await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id: userRequirementRaw?.user_id ?? '',
-          website_id: website_id,
-        },
-      },
-      update: {},
-      create: {
-        website_id: website_id,
-        user_id: userRequirementRaw?.user_id ?? '',
-      },
-    });
+
+    await prisma.analysis_status.upsert({
+  where: {
+    user_id_website_id: {
+      user_id,
+      website_id,
+    },
+  },
+  update: {
+    geo_llm: result,
+  },
+  create: {
+    user_id,
+    website_id,
+    geo_llm: result,
+  },
+});
+
     return labeledResults;
-  }
+}
 
 
   static async getComparisonRecommendations(website_id: string) {
@@ -663,7 +718,7 @@ export class CompetitorService {
       },
     };
 
-    console.log("main website data", main);
+    // console.log("main website data", main);
     const comps = competitors.map(comp => {
       const scraped = comp.competitor_data;
       let ps: any = scraped?.page_speed ?? {};
@@ -711,11 +766,11 @@ export class CompetitorService {
       };
     });
     console.log("competitors data", comps);
-    const prompt = createComparisonPrompt(main, comps, userRequirementRaw);
+    const prompt = await createComparisonPrompt(website_id);
     // console.log('Generated prompt for LLM:', prompt);
     if (!prompt) {
       throw new Error('Failed to generate prompt for LLM');
-    } else (console.log("prompt updated with data "));
+    } 
     const response = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: model,

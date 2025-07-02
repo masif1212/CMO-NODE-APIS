@@ -488,19 +488,6 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
 
 
-// Fetch brand's own website data
-// const [mainWebsiteScrapedData, mainWebsiteAnalysisData] = await Promise.all([
-//   prisma.scraped_data.findFirst({ where: { website_id } }),
-//   prisma.website_analysis.findFirst({ where: { website_id } }),
-// ]);
-
-// if (mainWebsiteScrapedData && mainWebsiteAnalysisData) {
-//   competitorsData["mainWebsite"] = {
-//     website: mainWebsiteScrapedData,
-//     brandWebsiteAnalysis: mainWebsiteAnalysisData,
-//   };
-// }
-
     
 
        // ---------- On Page Optimization ----------
