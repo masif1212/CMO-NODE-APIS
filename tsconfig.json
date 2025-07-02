@@ -11,6 +11,6 @@
     "types": ["node", "express"],
     "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["prisma/**/*", "src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
