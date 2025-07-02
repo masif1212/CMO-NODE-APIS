@@ -19,26 +19,21 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Support for seed.ts
-RUN npm install -g ts-node typescript prisma
+# Install ts-node and prisma for seeding (no need for global install)
+RUN npm install ts-node typescript @prisma/client prisma
 
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Do NOT hardcode the port – Cloud Run will inject it
+# Expose port (Cloud Run injects PORT)
 EXPOSE 3001
 
 CMD ["sh", "-c", "\
-echo 'TASK: $TASK'; \
 if [ \"$TASK\" = \"migrate\" ]; then \
   echo 'Running migrate + seed'; \
   npx prisma migrate deploy && npx prisma db seed; \
-elif [ \"$TASK\" = \"start\" ]; then \
-  echo 'Running seed and starting app'; \
-  npx prisma db seed || echo 'Seed skipped or failed'; \
-  node dist/server.js; \
 else \
-  echo '❌ Invalid TASK. Use TASK=migrate or TASK=start'; \
-  exit 1; \
+  echo 'Starting app'; \
+  node dist/server.js; \
 fi"]

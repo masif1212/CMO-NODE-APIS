@@ -1,4 +1,3 @@
-# cloudbuild.yaml for Node.js Backend API with migration + seed
 steps:
   # Step 1: Build the Docker image
   - name: "gcr.io/cloud-builders/docker"
@@ -42,8 +41,8 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --command=sh \
-          --args='-c,npx prisma migrate deploy && npx prisma db seed'
+          --max-retries=3 \
+          --task-timeout=10m
 
   # Step 4: Execute the migration job
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
