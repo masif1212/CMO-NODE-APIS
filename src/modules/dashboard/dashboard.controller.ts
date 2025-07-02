@@ -630,8 +630,6 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     // ---------- Response Payload ----------
 
 
-// ---------- Response Payload ----------
-
 const onlyWebsiteAudit = analysisStatus.website_audit != null &&
   !analysisStatus.seo_audit &&
   !analysisStatus.social_media_analysis &&

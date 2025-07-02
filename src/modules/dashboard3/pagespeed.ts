@@ -88,7 +88,7 @@ export async function getPageSpeedData(url: string) {
     // SEO audits
     const seoAuditIds = lighthouse.categories["seo"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
     const seoAudits = seoAuditIds.map(getAudit);
-
+    
     return {
       categories: {
         performance: getScore("performance"),

@@ -88,34 +88,12 @@ export class CompetitorService {
   }
 
   // Helper function to extract H1
-  // static extractH1(rawHtml: string | null): string {
-  //   if (!rawHtml) return 'Not Found';
-  //   const $ = cheerio.load(rawHtml);
-  //   return $('h1').first().text().trim() || 'Not Found';
-  // }
- 
-
   static extractH1(rawHtml: string | null): string {
-  if (!rawHtml) return 'Not Found';
-
-  // Remove all <style> and <script> blocks
-  const cleanedHtml = rawHtml
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '');
-
-  const $ = cheerio.load(cleanedHtml);
-  const h1 = $('h1').first();
-
-  // Extract only plain text nodes, skip nested tags like <span>, <style>, etc.
-  const cleanText = h1
-    .contents()
-    .filter((_, el) => el.type === 'text')
-    .text()
-    .trim();
-
-  return cleanText || 'Not Found';
-}
-
+    if (!rawHtml) return 'Not Found';
+    const $ = cheerio.load(rawHtml);
+    return $('h1').first().text().trim() || 'Not Found';
+  }
+ 
 
 
   static async process(website_id: string, user_id: string) {
@@ -215,7 +193,7 @@ export class CompetitorService {
   });
 
   let result: any;
-  if (!llmResponse || llmResponse.geo_llm === null) {
+  if (llmResponse?.geo_llm === null) {
     console.log("no geo llm response found")
     result = await fetchBrands(user_id, website_id);
     await prisma.analysis_status.upsert({
@@ -307,24 +285,9 @@ export class CompetitorService {
           });
         }
 
-        // const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-        //   ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-        //   : null;
-
-        const h1_Text = (() => {
-  if (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html) {
-    const cleanedHtml = scraped.raw_html.replace(/<style[\s\S]*?<\/style>/gi, '');
-    const $ = cheerio.load(cleanedHtml);
-    const h1 = $('h1').first();
-    const cleanText = h1
-      .contents()
-      .filter((_, el) => el.type === 'text')
-      .text()
-      .trim() || null;
-    return cleanText;
-  }
-  return null;
-})();
+        const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+          ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+          : null;
 
         processedUrls.add(compUrl);
         processedNames.add(competitorName);
@@ -498,24 +461,9 @@ export class CompetitorService {
                 });
               }
 
-              // const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-              //   ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-              //   : null;
-
-              const h1_Text = (() => {
-                if (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html) {
-                  const cleanedHtml = scraped.raw_html.replace(/<style[\s\S]*?<\/style>/gi, '');
-                  const $ = cheerio.load(cleanedHtml);
-                  const h1 = $('h1').first();
-                  const cleanText = h1
-                    .contents()
-                    .filter((_, el) => el.type === 'text')
-                    .text()
-                    .trim() || null;
-                  return cleanText;
-                }
-                return null;
-              })();
+              const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+                ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+                : null;
 
               competitorResults.push({
                 brand_profile: {
