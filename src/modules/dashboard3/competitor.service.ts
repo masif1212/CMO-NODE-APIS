@@ -88,12 +88,34 @@ export class CompetitorService {
   }
 
   // Helper function to extract H1
-  static extractH1(rawHtml: string | null): string {
-    if (!rawHtml) return 'Not Found';
-    const $ = cheerio.load(rawHtml);
-    return $('h1').first().text().trim() || 'Not Found';
-  }
+  // static extractH1(rawHtml: string | null): string {
+  //   if (!rawHtml) return 'Not Found';
+  //   const $ = cheerio.load(rawHtml);
+  //   return $('h1').first().text().trim() || 'Not Found';
+  // }
  
+
+  static extractH1(rawHtml: string | null): string {
+  if (!rawHtml) return 'Not Found';
+
+  // Remove all <style> and <script> blocks
+  const cleanedHtml = rawHtml
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const $ = cheerio.load(cleanedHtml);
+  const h1 = $('h1').first();
+
+  // Extract only plain text nodes, skip nested tags like <span>, <style>, etc.
+  const cleanText = h1
+    .contents()
+    .filter((_, el) => el.type === 'text')
+    .text()
+    .trim();
+
+  return cleanText || 'Not Found';
+}
+
 
 
   static async process(website_id: string, user_id: string) {
@@ -138,6 +160,7 @@ export class CompetitorService {
             speed_index: pageSpeed.audits?.speed_index?.display_value || null,
             cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
             time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
+            audit_details:pageSpeed.audit_details
           },
         });
       }
@@ -192,24 +215,26 @@ export class CompetitorService {
   });
 
   let result: any;
-  if (llmResponse?.geo_llm === null) {
+  if (!llmResponse || llmResponse.geo_llm === null) {
     console.log("no geo llm response found")
     result = await fetchBrands(user_id, website_id);
-    await prisma.llm_responses.update({
-      where: { website_id: website_id },
-      data: { geo_llm: result },
-    });
-    await prisma.analysis_status.update({
-      where: {
-        user_id_website_id: {
-          user_id: userRequirementRaw?.user_id ?? '',
-          website_id: website_id,
-        },
-      },
-      data: { geo_llm: result },
-    });
+    await prisma.analysis_status.upsert({
+  where: {
+    user_id_website_id: {
+      user_id: user_id ?? '',
+      website_id: website_id,
+    },
+  },
+  update: { geo_llm: result },
+  create: {
+    user_id: user_id ?? '',
+    website_id: website_id,
+    geo_llm: result,
+  },
+})
   } else {
     result = llmResponse?.geo_llm;
+    console.log("geo llm found")
   }
    
   
@@ -282,9 +307,24 @@ export class CompetitorService {
           });
         }
 
-        const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-          ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-          : null;
+        // const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+        //   ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+        //   : null;
+
+        const h1_Text = (() => {
+  if (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html) {
+    const cleanedHtml = scraped.raw_html.replace(/<style[\s\S]*?<\/style>/gi, '');
+    const $ = cheerio.load(cleanedHtml);
+    const h1 = $('h1').first();
+    const cleanText = h1
+      .contents()
+      .filter((_, el) => el.type === 'text')
+      .text()
+      .trim() || null;
+    return cleanText;
+  }
+  return null;
+})();
 
         processedUrls.add(compUrl);
         processedNames.add(competitorName);
@@ -338,7 +378,11 @@ export class CompetitorService {
             meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
             alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
             schema_markup_status: getSchemaMarkupStatus(scraped),
-            AI_Discoverability: "true"
+            AI_Discoverability: "true",
+            // brandAuditseo: pageSpeedData && pageSpeedData.brandAuditseo ? pageSpeedData.brandAuditseo.seo || null : null,
+             brandAuditseo: pageSpeedData && pageSpeedData.audit_details.seoAudits ? pageSpeedData.audit_details.seoAudits || null : null,
+
+
           },
         };
       } catch (err) {
@@ -454,9 +498,24 @@ export class CompetitorService {
                 });
               }
 
-              const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-                ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-                : null;
+              // const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
+              //   ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
+              //   : null;
+
+              const h1_Text = (() => {
+                if (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html) {
+                  const cleanedHtml = scraped.raw_html.replace(/<style[\s\S]*?<\/style>/gi, '');
+                  const $ = cheerio.load(cleanedHtml);
+                  const h1 = $('h1').first();
+                  const cleanText = h1
+                    .contents()
+                    .filter((_, el) => el.type === 'text')
+                    .text()
+                    .trim() || null;
+                  return cleanText;
+                }
+                return null;
+              })();
 
               competitorResults.push({
                 brand_profile: {
@@ -507,7 +566,8 @@ export class CompetitorService {
                     meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
                     alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
                     schema_markup_status: getSchemaMarkupStatus(scraped),
-                    AI_Discoverability: "true"
+                    AI_Discoverability: "true",
+                    brandAuditseo: pageSpeedData && pageSpeedData.audit_details.seoAudits ? pageSpeedData.audit_details.seoAudits || null : null,
                   },
               
               });
@@ -552,41 +612,86 @@ export class CompetitorService {
       seo: brandWebsiteAnalysis?.seo_score ?? 0,
       accessibility: brandWebsiteAnalysis?.accessibility_score ?? 0,
       best_practices: brandWebsiteAnalysis?.best_practices_score ?? 0,
+
+      
+      
     };
+
+    // let auditDetails: any = brandWebsiteAnalysis?.audit_details?? {};
+    // if (typeof auditDetails === 'string') {
+    //   try {
+    //     auditDetails = JSON.parse(auditDetails);
+    //   } catch {
+    //     auditDetails = {};
+    //   }
+    // }
+
+    // let website_health_matrix = {
+
+    //   speed_index: {
+    //     display_value: brandWebsiteAnalysis?.speed_index ?? "N/A",
+    //     score: auditDetails?.metrics?.speed_index?.score ?? null,
+    //   },
+      
+    //   total_blocking_time: {
+    //     display_value: brandWebsiteAnalysis?.total_blocking_time ?? "N/A",
+    //     score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
+    //   },
+    //   first_contentful_paint: {
+    //     display_value: brandWebsiteAnalysis?.first_contentful_paint ?? "N/A",
+    //     score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
+    //   },
+    //   largest_contentful_paint: {
+    //     display_value: brandWebsiteAnalysis?.largest_contentful_paint ?? "N/A",
+    //     score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
+    //   },
+    //   cumulative_layout_shift: {
+    //     display_value: brandWebsiteAnalysis?.cumulative_layout_shift ?? "N/A",
+    //     score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
+    //   },
+    // };
+
+
 
     let auditDetails: any = brandWebsiteAnalysis?.audit_details ?? {};
-    if (typeof auditDetails === 'string') {
-      try {
-        auditDetails = JSON.parse(auditDetails);
-      } catch {
-        auditDetails = {};
-      }
-    }
+if (typeof auditDetails === 'string') {
+  try {
+    auditDetails = JSON.parse(auditDetails);
+  } catch {
+    auditDetails = {};
+  }
+}
 
-    let website_health_matrix = {
+// Helper function to get audit by ID from allAudits
+function getAuditById(id: string) {
+  // console.log("All Audits:", auditDetails?.allAudits);
+  return auditDetails?.allAudits?.find((a: any) => a.id === id) ?? {};
+  
+}
 
-      speed_index: {
-        display_value: brandWebsiteAnalysis?.speed_index ?? "N/A",
-        score: auditDetails?.metrics?.speed_index?.score ?? null,
-      },
-      
-      total_blocking_time: {
-        display_value: brandWebsiteAnalysis?.total_blocking_time ?? "N/A",
-        score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
-      },
-      first_contentful_paint: {
-        display_value: brandWebsiteAnalysis?.first_contentful_paint ?? "N/A",
-        score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
-      },
-      largest_contentful_paint: {
-        display_value: brandWebsiteAnalysis?.largest_contentful_paint ?? "N/A",
-        score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
-      },
-      cumulative_layout_shift: {
-        display_value: brandWebsiteAnalysis?.cumulative_layout_shift ?? "N/A",
-        score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
-      },
-    };
+let website_health_matrix = {
+  speed_index: {
+    display_value: getAuditById("speed-index").display_value ?? "N/A",
+    score: getAuditById("speed-index").score ?? null,
+  },
+  total_blocking_time: {
+    display_value: getAuditById("total-blocking-time").display_value ?? "N/A",
+    score: getAuditById("total-blocking-time").score ?? null,
+  },
+  first_contentful_paint: {
+    display_value: getAuditById("first-contentful-paint").display_value ?? "N/A",
+    score: getAuditById("first-contentful-paint").score ?? null,
+  },
+  largest_contentful_paint: {
+    display_value: getAuditById("largest-contentful-paint").display_value ?? "N/A",
+    score: getAuditById("largest-contentful-paint").score ?? null,
+  },
+  cumulative_layout_shift: {
+    display_value: getAuditById("cumulative-layout-shift").display_value ?? "N/A",
+    score: getAuditById("cumulative-layout-shift").score ?? null,
+  },
+};
+
 
     const { raw_html, other_links, ctr_loss_percent, sitemap_pages, ai_response, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
 
@@ -611,14 +716,31 @@ export class CompetitorService {
           website_health_matrix,
         },
       seo_audit: {
-          h1_heading: h1Text,
-          meta_title: ('page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title) ? scrapedMainWithoutRawHtml.page_title : null,
-          meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
-          alt_text_coverage: 'homepage_alt_text_coverage' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.homepage_alt_text_coverage : null,
-          schema_markup_status: schema_markup_status,
-          AI_Discoverability: result
-        },
-      
+        h1_heading: h1Text,
+        meta_title: ('page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title) ? scrapedMainWithoutRawHtml.page_title : null,
+        meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
+        alt_text_coverage: 'homepage_alt_text_coverage' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.homepage_alt_text_coverage : null,
+        schema_markup_status: schema_markup_status,
+        AI_Discoverability: result,
+        // brandAuditseo: brandWebsiteAnalysis && brandWebsiteAnalysis.audit_details ? brandWebsiteAnalysis.audit_details : null,
+        brandAuditseo: (() => {
+          if (brandWebsiteAnalysis && brandWebsiteAnalysis.audit_details) {
+            let auditDetailsObj: any = brandWebsiteAnalysis.audit_details;
+            if (typeof auditDetailsObj === 'string') {
+              try {
+                auditDetailsObj = JSON.parse(auditDetailsObj);
+              } catch {
+                return null;
+              }
+            }
+            return auditDetailsObj && auditDetailsObj.seoAudits ? auditDetailsObj.seoAudits : null;
+          }
+          return null;
+        })(),
+
+       
+
+      },
     };
 
     await prisma.llm_responses.upsert({
@@ -719,12 +841,7 @@ export class CompetitorService {
         total_blocking_time: mainWebsite.brand_website_analysis?.[0]?.total_blocking_time ?? 'N/A',
         cumulative_layout_shift: mainWebsite.brand_website_analysis?.[0]?.cumulative_layout_shift ?? 'N/A',
 
-        
-        // total_broken_links: mainWebsite.brand_website_analysis?.[0]?.total_broken_links ?? 'N/A',
-        // broken_links: mainWebsite.brand_website_analysis?.[0]?.broken_links ?? [],
-        // audit_details: mainWebsite.brand_website_analysis?.[0]?.audit_details ?? [],
-
-      },
+            },
     };
 
     // console.log("main website data", main);
@@ -774,7 +891,7 @@ export class CompetitorService {
         },
       };
     });
-    console.log("competitors data", comps);
+    // console.log("competitors data", comps);
     const prompt = await createComparisonPrompt(website_id);
     // console.log('Generated prompt for LLM:', prompt);
     if (!prompt) {

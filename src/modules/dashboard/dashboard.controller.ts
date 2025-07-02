@@ -647,41 +647,95 @@ if (onlyWebsiteAudit) {
   });
 }
 
-const responsePayload: Record<string, any> = {
-  success: true,
-  website_health,
-  traffic_anaylsis,
+// const responsePayload: Record<string, any> = {
+//   success: true,
+//   website_health,
+//   traffic_anaylsis,
     
-  onpage_opptimization,
-  technical_seo,
-  geo,
-  // competitor_analysis: competitorAnalysis.length > 0 ? competitorAnalysis : undefined,
+//   onpage_opptimization,
+//   technical_seo,
+//   geo,
+//   // competitor_analysis: competitorAnalysis.length > 0 ? competitorAnalysis : undefined,
 
-  // competitors: Object.keys(competitorsData).length ? competitorsData : undefined,
-};
-if (analysisStatus.competitor_details !=null)
-responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
+//   // competitors: Object.keys(competitorsData).length ? competitorsData : undefined,
+// };
+// if (analysisStatus.competitor_details !=null)
+// responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
 
 
+// if (recommendation?.recommendation_by_mo_dashboard1 != null) {
+//   responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);
+// }
+
+// if (recommendation?.recommendation_by_mo_dashboard2 != null) {
+//   responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
+// }
+
+// if (recommendation?.recommendation_by_mo_dashboard3 != null) {
+//   responsePayload.recommendation_by_mo_dashboard3 = safeParse(recommendation.recommendation_by_mo_dashboard3);
+// }
+
+
+// if (recommendation && recommendation.recommendation_by_cmo != null) {
+// responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
+// }
+
+const hasOtherData =
+  analysisStatus.website_audit ||
+  analysisStatus.seo_audit ||
+  analysisStatus.social_media_analysis ||
+  analysisStatus.recommendation_by_mo1 ||
+  analysisStatus.recommendation_by_mo2 ||
+  analysisStatus.recommendation_by_mo3 ||
+  analysisStatus.recommendation_by_cmo;
+
+const responsePayload: Record<string, any> = { success: true };
+
+if (hasOtherData) {
+  if (Object.keys(website_health).length > 0) {
+    responsePayload.website_health = website_health;
+  }
+
+  if (traffic_anaylsis && Object.keys(traffic_anaylsis).length > 0) {
+    responsePayload.traffic_anaylsis = traffic_anaylsis;
+  }
+
+  if (onpage_opptimization && Object.keys(onpage_opptimization).length > 0) {
+    responsePayload.onpage_opptimization = onpage_opptimization;
+  }
+
+  if (technical_seo && Object.keys(technical_seo).length > 0) {
+    responsePayload.technical_seo = technical_seo;
+  }
+
+  if (geo && Object.keys(geo).length > 0) {
+    responsePayload.geo = geo;
+  }
+}
+
+// Always add competitor data if available
+if (analysisStatus.competitor_details != null) {
+  responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
+}
+
+// Add recommendations if available
 if (recommendation?.recommendation_by_mo_dashboard1 != null) {
   responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);
 }
-
 if (recommendation?.recommendation_by_mo_dashboard2 != null) {
   responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
 }
-
 if (recommendation?.recommendation_by_mo_dashboard3 != null) {
   responsePayload.recommendation_by_mo_dashboard3 = safeParse(recommendation.recommendation_by_mo_dashboard3);
 }
-
-
-if (recommendation && recommendation.recommendation_by_cmo != null) {
-responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
+if (recommendation?.recommendation_by_cmo != null) {
+  responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
 }
 
-
+// Final return
 return res.status(200).json(responsePayload);
+
+// return res.status(200).json(responsePayload);
 } catch (error) {
   console.error("Error fetching website detailed analysis:", error);
   return res.status(500).json({ error: "Server error" });

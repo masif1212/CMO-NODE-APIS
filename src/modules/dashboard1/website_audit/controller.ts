@@ -17,25 +17,26 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
   try {
     // Step 1: Get PageSpeed summary
+    console.log("website audit started")
     const summary = await getPageSpeedSummary(user_id, website_id);
-
+    // const seoAudits = summary.seoAudits
     if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
       return res.status(502).json({
         success: false,
         error: "Invalid or empty response from PageSpeed Insights API.",
         detail: summary,
       });
-    } else (console.log("PageSpeed processing complete"))
+    } else (console.log("website audit processing complete"))
 
     // Step 2: Save PageSpeed analysis
-    console.log("Saving PageSpeed analysis to database...");
+    console.log("Saving website audit analysis to database...");
     const saved = await savePageSpeedAnalysis(user_id, website_id, summary);
     if (!saved) {
       return res.status(500).json({
         success: false,
-        error: "Failed to save PageSpeed analysis.",
+        error: "Failed to save website audit analysis.",
       });
-    }else (console.log("PageSpeed analysis saved successfully"))
+    } else (console.log("website audit analysis saved successfully"))
 
     const auditKeysToInclude = [
       "first-contentful-paint",
@@ -55,7 +56,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       if (auditKeysToInclude.includes(audit.id)) {
         const normalizedKey = audit.id.replace(/-/g, "_");
         auditMap[normalizedKey] = {
-          display_value: audit.displayValue,
+          display_value: audit.display_value,
           score: typeof audit.score === "number" ? audit.score : null,
         };
       }
@@ -70,7 +71,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       best_practices: categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
     };
 
-   
+
     const website = await prisma.user_websites.findUnique({
       where: { website_id: website_id },
     });
@@ -78,80 +79,75 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       throw new Error("Website URL not found for the given website_id");
     }
 
-    
+
 
 
     const scrapedMeta = await prisma.website_scraped_data.findUnique({
-  where: { website_id },
-  select: {
-    page_title: true,
-    meta_description: true,
-    meta_keywords: true,
-    og_title: true,
-    og_description: true,
-    og_image: true,
-    ctr_loss_percent: true,
-    raw_html: true,
-    homepage_alt_text_coverage: true,
-    status_message: true,
-    status_code: true,
-    ip_address: true,
-    response_time_ms: true,
-    
-  },
-});
+      where: { website_id },
+      select: {
+        page_title: true,
+        meta_description: true,
+        meta_keywords: true,
+        og_title: true,
+        og_description: true,
+        og_image: true,
+        ctr_loss_percent: true,
+        raw_html: true,
+        homepage_alt_text_coverage: true,
+        status_message: true,
+        status_code: true,
+        ip_address: true,
+        response_time_ms: true,
 
-  // let h1Text = "Not Found";
-  //   if (scrapedMeta && scrapedMeta.raw_html) {
-  //     const $ = cheerio.load(scrapedMeta.raw_html);
-  //     h1Text = $("h1").first().text().trim() || "Not Found";
-  //   }
+      },
+    });
 
- const {
-  raw_html, // omit this
-  ...metaDataWithoutRawHtml
-} = scrapedMeta || {};
- 
-const seo_revenue_loss_percentage = (metaDataWithoutRawHtml as { ctr_loss_percent?: { CTR_Loss_Percent?: number } })?.ctr_loss_percent?.CTR_Loss_Percent ?? null;
+    const {
+      raw_html, // omit this
+      ...metaDataWithoutRawHtml
+    } = scrapedMeta || {};
 
-const availability_tracker = {
-  status_message: scrapedMeta?.status_message ?? null,
-  status_code: scrapedMeta?.status_code ?? null,
-  ip_address: scrapedMeta?.ip_address ?? null,
-  response_time_ms: scrapedMeta?.response_time_ms ?? null,
-};
+    const seo_revenue_loss_percentage = (metaDataWithoutRawHtml as { ctr_loss_percent?: { CTR_Loss_Percent?: number } })?.ctr_loss_percent?.CTR_Loss_Percent ?? null;
+
+    const availability_tracker = {
+      status_message: scrapedMeta?.status_message ?? null,
+      status_code: scrapedMeta?.status_code ?? null,
+      ip_address: scrapedMeta?.ip_address ?? null,
+      response_time_ms: scrapedMeta?.response_time_ms ?? null,
+    };
 
 
-  await prisma.analysis_status.upsert({
-  where: {
-    user_id_website_id: {
-      user_id,
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id,
+        },
+      },
+      update: {
+        website_audit: saved.website_analysis_id,
+      },
+      create: {
+        user_id,
+        website_id,
+        website_audit: saved.website_analysis_id,
+      },
+    });
+
+    return res.status(201).json({
+      message: "website audit",
       website_id,
-    },
-  },
-  update: {
-    website_audit: saved.website_analysis_id,
-  },
-  create: {
-    user_id,
-    website_id,
-    website_audit: saved.website_analysis_id,
-  },
-});
+      revenueLossPercent: saved.revenue_loss_percent,
+      seo_revenue_loss_percentage,
+      categories: categoryScores,
+      speed_health: auditMap,
+      availability_tracker,
+      optimization_opportunities: optimization_opportunities,
+      // seo: seoAudits
+      // h1Text,
+      // metaData: metaDataWithoutRawHtml,
 
-return res.status(201).json({
-  message: "website audit",
-  website_id,
-  revenueLossPercent: saved.revenue_loss_percent,
-  seo_revenue_loss_percentage,
-  categories: categoryScores,
-  speed_health: auditMap,
-  availability_tracker,
-  optimization_opportunities:optimization_opportunities
-  // h1Text,
-  // metaData: metaDataWithoutRawHtml,
-  
-});
+    });
 
   } catch (err: any) {
     console.error("❌ handlePageSpeed error:", err);
