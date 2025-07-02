@@ -14,20 +14,20 @@ FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy all dependencies and build output
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
-# Required for ts-node to run seed.ts
+# Support for seed.ts
 RUN npm install -g ts-node typescript prisma
 
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-EXPOSE 3001  # Still let Cloud Run assign PORT
+# Do NOT hardcode the port – Cloud Run will inject it
+EXPOSE 3001
 
 CMD ["sh", "-c", "\
 echo 'TASK: $TASK'; \
