@@ -1,4 +1,3 @@
-# ---- Stage 1: Build ----
 FROM node:18-slim AS builder
 WORKDIR /app
 
@@ -11,31 +10,25 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# ---- Stage 2: Final Image ----
 FROM node:18-slim AS final
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy only what's needed in the final image
+# Copy all dependencies and build output
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma/seed.ts ./prisma/seed.ts
-COPY --from=builder /app/tsconfig.json ./tsconfig.json  # optional, but needed by ts-node
 
-# Install only tools needed for seeding
+# Required for ts-node to run seed.ts
 RUN npm install -g ts-node typescript prisma
 
-# Secure non-root user
 RUN adduser --system --group nodejs
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Cloud Run will inject PORT env; don't hardcode
-EXPOSE 3001
+EXPOSE 3001  # Still let Cloud Run assign PORT
 
-# Entrypoint logic
 CMD ["sh", "-c", "\
 echo 'TASK: $TASK'; \
 if [ \"$TASK\" = \"migrate\" ]; then \
