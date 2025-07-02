@@ -344,7 +344,7 @@ ${!website_analytics && !social_media && !competitor_analysis ? '- No performanc
 Based on the data and brand information, provide a comprehensive and structured report with the following sections:
 
 1. **Executive Summary** 
-   - Brand introdunction in 3 -4 sentences . 
+   - Brand introdunction in 3-4 sentences . 
    - High-level overview of brand health, performance, and market stance  
    - Include 2–3 high-impact, data-driven strategic recommendations
 

@@ -296,7 +296,10 @@ export class CompetitorService {
             unique_selling_point: competitorData.usp || 'No clear USP identified',
             primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
             logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-            competitor_website_url:competitorData.competitor_website_url || '', 
+
+            website_url:competitorData.competitor_website_url || '', 
+            meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
+
           },
           website_audit: pageSpeedData ? {
                 performance_insights: {
@@ -462,7 +465,9 @@ export class CompetitorService {
                   unique_selling_point: comp.usp || 'No clear USP identified',
                   primary_offering: comp.primary_offering || userRequirement.primary_offering || 'Unknown',
                   logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-                  competitor_website_url:comp.website_url || '', 
+                  website_url:comp.website_url || '', 
+                  meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
+
                 },
                 website_audit: pageSpeedData ? {
                   performance_insights: {
@@ -594,6 +599,10 @@ export class CompetitorService {
         unique_selling_point: userRequirement.USP || 'Unknown',
         primary_offering: userRequirement.primary_offering || 'Unknown',
         logo_url: scrapedMain?.logo_url || null,
+        meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
+        website_url: website_url
+
+
         
       },
       website_audit: {
@@ -657,7 +666,7 @@ export class CompetitorService {
         brand_website_analysis: {
           orderBy: { created_at: 'desc' },
           take: 1,
-        },
+        }
       },
     });
 
