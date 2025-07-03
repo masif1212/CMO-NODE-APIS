@@ -1,6 +1,7 @@
 
 import OpenAI from 'openai';
 import 'dotenv/config';
+import axios from 'axios';
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export const openai = new OpenAI({
@@ -8,7 +9,6 @@ export const openai = new OpenAI({
 });
 
 
-import axios from 'axios';
 
 export async function fetchCompetitorsFromLLM(
   site: any,
@@ -180,6 +180,7 @@ If data is insufficient, return null.
     return null;
   }
 }
+
 export async function createComparisonPrompt(website_id: string) {
  let recommendation = null;
       recommendation = await prisma.llm_responses.findUnique({
@@ -188,11 +189,7 @@ export async function createComparisonPrompt(website_id: string) {
           id: true,
           website_id: true,
           dashboard3_competi_camparison:true,
-          // recommendation_by_mo_dashboard1:true,
-          // recommendation_by_mo_dashboard2:true,
-          // recommendation_by_mo_dashboard3:true,
-          // geo_llm:true,
-          // recommendation_by_cmo: true,
+         
         },
       });
 

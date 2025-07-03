@@ -45,9 +45,5 @@ export const createBrandProfile = async (
 };
 
 
-export const updateUserType = async (user_id: string, user_type: string) => {
-  return await prisma.users.update({
-    where: { user_id },
-    data: { user_type },
-  });
-};
+
+

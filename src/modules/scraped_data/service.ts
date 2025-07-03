@@ -7,15 +7,6 @@ import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 
 const prisma = new PrismaClient();
 
-interface ScrapedMetaData {
-  page_title?: string;
-  meta_description?: string;
-  meta_keywords?: string;
-  og_title?: string;
-  og_description?: string;
-  og_image?: string;
-}
-
 export interface ScrapeResult {
   success: boolean;
   website_id?: string;
@@ -164,7 +155,17 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   };
 }
 
-
+async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
+  try {
+    const response = await axios.head(logoUrl, {
+      timeout: 5000,
+      validateStatus: () => true // Don't throw on 404/500
+    });
+    return response.status === 200;
+  } catch (error) {
+    return false;
+  }
+}
 
 
 async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
@@ -306,25 +307,25 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
   const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
-  const logoSelectors = [
-    'link[rel="icon"]',
-    'link[rel="shortcut icon"]',
-    'link[rel="apple-touch-icon"]',
-    'img[alt*="logo"]',
-    'img[src*="logo"]',
-  ];
+  // const logoSelectors = [
+  //   'link[rel="icon"]',
+  //   'link[rel="shortcut icon"]',
+  //   'link[rel="apple-touch-icon"]',
+  //   'img[alt*="logo"]',
+  //   'img[src*="logo"]',
+  // ];
 
-  let logoUrl = "not found";
-  for (const selector of logoSelectors) {
-    const el = $(selector).first();
-    let src = el.attr("href") || el.attr("src");
-    if (src) {
-      if (src.startsWith("//")) src = "https:" + src;
-      else if (src.startsWith("/")) src = new URL(src, url).href;
-      logoUrl = src;
-      break;
-    }
-  }
+  // let logoUrl = "not found";
+  // for (const selector of logoSelectors) {
+  //   const el = $(selector).first();
+  //   let src = el.attr("href") || el.attr("src");
+  //   if (src) {
+  //     if (src.startsWith("//")) src = "https:" + src;
+  //     else if (src.startsWith("/")) src = new URL(src, url).href;
+  //     logoUrl = src;
+  //     break;
+  //   }
+  // }
 
   const sitemapUrls = await getRobotsTxtAndSitemaps(url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
@@ -378,12 +379,47 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   try {
     const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url, websiteId);
     const isCrawlable = await isCrawlableByLLMBots(url);
+
+// Fallback logo detection if needed
+// Step 1: Try to use logo from schema
+let finalLogoUrl = schemaAnalysisData.logo ?? null;
+console.log("finalLogoUrlfromschema",finalLogoUrl)
+if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
+  console.log("Schema logo URL is invalid, falling back...");
+  finalLogoUrl = null; // Clear it so fallback logic runs
+}
+
+// Step 2: If no valid schema logo, try scraping from HTML
+if (!finalLogoUrl) {
+  const logoSelectors = [
+    'link[rel="icon"]',
+    'link[rel="shortcut icon"]',
+    'link[rel="apple-touch-icon"]',
+    'img[alt*="logo"]',
+    'img[src*="logo"]',
+  ];
+
+  const $ = cheerio.load(html);
+  for (const selector of logoSelectors) {
+    const el = $(selector).first();
+    let src = el.attr("href") || el.attr("src");
+    if (src) {
+      if (src.startsWith("//")) src = "https:" + src;
+      else if (src.startsWith("/")) src = new URL(src, url).href;
+
+      if (await isLogoUrlValid(src)) {
+        finalLogoUrl = src;
+        break;
+      }
+    }
+  }
+}
     const record = await prisma.website_scraped_data.create({
       data: {
         website_id: websiteId,
         website_url: url,
         page_title: JSON.stringify(meta.page_title),
-        logo_url: logoUrl,
+        logo_url: finalLogoUrl,
         meta_description: meta.meta_description,
         meta_keywords: meta.meta_keywords,
         og_title: meta.og_title,

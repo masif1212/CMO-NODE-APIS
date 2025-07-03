@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { createBrandProfile, updateUserType } from "./service";
+import { createBrandProfile} from "./service";
 
 // Handles POST /brand-profile
 
@@ -43,31 +43,5 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
 
 
 // Handles POST /update-user-type
-export const handleUserTypeUpdate: RequestHandler = async (req, res) => {
-  try {
-    const { user_id, user_type } = req.body;
 
-    if (!user_id || !user_type) {
-      res.status(400).json({
-        success: false,
-        error: "Missing user_id or user_type",
-      });
-      return;
-    }
-
-    const updated = await updateUserType(user_id, user_type);
-
-    res.status(200).json({
-      success: true,
-      message: "User type updated successfully",
-      data: updated,
-    });
-  } catch (error) {
-    console.error("Error updating user type:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
-};
 

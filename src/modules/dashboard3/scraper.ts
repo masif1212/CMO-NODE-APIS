@@ -18,6 +18,19 @@ const getDomainRoot = (url: string): string => {
 
 const prisma = new PrismaClient();
 
+
+async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
+  try {
+    const response = await axios.head(logoUrl, {
+      timeout: 5000,
+      validateStatus: () => true // Don't throw on 404/500
+    });
+    return response.status === 200;
+  } catch (error) {
+    return false;
+  }
+}
+
 function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   hasH1: boolean;
   totalHeadings: number;
@@ -129,7 +142,6 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 
     return true;
   } catch {
-    // If robots.txt is missing or can't be fetched, assume crawlable
     return true;
   }
 }
@@ -151,14 +163,7 @@ export async function scrapeWebsitecompetitos(url: string) {
       .filter((href, idx, self) => self.indexOf(href) === idx);
 
 
-    const logoSelectors = [
-      'link[rel="icon"]',
-      'link[rel="shortcut icon"]',
-      'link[rel="apple-touch-icon"]',
-      'img[alt*="logo"]',
-      'img[src*="logo"]'
-    ];
-    let logoUrl: string | undefined = undefined;
+  
 
     const imgTags = $("img");
     const totalImages = imgTags.length;
@@ -168,29 +173,51 @@ export async function scrapeWebsitecompetitos(url: string) {
     }).length;
 
     const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url);
-    console.log("schemaAnalysisData",schemaAnalysisData)
-    for (const selector of logoSelectors) {
-      const el = $(selector).first();
-      let src = el.attr("href") || el.attr("src");
-      if (src) {
-        // Handle relative URLs
-        if (src.startsWith("//")) src = "https:" + src;
-        else if (src.startsWith("/")) src = new URL(src, url).href;
-        logoUrl = src;
-        console.log(`Found logo URL: ${logoUrl}`);
+     const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url);
+        const isCrawlable = await isCrawlableByLLMBots(url);
+    
+    // Fallback logo detection if needed
+   // Step 1: Try to use logo from schema
+let finalLogoUrl = schemaAnalysisData.logo ?? null;
+console.log("finalLogoUrlfromschema",finalLogoUrl)
+if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
+  console.log("Schema logo URL is invalid, falling back...");
+  finalLogoUrl = null; // Clear it so fallback logic runs
+}
+
+// Step 2: If no valid schema logo, try scraping from HTML
+if (!finalLogoUrl) {
+  const logoSelectors = [
+    'link[rel="icon"]',
+    'link[rel="shortcut icon"]',
+    'link[rel="apple-touch-icon"]',
+    'img[alt*="logo"]',
+    'img[src*="logo"]',
+  ];
+
+  const $ = cheerio.load(html);
+  for (const selector of logoSelectors) {
+    const el = $(selector).first();
+    let src = el.attr("href") || el.attr("src");
+    if (src) {
+      if (src.startsWith("//")) src = "https:" + src;
+      else if (src.startsWith("/")) src = new URL(src, url).href;
+
+      if (await isLogoUrlValid(src)) {
+        finalLogoUrl = src;
         break;
       }
     }
+  }
+}
 
 
 
-   const isCrawlable = await isCrawlableByLLMBots(url);
 
     return {
       website_url: url,
       page_title: $('title').text() || null,
-      logo_url: logoUrl || null,
+      logo_url:  finalLogoUrl|| null,
       meta_description: $('meta[name="description"]').attr('content') || null,
       meta_keywords: $('meta[name="keywords"]').attr('content') || null,
       og_title: $('meta[property="og:title"]').attr('content') || null,
