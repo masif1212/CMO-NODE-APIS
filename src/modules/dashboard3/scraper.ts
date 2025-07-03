@@ -18,12 +18,129 @@ const getDomainRoot = (url: string): string => {
 
 const prisma = new PrismaClient();
 
+function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
+  hasH1: boolean;
+  totalHeadings: number;
+  headingLevelsUsed: string[];
+  headingOrderUsed: string[];
+  hasMultipleH1s: boolean;
+  skippedHeadingLevels: boolean;
+  reversedHeadingOrder: boolean;
+  headingHierarchyIssues: boolean;
+  message: string;
+} {
+  const headings = $("h1, h2, h3, h4, h5, h6");
+  const levels: number[] = [];
+  const headingOrderUsed: string[] = [];
+  const headingLevelsUsed: string[] = [];
+
+  headings.each((_, el) => {
+    const tag = $(el)[0].tagName.toLowerCase();
+    const level = parseInt(tag.replace("h", ""));
+    if (!isNaN(level)) {
+      levels.push(level);
+      headingOrderUsed.push(tag);
+      if (!headingLevelsUsed.includes(tag)) {
+        headingLevelsUsed.push(tag);
+      }
+    }
+  });
+
+  const totalHeadings = levels.length;
+  const hasH1 = headingLevelsUsed.includes("h1");
+  const hasMultipleH1s = levels.filter((l) => l === 1).length > 1;
+
+  // Check for skipped heading levels (e.g., h2 → h4 without h3)
+  let skippedHeadingLevels = false;
+  for (let i = 1; i < levels.length; i++) {
+    const prev = levels[i - 1];
+    const curr = levels[i];
+    if (curr - prev > 1) {
+      skippedHeadingLevels = true;
+      break;
+    }
+  }
+
+  // Check for reversed order (e.g., h3 before h2)
+  let reversedHeadingOrder = false;
+  for (let i = 1; i < levels.length; i++) {
+    if (levels[i] < levels[i - 1]) {
+      reversedHeadingOrder = true;
+      break;
+    }
+  }
+
+  const headingHierarchyIssues =
+    !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
+
+  let message = "Heading structure looks good.";
+  if (!hasH1) {
+    message = "Missing <h1> tag — every page should have a main heading.";
+  } else if (hasMultipleH1s) {
+    message = "Multiple <h1> tags found — should only have one main heading.";
+  } else if (skippedHeadingLevels) {
+    message = "Heading levels are skipped — e.g., <h2> followed by <h4>.";
+  } else if (reversedHeadingOrder) {
+    message = "Improper heading order — higher-level headings (e.g., <h3>) appear before <h2>.";
+  }
+
+  return {
+    hasH1,
+    totalHeadings,
+    headingLevelsUsed,
+    headingOrderUsed,
+    hasMultipleH1s,
+    skippedHeadingLevels,
+    reversedHeadingOrder,
+    headingHierarchyIssues,
+    message,
+  };
+}
+
+
+
+
+async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
+  try {
+    const robotsUrl = new URL("/robots.txt", baseUrl).href;
+    const { data: robotsTxt } = await axios.get(robotsUrl);
+
+    const disallowedAgents = ["*", "GPTBot", "CCBot", "AnthropicBot", "ClaudeBot", "ChatGPT-User", "googlebot"];
+    const lines = robotsTxt.split("\n").map((line: string) => line.trim());
+    let currentAgent: string | null = null;
+    const disallowedMap: Record<string, string[]> = {};
+
+    for (const line of lines) {
+      if (line.toLowerCase().startsWith("user-agent:")) {
+        currentAgent = line.split(":")[1].trim();
+      } else if (line.toLowerCase().startsWith("disallow:") && currentAgent) {
+        const path = line.split(":")[1].trim();
+        if (!disallowedMap[currentAgent]) disallowedMap[currentAgent] = [];
+        disallowedMap[currentAgent].push(path);
+      }
+    }
+
+    for (const agent of disallowedAgents) {
+      const disallows = disallowedMap[agent];
+      if (disallows && disallows.some(path => path === "/" || path === "/*")) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    // If robots.txt is missing or can't be fetched, assume crawlable
+    return true;
+  }
+}
+
+
 export async function scrapeWebsitecompetitos(url: string) {
   try {
     const res = await axios.get(url, { timeout: 10000 });
     const html = res.data;
     const $ = cheerio.load(html);
-
+    const headingAnalysis = evaluateHeadingHierarchy($);
     const extractHandle = (platform: string) =>
       $(`a[href*="${platform}.com"]`).attr('href') || null;
 
@@ -68,7 +185,7 @@ export async function scrapeWebsitecompetitos(url: string) {
 
 
 
-
+   const isCrawlable = await isCrawlableByLLMBots(url);
 
     return {
       website_url: url,
@@ -85,7 +202,9 @@ export async function scrapeWebsitecompetitos(url: string) {
       linkedin_handle: extractHandle('linkedin') || null,
       youtube_handle: extractHandle('youtube') || null,
       homepage_alt_text_coverage:   homepage_alt_text_coverage,
+      isCrawlable:isCrawlable,
       tiktok_handle: extractHandle('tiktok') || null,
+      headingAnalysis:headingAnalysis,
       other_links: otherLinks,
       schema_analysis:schemaAnalysisData || null,
       raw_html: html,
@@ -95,6 +214,9 @@ export async function scrapeWebsitecompetitos(url: string) {
     return err instanceof Error ? err.message : 'Unknown error';
   }
 }
+
+
+
 
 
 export const fetchBrands = async (

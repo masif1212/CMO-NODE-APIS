@@ -772,17 +772,17 @@ function processSeoAudits(auditData: any[]): { passedAudits: { title: string; de
         break;
       case 'crawlable-anchors':
         userFriendlyTitle = 'Links Can Be Followed by Search Engines';
-        passedDescription = ' links are set up correctly, allowing search engines to explore  website effectively.';
+        passedDescription = 'Links are set up correctly, allowing search engines to explore  website effectively.';
         failedDescription = 'Some links are not crawlable due to improper setup (e.g., JavaScript-based links). Ensure links use proper HTML anchor tags.';
         break;
       case 'robots-txt':
         userFriendlyTitle = 'Robots.txt File Is Set Up Correctly';
-        passedDescription = ' robots.txt file is properly configured, guiding search engines on how to crawl  site.';
-        failedDescription = ' robots.txt file is missing or incorrectly configured, which may block search engines. Create or fix the robots.txt file.';
+        passedDescription = 'Robots.txt file is properly configured, guiding search engines on how to crawl  site.';
+        failedDescription = 'Robots.txt file is missing or incorrectly configured, which may block search engines. Create or fix the robots.txt file.';
         break;
       case 'image-alt':
         userFriendlyTitle = 'Images Have Descriptive Alt Text';
-        passedDescription = ' Images include alt text, helping search engines and screen readers understand them.';
+        passedDescription = 'Images include alt text, helping search engines and screen readers understand them.';
         failedDescription = 'Some images lack alt text, making them less accessible and harder for search engines to understand. Add descriptive alt text to all images.';
         break;
       case 'hreflang':
@@ -1111,6 +1111,8 @@ export class CompetitorService {
             brandAuditseo: pageSpeedData && pageSpeedData.audit_details?.seoAudits
               ? processSeoAudits(pageSpeedData.audit_details.seoAudits)
               : { passedAudits: [], failedAudits: [] },
+            isCrawlablebyllmbot:(typeof scraped === 'object' && scraped !== null && 'isCrawlable' in scraped) ? scraped.isCrawlable : null,
+            headingAnalysis:(typeof scraped === 'object' && scraped !== null && 'headingAnalysis' in scraped) ? scraped.headingAnalysis : null,
           },
         };
       } catch (err) {
@@ -1280,6 +1282,10 @@ export class CompetitorService {
                   brandAuditseo: pageSpeedData && pageSpeedData.audit_details?.seoAudits
                     ? processSeoAudits(pageSpeedData.audit_details.seoAudits)
                     : { passedAudits: [], failedAudits: [] },
+                  isCrawlablebyllmbot:(typeof scraped === 'object' && scraped !== null && 'isCrawlable' in scraped) ? scraped.isCrawlable : null,
+                  headingAnalysis:(typeof scraped === 'object' && scraped !== null && 'headingAnalysis' in scraped) ? scraped.headingAnalysis : null,
+
+  
                 },
               });
 
@@ -1403,6 +1409,9 @@ export class CompetitorService {
           }
           return { passedAudits: [], failedAudits: [] };
         })(),
+        isCrawlablebyllmbot: ('isCrawlable' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.isCrawlable) ? scrapedMainWithoutRawHtml.isCrawlable : null,
+        headingAnalysis:('headingAnalysis' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.headingAnalysis) ? scrapedMainWithoutRawHtml.headingAnalysis : null,
+
       },
     };
 

@@ -150,24 +150,6 @@ export async function validateComprehensiveSchema(url: string): Promise<SchemaOu
     }));
 
 
-// Combine the groupedResults and summary
-    const schemaAnalysisData = {
-      grouped: groupedResults,
-      summary: summary,
-    };
-
-    // await prisma.website_scraped_data.update({
-    //   where: {
-    //     website_id: website_id, // make sure this matches your primary key
-    //   },
-    //   data: {
-    //     schema_analysis: JSON.stringify(schemaAnalysisData),
-    //   },
-    // });
-    
-
-
-
 
     return {
       url,

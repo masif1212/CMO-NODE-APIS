@@ -281,7 +281,8 @@ model website_scraped_data {
   scraped_data_id   String   @id @default(uuid())
   website_id        String   @unique // 1‑to‑1 with user_websites
   website_url       String
-  
+  isCrawlable       Boolean?  
+  headingAnalysis Json?
   page_title        String?  @db.LongText
   logo_url              String?  @db.LongText
   meta_description  String?  @db.LongText
@@ -365,13 +366,14 @@ model competitor_data {
   competitor_scraped_id String @id @default(uuid())
   competitor_id         String @unique
   website_id            String // User's website this competitor is related to
-
+  isCrawlable      Boolean?
   website_url      String
   page_title       String? @db.LongText
   logo_url                 String?  @db.LongText
   meta_description String? @db.LongText
   meta_keywords    String? @db.LongText
   og_title         String? @db.LongText
+  headingAnalysis Json?
   og_description   String? @db.LongText
   og_image         String? @db.LongText
   twitter_handle   String? @db.LongText
