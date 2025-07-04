@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE `analysis_status` MODIFY `social_media_analysis` LONGTEXT NULL,
+    MODIFY `geo_llm` LONGTEXT NULL,
+    MODIFY `recommendation_by_cmo` LONGTEXT NULL,
+    MODIFY `recommendation_by_mo1` LONGTEXT NULL,
+    MODIFY `recommendation_by_mo2` LONGTEXT NULL,
+    MODIFY `recommendation_by_mo3` LONGTEXT NULL,
+    MODIFY `dashboard1` LONGTEXT NULL,
+    MODIFY `dashboard2` LONGTEXT NULL,
+    MODIFY `dashboard3` LONGTEXT NULL,
+    MODIFY `dashboard4` LONGTEXT NULL,
+    MODIFY `seo_audit` LONGTEXT NULL,
+    MODIFY `technical_seo` LONGTEXT NULL,
+    MODIFY `website_audit` LONGTEXT NULL,
+    MODIFY `competitor_details` LONGTEXT NULL;

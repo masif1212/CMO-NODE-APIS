@@ -462,20 +462,20 @@ model analysis_status {
   id                    String   @id @default(uuid())
   user_id               String
   website_id            String
-  dashboard1            String?
-  dashboard2            String?
-  dashboard3            String?
-  dashboard4            String?
-  website_audit         String? 
-  seo_audit             String? 
-  technical_seo         String?
-  geo_llm               String?
-  social_media_analysis String? 
-  competitor_details   String?  
-  recommendation_by_mo1 String? 
-  recommendation_by_mo2 String?
-  recommendation_by_mo3 String? 
-  recommendation_by_cmo String? 
+  dashboard1            String? @db.LongText
+  dashboard2            String? @db.LongText
+  dashboard3            String? @db.LongText
+  dashboard4            String? @db.LongText
+  website_audit         String? @db.LongText
+  seo_audit             String? @db.LongText
+  technical_seo         String? @db.LongText
+  geo_llm               String? @db.LongText
+  social_media_analysis String? @db.LongText
+  competitor_details   String?  @db.LongText
+  recommendation_by_mo1 String? @db.LongText
+  recommendation_by_mo2 String? @db.LongText
+  recommendation_by_mo3 String? @db.LongText
+  recommendation_by_cmo String? @db.LongText
   
 
 created_at DateTime @default(now())

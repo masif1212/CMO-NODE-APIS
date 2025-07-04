@@ -202,12 +202,11 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
       time_to_interactive: getAuditValue("interactive"),
 
-      // Revenue loss
       revenue_loss_percent: summary.revenueLossPercent,
 
       audit_details: {
         allAudits: summary.audits,
-        optimization_opportunities: summary.optimization_opportunities,
+        optimization_opportunities: summary.bestPracticeGroups,
         user_access_readiness: summary.userAccessReadiness,
         seoAudits: summary.seoAudits,
       },

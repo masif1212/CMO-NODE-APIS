@@ -115,7 +115,16 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       ip_address: scrapedMeta?.ip_address ?? null,
       response_time_ms: scrapedMeta?.response_time_ms ?? null,
     };
-
+    const website_health = {
+  website_id,
+  revenueLossPercent: saved.revenue_loss_percent,
+  seo_revenue_loss_percentage,
+  categories: categoryScores,
+  speed_health: auditMap,
+  availability_tracker,
+  optimization_opportunities,
+  // seo: seoAudits // include this if needed
+};
 
     await prisma.analysis_status.upsert({
       where: {
@@ -125,15 +134,16 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         },
       },
       update: {
-        website_audit: saved.website_analysis_id,
+        website_audit: JSON.stringify(website_health),
       },
       create: {
         user_id,
         website_id,
-        website_audit: saved.website_analysis_id,
+        website_audit: JSON.stringify(website_health),
       },
     });
 
+     
     return res.status(201).json({
       message: "website audit",
       website_id,
