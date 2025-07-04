@@ -282,7 +282,8 @@ model website_scraped_data {
   scraped_data_id   String   @id @default(uuid())
   website_id        String   @unique // 1‑to‑1 with user_websites
   website_url       String
-  
+  isCrawlable       Boolean?  
+  headingAnalysis Json?
   page_title        String?  @db.LongText
   logo_url              String?  @db.LongText
   meta_description  String?  @db.LongText
@@ -366,19 +367,21 @@ model competitor_data {
   competitor_scraped_id String @id @default(uuid())
   competitor_id         String @unique
   website_id            String // User's website this competitor is related to
-
+  isCrawlable      Boolean?
   website_url      String
   page_title       String? @db.LongText
   logo_url                 String?  @db.LongText
   meta_description String? @db.LongText
   meta_keywords    String? @db.LongText
   og_title         String? @db.LongText
+  headingAnalysis Json?
   og_description   String? @db.LongText
   og_image         String? @db.LongText
   twitter_handle   String? @db.LongText
   facebook_handle  String? @db.LongText
   instagram_handle String? @db.LongText
   linkedin_handle  String? @db.LongText
+  homepage_alt_text_coverage Int? 
   youtube_handle   String? @db.LongText
   tiktok_handle    String? @db.LongText
 
@@ -438,7 +441,7 @@ model user_requirements {
   fetched_properties  Json?
   summary_status      String? // e.g., "pending", "success", "error"
   summary_data        Json?
-  competitor_urls     String? @db.LongText
+  competitor_urls     Json?
   ip_address          String? @db.LongText
   user_agent          String? @db.LongText
   industry            String? @db.LongText
@@ -460,20 +463,20 @@ model analysis_status {
   id                    String   @id @default(uuid())
   user_id               String
   website_id            String
-  dashboard1            String?
-  dashboard2            String?
-  dashboard3            String?
-  dashboard4            String?
-  website_audit         String? 
-  seo_audit             String? 
-  technical_seo         String?
-  geo_llm               String?
-  social_media_analysis String? 
-  competitor_details   String?  
-  recommendation_by_mo1 String? 
-  recommendation_by_mo2 String?
-  recommendation_by_mo3 String? 
-  recommendation_by_cmo String? 
+  dashboard1            String? @db.LongText
+  dashboard2            String? @db.LongText
+  dashboard3            String? @db.LongText
+  dashboard4            String? @db.LongText
+  website_audit         String? @db.LongText
+  seo_audit             String? @db.LongText
+  technical_seo         String? @db.LongText
+  geo_llm               String? @db.LongText
+  social_media_analysis String? @db.LongText
+  competitor_details   String?  @db.LongText
+  recommendation_by_mo1 String? @db.LongText
+  recommendation_by_mo2 String? @db.LongText
+  recommendation_by_mo3 String? @db.LongText
+  recommendation_by_cmo String? @db.LongText
   
 
 created_at DateTime @default(now())

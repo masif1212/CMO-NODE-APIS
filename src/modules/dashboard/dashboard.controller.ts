@@ -202,33 +202,42 @@ const cmoRecommendations = cmoRecommendationsRaw.map(site => ({
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
 interface GeoData {
   AI_Discoverability?: any; // Flexible type, replace with specific structure if known
   bingSource?: { type: string; name: string; sessions: number };
   SearchBotcrawlability?: any;
-  // schema_analysis?: any; // Flexible type, replace with specific structure if known
-  // Schema_Markup_Status?: any; // Added to fix compile error
+ 
 }
 
-interface MoRecommendation {
-  id: string;
-  website_id: string;
-  recommendation_by_mo_dashboard1?: any;
-  recommendation_by_mo_dashboard2?: any;
-  recommendation_by_mo_dashboard3?: any;
-  dashboard3_competi_camparison?: any;
+interface CompetitorAnalysis {
+  competitor_id: string;
+  name: string | null;
+  website_url: string | null;
+  industry: string | null;
+  region: string | null;
+  target_audience: string | null;
+  primary_offering: string | null;
+  usp: string | null;
+  page_title: string | null;
+  logo_url: string | null;
+  meta_description: string | null;
+  meta_keywords: string | null;
+  social_handles: {
+    twitter: string | null;
+    facebook: string | null;
+    instagram: string | null;
+    linkedin: string | null;
+    youtube: string | null;
+    tiktok: string | null;
+  };
+  ctr_loss_percent: any;
+  revenue_loss_percent: number | null;
+  schema_analysis: any;
+  page_speed: any;
+  other_links: any;
 }
+
+
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const { website_id } = req.query;
@@ -256,8 +265,8 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       return res.status(404).json({ error: "no data found" });
     }
 
-    const responseData: Record<string, any> = {};
-    const website_health: Record<string, any> = {};
+    const responsePayload: Record<string, any> = { success: true };
+    // const website_health: Record<string, any> = {};
     let traffic_anaylsis: Record<string, any> = {};
     let pageSpeedData: any = undefined;
 
@@ -279,147 +288,39 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       },
     });
 
-    // ---------- PageSpeed / Website Health ----------
-    if (analysisStatus.website_audit != null) {
-      pageSpeedData = await prisma.brand_website_analysis.findUnique({
-        where: { website_analysis_id: analysisStatus.website_audit },
-        select: {
-          performance_score: true,
-          seo_score: true,
-          accessibility_score: true,
-          best_practices_score: true,
-          revenue_loss_percent: true,
-          total_blocking_time: true,
-          first_contentful_paint: true,
-          cumulative_layout_shift: true,
-          speed_index: true,
-          largest_contentful_paint: true,
-          time_to_interactive: true,
-          broken_links: true,
-          total_broken_links: true,
-          audit_details: true,
-        },
+    // Fetch pageSpeedData (assuming it exists in the database)
+   pageSpeedData = await prisma.brand_website_analysis.findFirst({
+  where: { website_id },
+  select: {
+    audit_details: true,
+    broken_links: true,
+    total_broken_links: true,
+  },
+});
+
+    // Availability Tracker
+    // if (scrapedData) {
+    //   website_health.availability_tracker = {
+    //     status_message: scrapedData.status_message ?? "Unknown",
+    //     status_code: scrapedData.status_code ?? 0,
+    //     ip_address: scrapedData.ip_address ?? "N/A",
+    //     response_time_ms: scrapedData.response_time_ms ?? 0,
+    //     logo: scrapedData.logo_url ?? null,
+    //   };
+    //   responsePayload.website_health = website_health;
+    // }
+
+    // SEO Audit and Traffic Analysis
+    if (analysisStatus.seo_audit != null) {
+      const traffic = await prisma.brand_traffic_analysis.findUnique({
+        where: { traffic_analysis_id: analysisStatus.seo_audit },
       });
-
-      if (pageSpeedData) {
-        const auditDetails = typeof pageSpeedData.audit_details === "string"
-          ? JSON.parse(pageSpeedData.audit_details)
-          : pageSpeedData.audit_details;
-
-        website_health.revenueLossPercent = pageSpeedData.revenue_loss_percent ?? 0;
-        website_health.seo_revenue_loss_percentage = 0;
-        website_health.ctr_loss_percent = scrapedData?.ctr_loss_percent;
-
-        website_health.categories = {
-          performance_insight: pageSpeedData.performance_score ?? 0,
-          seo: pageSpeedData.seo_score ?? 0,
-          accessibility: pageSpeedData.accessibility_score ?? 0,
-          best_practices: pageSpeedData.best_practices_score ?? 0,
-        };
-
-        website_health.speed_health = {
-          total_blocking_time: {
-            display_value: pageSpeedData.total_blocking_time ?? "N/A",
-            score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
-          },
-          first_contentful_paint: {
-            display_value: pageSpeedData.first_contentful_paint ?? "N/A",
-            score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
-          },
-          speed_index: {
-            display_value: pageSpeedData.speed_index ?? "N/A",
-            score: auditDetails?.metrics?.speed_index?.score ?? null,
-          },
-          largest_contentful_paint: {
-            display_value: pageSpeedData.largest_contentful_paint ?? "N/A",
-            score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
-          },
-          interactive: {
-            display_value: pageSpeedData.time_to_interactive ?? "N/A",
-            score: auditDetails?.metrics?.interactive?.score ?? null,
-          },
-          cumulative_layout_shift: {
-            display_value: pageSpeedData.cumulative_layout_shift ?? "N/A",
-            score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
-          },
-        };
-      } // <-- Add this closing brace to properly close the try block
-    }
-    if (pageSpeedData?.audit_details) {
-      try {
-        const auditDetails =
-          typeof pageSpeedData.audit_details === "string"
-            ? JSON.parse(pageSpeedData.audit_details)
-            : pageSpeedData.audit_details;
-        website_health.optimization_opportunities = auditDetails?.optimization_opportunities || "None";
-      } catch (error) {
-        console.error("Error parsing audit_details:", error);
+      if (traffic) {
+        traffic_anaylsis = traffic;
       }
     }
 
-    // ---------- Availability Tracker ----------
-    if (scrapedData) {
-      website_health.availability_tracker = {
-        status_message: scrapedData.status_message ?? "Unknown",
-        status_code: scrapedData.status_code ?? 0,
-        ip_address: scrapedData.ip_address ?? "N/A",
-        response_time_ms: scrapedData.response_time_ms ?? 0,
-        logo: scrapedData.logo_url ?? null,
-      };
-    }
-
-    // ---------- SEO Health (Traffic Analysis) ----------
-    // if (analysisStatus.seo_audit != null) {
-    //   const traffic = await prisma.brand_traffic_analysis.findUnique({
-    //     where: { traffic_analysis_id: analysisStatus.seo_audit },
-    //     select: {
-    //       total_visitors: true,
-    //       organic_search: true,
-    //       direct: true,
-    //       referral: true,
-    //       organic_social: true,
-    //       unassigned: true,
-    //       high_bounce_pages: true,
-    //       top_countries: true,
-    //       top_sources: true,
-    //       top_browsers: true,
-    //       top_devices: true,
-    //       overall_bounce_rate: true,
-    //       actionable_fix: true,
-    //     },
-    //   });
-
-    //   if (traffic) {
-    //     traffic_anaylsis = {
-    //       total_visitors: traffic.total_visitors ?? "N/A",
-    //       unique_visitors: traffic.unassigned ?? "N/A",
-    //       sources: {
-    //         organic: traffic.organic_search ?? "N/A",
-    //         direct: traffic.direct ?? "N/A",
-    //         referral: traffic.referral ?? "N/A",
-    //         social: traffic.organic_social ?? "N/A",
-    //       },
-    //       top_countries: traffic.top_countries ?? "N/A",
-    //       bounce_rate: traffic.overall_bounce_rate ?? "N/A",
-    //       high_bounce_pages: traffic.high_bounce_pages ?? [],
-    //       actionable_fix: traffic.actionable_fix ?? [],
-    //     };
-    //   }
-    // }
-
-
-    if (analysisStatus.seo_audit != null) {
-  const traffic = await prisma.brand_traffic_analysis.findUnique({
-    where: { traffic_analysis_id: analysisStatus.seo_audit },
-    // Select all columns by default
-  });
-
-  if (traffic) {
-    traffic_anaylsis = traffic;
-  }
-}
-
-    // ---------- Social Media Analysis ----------
+    // Social Media Analysis
     let socialMediaData: any[] = [];
     if (analysisStatus.social_media_analysis != null) {
       socialMediaData = await prisma.brand_social_media_analysis.findMany({
@@ -439,98 +340,46 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
           engagementToFollowerRatio: true,
         },
       });
-
-      if (socialMediaData.length > 0) {
-        responseData.social_media_analysis = socialMediaData;
-      }
+      responsePayload.social_media_analysis = socialMediaData.length > 0 ? socialMediaData : [];
     }
 
-    // ---------- Recommendations ----------
-    const moRecommendations: MoRecommendation[] = [];
-    const recommendation = await prisma.llm_responses.findUnique({
-      where: { website_id: website_id },
+    // Recommendations
+    let recommendation = null;
+    recommendation = await prisma.llm_responses.findUnique({
+      where: { website_id },
       select: {
         id: true,
         website_id: true,
+        dashboard3_competi_camparison: true,
         recommendation_by_mo_dashboard1: true,
         recommendation_by_mo_dashboard2: true,
         recommendation_by_mo_dashboard3: true,
-        dashboard3_competi_camparison: true,
-        geo_llm: true, // Include geo_llm in the query
+        geo_llm: true,
+        recommendation_by_cmo: true,
       },
     });
 
-    if (recommendation) {
-      const moFieldMap: { [key: string]: any } = {
-        recommendation_by_mo1: recommendation.recommendation_by_mo_dashboard1,
-        recommendation_by_mo2: recommendation.recommendation_by_mo_dashboard2,
-        recommendation_by_mo3: recommendation.recommendation_by_mo_dashboard3,
-      };
-
-      for (const moField of ["recommendation_by_mo1", "recommendation_by_mo2", "recommendation_by_mo3"] as const) {
-        if (analysisStatus[moField] && moFieldMap[moField]) {
-          let parsedRecommendation: any = moFieldMap[moField];
-          try {
-            if (typeof parsedRecommendation === "string") {
-              parsedRecommendation = JSON.parse(parsedRecommendation);
-            }
-          } catch (error) {
-            console.error(`Error parsing ${moField}:`, error);
-            // Keep as string if parsing fails
-          }
-
-          moRecommendations.push({
-            id: recommendation.id,
-            website_id: recommendation.website_id,
-            recommendation_by_mo_dashboard1: moField === "recommendation_by_mo1" ? parsedRecommendation : null,
-            recommendation_by_mo_dashboard2: moField === "recommendation_by_mo2" ? parsedRecommendation : null,
-            recommendation_by_mo_dashboard3: moField === "recommendation_by_mo3" ? parsedRecommendation : null,
-            dashboard3_competi_camparison: recommendation.dashboard3_competi_camparison,
-          });
-        }
+    function safeParse(jsonStr: any) {
+      try {
+        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      } catch (e) {
+        console.error("JSON parse failed:", e);
+        return jsonStr;
       }
     }
 
-    // ---------- CMO Recommendation ----------
-    let cmoRecommendation = null;
-    if (analysisStatus.recommendation_by_cmo) {
-      cmoRecommendation = await prisma.llm_responses.findUnique({
-        where: { website_id: website_id }, // Updated to use website_id
-        select: {
-          id: true,
-          website_id: true,
-          recommendation_by_cmo: true,
-        },
-      });
-
-      if (cmoRecommendation?.recommendation_by_cmo) {
-        try {
-          cmoRecommendation.recommendation_by_cmo =
-            typeof cmoRecommendation.recommendation_by_cmo === "string"
-              ? JSON.parse(cmoRecommendation.recommendation_by_cmo)
-              : cmoRecommendation.recommendation_by_cmo;
-        } catch (error) {
-          console.error("Error parsing recommendation_by_cmo:", error);
-          // Keep as string if parsing fails
-        }
-      }
-    }
-
-
-
-
-    // ---------- On Page Optimization ----------
+    // On Page Optimization
     const onpage_opptimization: Record<string, any> = {};
     if (scrapedData) {
       onpage_opptimization.metaDataWithoutRawHtml = {
         page_title: scrapedData.page_title || "N/A",
         meta_description: scrapedData.meta_description || "N/A",
         meta_keywords: scrapedData.meta_keywords || "N/A",
-        homepage_alt_text_coverage : scrapedData.homepage_alt_text_coverage || "N/A",
-        status_message : scrapedData.status_code,
-        ip_address:scrapedData.ip_address,
-        response_time_ms:scrapedData.response_time_ms,
-        status_code : scrapedData.status_code
+        homepage_alt_text_coverage: scrapedData.homepage_alt_text_coverage || "N/A",
+        status_message: scrapedData.status_code,
+        ip_address: scrapedData.ip_address,
+        response_time_ms: scrapedData.response_time_ms,
+        status_code: scrapedData.status_code,
       };
       try {
         let h1Text = "Not Found";
@@ -545,154 +394,108 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       }
     }
 
-    // ---------- Technical SEO ----------
-
-
-
-      // ---------- Geo Data ----------
-    const geo: GeoData = {};
-
-    // Parse geo_llm
-    if (recommendation?.geo_llm) {
-      try {
-        geo.AI_Discoverability = typeof recommendation.geo_llm === "string"
-          ? JSON.parse(recommendation.geo_llm)
-          : recommendation.geo_llm;
-      } catch (error) {
-        console.error("Error parsing geo_llm:", error);
-        geo.AI_Discoverability = recommendation.geo_llm;
-        // geo.Schema_Markup_Status = scrapedData ? scrapedData.schema_analysis : undefined;
-         // Fallback to raw string
-      }
-    }  
-
-
-    // Fetch top_sources from brand_traffic_analysis
-    let sources: any[] = [];
-    if (analysisStatus.seo_audit != null) {
-      const traffic = await prisma.brand_traffic_analysis.findUnique({
-        where: { traffic_analysis_id: analysisStatus.seo_audit },
-        select: {
-          top_sources: true, // Add top_sources to the select
-        },
-      });
-
-      sources = traffic?.top_sources
-        ? (typeof traffic.top_sources === "string"
-          ? JSON.parse(traffic.top_sources)
-          : traffic.top_sources) // Parse if stored as a string
-        : [];
-    }
-
-    // Extract bing source
-    const bingSource = sources?.find((src) =>
-      ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
-    ) ?? { type: "source", name: "bing.com", sessions: 0 };
-
-    geo.bingSource = bingSource;
-
-
-
-      const technical_seo: Record<string, any> = {};
+    // Technical SEO
+    const technical_seo: Record<string, any> = {};
     if (pageSpeedData?.audit_details) {
       try {
-        const auditDetails =
-          typeof pageSpeedData.audit_details === "string"
-            ? JSON.parse(pageSpeedData.audit_details)
-            : pageSpeedData.audit_details;
+        const auditDetails = safeParse(pageSpeedData.audit_details);
         technical_seo.user_access_readiness = auditDetails?.user_access_readiness || "None";
       } catch (error) {
         console.error("Error parsing audit_details:", error);
+        technical_seo.user_access_readiness = "Not Available";
       }
+    } else {
+      technical_seo.user_access_readiness = "Not Available";
     }
 
     if (scrapedData?.schema_analysis) {
       try {
-        technical_seo.Schema_Markup_Status = typeof scrapedData.schema_analysis === "string"
-          ? JSON.parse(scrapedData.schema_analysis)
-          : scrapedData.schema_analysis;
-      
-          geo.SearchBotcrawlability = technical_seo.Schema_Markup_Status;
-
+        technical_seo.Schema_Markup_Status = safeParse(scrapedData.schema_analysis);
       } catch (error) {
         console.error("Error parsing schema_analysis:", error);
         technical_seo.Schema_Markup_Status = scrapedData.schema_analysis;
-        geo.SearchBotcrawlability = scrapedData.schema_analysis;
-
       }
     }
 
     if (pageSpeedData?.broken_links) {
-  try {
-    const parsedBrokenLinks = typeof pageSpeedData.broken_links === "string"
-      ? JSON.parse(pageSpeedData.broken_links)
-      : pageSpeedData.broken_links;
+      try {
+        const parsedBrokenLinks = safeParse(pageSpeedData.broken_links);
+        const totalBroken = pageSpeedData.total_broken_links ?? parsedBrokenLinks?.broken_links?.length ?? 0;
+        const brokenLinksResult = parsedBrokenLinks?.broken_links ?? [];
+        technical_seo.Link_Health = {
+          message: totalBroken ? "Broken links found and saved." : "No broken links found.",
+          totalBroken,
+          brokenLinks: brokenLinksResult,
+        };
+      } catch (error) {
+        console.error("Error parsing broken_links from pageSpeedData:", error);
+        technical_seo.Link_Health = {
+          message: pageSpeedData?.total_broken_links ? "Broken links found and saved." : "No broken links found.",
+          totalBroken: pageSpeedData?.total_broken_links ?? 0,
+          brokenLinks: [],
+        };
+      }
+    } else {
+      technical_seo.Link_Health = {
+        message: "No page speed data available",
+        totalBroken: 0,
+        brokenLinks: [],
+      };
+    }
 
-    const totalBroken = pageSpeedData.total_broken_links ?? parsedBrokenLinks?.broken_links?.length ?? 0;
-    const brokenLinksResult = parsedBrokenLinks?.broken_links ?? [];
+    // Geo Data
+    const geo: Record<string, any> = {};
+    if (recommendation?.geo_llm) {
+      geo.AI_Discoverability = safeParse(recommendation.geo_llm);
+    }
+    if (technical_seo.Schema_Markup_Status) {
+      geo.SearchBotcrawlability = technical_seo.Schema_Markup_Status;
+    }
+    let sources: any[] = [];
+    if (analysisStatus.seo_audit != null) {
+      const traffic = await prisma.brand_traffic_analysis.findUnique({
+        where: { traffic_analysis_id: analysisStatus.seo_audit },
+        select: { top_sources: true },
+      });
+      sources = traffic?.top_sources ? safeParse(traffic.top_sources) : [];
+    }
+    geo.bingSource = sources.find((src) =>
+      ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
+    ) ?? { type: "source", name: "bing.com", sessions: 0 };
 
-    technical_seo.Link_Health = {
-      message: totalBroken ? "Broken links found and saved." : "No broken links found.",
-      totalBroken,
-      brokenLinks: brokenLinksResult,
-    };
+    // Add all non-null data to responsePayload
+    if (analysisStatus.website_audit != null) {
+      responsePayload.website_audit = safeParse(analysisStatus.website_audit);
+    }
+    if (traffic_anaylsis && Object.keys(traffic_anaylsis).length > 0) {
+      responsePayload.traffic_anaylsis = traffic_anaylsis;
+      responsePayload.onpage_opptimization = onpage_opptimization;
+      responsePayload.technical_seo = technical_seo;
+      responsePayload.geo = geo;
+    }
+
+    if (analysisStatus.competitor_details != null) {
+      responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
+    }
+    if (recommendation?.recommendation_by_mo_dashboard1 != null) {
+      responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);
+    }
+    if (recommendation?.recommendation_by_mo_dashboard2 != null) {
+      responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
+    }
+    if (recommendation?.recommendation_by_mo_dashboard3 != null) {
+      responsePayload.recommendation_by_mo_dashboard3 = safeParse(recommendation.recommendation_by_mo_dashboard3);
+    }
+    if (recommendation?.recommendation_by_cmo != null) {
+      responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
+    }
+
+    // Add traffic-related data only if traffic_anaylsis is non-empty
+
+
+    return res.status(200).json(responsePayload);
   } catch (error) {
-    console.error("Error parsing broken_links from pageSpeedData:", error);
-    const totalBroken = pageSpeedData.total_broken_links ?? 0;
-    technical_seo.Link_Health = {
-      message: totalBroken ? "Broken links found and saved." : "No broken links found.",
-      totalBroken,
-      brokenLinks: [],
-    };
+    console.error("Error fetching website detailed analysis:", error);
+    return res.status(500).json({ error: "Server error" });
   }
-} else {
-  const totalBroken = pageSpeedData?.total_broken_links ?? 0;
-  technical_seo.Link_Health = {
-    message: totalBroken ? "Broken links found and saved." : "No broken links found.",
-    totalBroken,
-    brokenLinks: [],
-  };
-}
-
-
-    // ---------- Response Payload ----------
-
-
-// ---------- Response Payload ----------
-
-const onlyWebsiteAudit = analysisStatus.website_audit != null &&
-  !analysisStatus.seo_audit &&
-  !analysisStatus.social_media_analysis &&
-  !analysisStatus.recommendation_by_mo1 &&
-  !analysisStatus.recommendation_by_mo2 &&
-  !analysisStatus.recommendation_by_mo3 &&
-  !analysisStatus.recommendation_by_cmo;
-
-if (onlyWebsiteAudit) {
-  return res.status(200).json({
-    success: true,
-    website_health,
-  });
-}
-
-const responsePayload: Record<string, any> = {
-  success: true,
-  website_health,
-  traffic_anaylsis,
-    
-  onpage_opptimization,
-  technical_seo,
-  geo,
-  moRecommendations,
-};
-
-if (cmoRecommendation != null) {
-  responsePayload.cmoRecommendation = cmoRecommendation;
-}
-
-return res.status(200).json(responsePayload);
-} catch (error) {
-  console.error("Error fetching website detailed analysis:", error);
-  return res.status(500).json({ error: "Server error" });
-}
 };

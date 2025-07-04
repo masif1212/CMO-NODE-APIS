@@ -150,32 +150,13 @@ Format:
     });
 
 
-    const response = websiteFound
-      ? {
-        website_found: true,
-        // message: "Awesome! Your brand has earned a spot among the top online performers."
-      }
-      : {
-        website_found: false,
+   
 
-        // summary: "Sorry, your brand does not appear in the top brands.",
-        // recommendation: "You need to improve your marketing strategy and website structuring for better online visibility."
-
-      };
-
-
-    const saveData = JSON.stringify({/*  */
-      // brands: parsedBrands,
-      website_found: websiteFound,
-
-    });
-
-    await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: { geo_llm: saveData },
-      create: { website_id, geo_llm: saveData },
-    });
-
+   await prisma.llm_responses.upsert({
+  where: { website_id },
+  update: { geo_llm: websiteFound.toString() }, // converts boolean to "true"/"false"
+  create: { website_id, geo_llm: websiteFound.toString() },
+});
     const traffic = await prisma.brand_traffic_analysis.findFirst({
       where: { website_id },
       orderBy: { created_at: "desc" },
@@ -205,9 +186,7 @@ Format:
 
 
       AI_Discoverability: {
-        
-        ...response 
-        
+        found: websiteFound.toString()
       },
 
       SearchBotcrawlability: {

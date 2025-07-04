@@ -33,9 +33,6 @@ const excludedDomains = [
   "messenger.com",
 ];
 
-const visited = new Set<string>();
-const checkedLinks = new Set<string>();
-
 function isExcluded(link: string): boolean {
   return excludedDomains.some((domain) => link.toLowerCase().includes(domain));
 }
@@ -151,10 +148,6 @@ export async function checkBrokenLinks(
     throw new Error("Website does not belong to the user.");
   }
 
-  // Step 2: Get base URL safely (assuming this also verifies the website)
-//   
-  
-  // Puppeteer browser and sets for tracking
   console.log(`Puppeteer is launching...`);
   const browser = await puppeteer.launch({ headless: "new" as any })
 
