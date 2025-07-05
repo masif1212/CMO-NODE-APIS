@@ -7,7 +7,7 @@ import { BrokenLinkResult } from "../../../types/express";
 
 const prisma = new PrismaClient();
 
-const TIMEOUT_MS = 10000;
+const TIMEOUT_MS = 30000;
 
 const excludedDomains = [
   "mailto:",

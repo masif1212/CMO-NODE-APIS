@@ -307,25 +307,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
   const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
-  // const logoSelectors = [
-  //   'link[rel="icon"]',
-  //   'link[rel="shortcut icon"]',
-  //   'link[rel="apple-touch-icon"]',
-  //   'img[alt*="logo"]',
-  //   'img[src*="logo"]',
-  // ];
 
-  // let logoUrl = "not found";
-  // for (const selector of logoSelectors) {
-  //   const el = $(selector).first();
-  //   let src = el.attr("href") || el.attr("src");
-  //   if (src) {
-  //     if (src.startsWith("//")) src = "https:" + src;
-  //     else if (src.startsWith("/")) src = new URL(src, url).href;
-  //     logoUrl = src;
-  //     break;
-  //   }
-  // }
 
   const sitemapUrls = await getRobotsTxtAndSitemaps(url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
@@ -413,7 +395,9 @@ if (!finalLogoUrl) {
       }
     }
   }
-}
+
+}   
+   try { console.log("saving scraped data...")
     const record = await prisma.website_scraped_data.create({
       data: {
         website_id: websiteId,
@@ -445,12 +429,19 @@ if (!finalLogoUrl) {
         status_message: message,
       },
     });
-
+    console.log("scraped data saved")
     return {
       success: true,
       website_id: record.website_id,
       logo_url: record.logo_url ?? undefined,
     };
+    }
+    catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   } catch (error: any) {
     return {
       success: false,
