@@ -21,7 +21,7 @@ export interface ScrapeResult {
 
 async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   try {
-    console.log("getRobotsTxtAndSitemaps")
+    console.log("getRobotsTxtAndSitemaps");
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
     const { data } = await axios.get(robotsUrl);
     const sitemapUrls: string[] = [];
@@ -49,7 +49,7 @@ async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
 
 async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   try {
-    console.log("parseSitemap")
+    console.log("parseSitemap");
     const { data } = await axios.get(sitemapUrl);
     const parsed = await parseStringPromise(data);
     const urls: string[] = [];
@@ -74,7 +74,6 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
     return [];
   }
 }
-
 
 function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   // hasH1: boolean;
@@ -128,8 +127,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
     }
   }
 
-  const headingHierarchyIssues =
-    !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
+  const headingHierarchyIssues = !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
 
   let message = "Heading structure looks good.";
   if (!hasH1) {
@@ -159,14 +157,13 @@ async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
       timeout: 5000,
-      validateStatus: () => true // Don't throw on 404/500
+      validateStatus: () => true, // Don't throw on 404/500
     });
     return response.status === 200;
   } catch (error) {
     return false;
   }
 }
-
 
 async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   try {
@@ -190,7 +187,7 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 
     for (const agent of disallowedAgents) {
       const disallows = disallowedMap[agent];
-      if (disallows && disallows.some(path => path === "/" || path === "/*")) {
+      if (disallows && disallows.some((path) => path === "/" || path === "/*")) {
         return false;
       }
     }
@@ -201,10 +198,6 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
     return true;
   }
 }
-
-
-
-
 
 export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult> {
   const start = Date.now();
@@ -245,11 +238,10 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
         message = `Fetch or DNS error: ${error.message}`;
     }
 
-
     return {
       success: false,
       status_code: code,
-      
+
       error: message,
     };
   }
@@ -269,12 +261,12 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const headingAnalysis = evaluateHeadingHierarchy($);
 
   function extractTitleTags(): object {
-    const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
+    const titles = $("title")
+      .map((_, el) => $(el).text().trim())
+      .get()
+      .filter(Boolean);
     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
-    const message =
-      titles.length > 1
-        ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-        : titles[0] || "not found";
+    const message = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
     return { status, titles, message };
   }
 
@@ -305,7 +297,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
 
   const totalImages = $("img").length;
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
-  const   homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+  const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
   // const logoSelectors = [
   //   'link[rel="icon"]',
@@ -338,11 +330,11 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
         const res = await axios.get(pageUrl);
         if (res.status >= 200 && res.status < 400) {
           const $$ = cheerio.load(res.data);
-          const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
-          const title =
-            titles.length > 1
-              ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-              : titles[0] || "not found";
+          const titles = $$("title")
+            .map((_, el) => $$(el).text().trim())
+            .get()
+            .filter(Boolean);
+          const title = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
           const meta_description = $$('meta[name="description"]').attr("content") || "not found";
           const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
           const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
@@ -378,42 +370,36 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
 
   try {
     const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url, websiteId);
-    const isCrawlable = await isCrawlableByLLMBots(url);
+    const isCrawlable: boolean = await isCrawlableByLLMBots(url);
 
-// Fallback logo detection if needed
-// Step 1: Try to use logo from schema
-let finalLogoUrl = schemaAnalysisData.logo ?? null;
-console.log("finalLogoUrlfromschema",finalLogoUrl)
-if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
-  console.log("Schema logo URL is invalid, falling back...");
-  finalLogoUrl = null; // Clear it so fallback logic runs
-}
+    // Fallback logo detection if needed
+    // Step 1: Try to use logo from schema
+    let finalLogoUrl = schemaAnalysisData.logo ?? null;
+    console.log("finalLogoUrlfromschema", finalLogoUrl);
+    if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
+      console.log("Schema logo URL is invalid, falling back...");
+      finalLogoUrl = null; // Clear it so fallback logic runs
+    }
 
-// Step 2: If no valid schema logo, try scraping from HTML
-if (!finalLogoUrl) {
-  const logoSelectors = [
-    'link[rel="icon"]',
-    'link[rel="shortcut icon"]',
-    'link[rel="apple-touch-icon"]',
-    'img[alt*="logo"]',
-    'img[src*="logo"]',
-  ];
+    // Step 2: If no valid schema logo, try scraping from HTML
+    if (!finalLogoUrl) {
+      const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
 
-  const $ = cheerio.load(html);
-  for (const selector of logoSelectors) {
-    const el = $(selector).first();
-    let src = el.attr("href") || el.attr("src");
-    if (src) {
-      if (src.startsWith("//")) src = "https:" + src;
-      else if (src.startsWith("/")) src = new URL(src, url).href;
+      const $ = cheerio.load(html);
+      for (const selector of logoSelectors) {
+        const el = $(selector).first();
+        let src = el.attr("href") || el.attr("src");
+        if (src) {
+          if (src.startsWith("//")) src = "https:" + src;
+          else if (src.startsWith("/")) src = new URL(src, url).href;
 
-      if (await isLogoUrlValid(src)) {
-        finalLogoUrl = src;
-        break;
+          if (await isLogoUrlValid(src)) {
+            finalLogoUrl = src;
+            break;
+          }
+        }
       }
     }
-  }
-}
     const record = await prisma.website_scraped_data.create({
       data: {
         website_id: websiteId,
@@ -431,12 +417,12 @@ if (!finalLogoUrl) {
         linkedin_handle: linkedin,
         youtube_handle: youtube,
         tiktok_handle: tiktok,
-        isCrawlable:isCrawlable,
-        headingAnalysis:headingAnalysis,
+        isCrawlable: isCrawlable,
+        headingAnalysis: headingAnalysis,
         ctr_loss_percent: CTR_Loss_Percent,
         sitemap_pages: filteredPages,
         schema_analysis: JSON.stringify(schemaAnalysisData),
-        homepage_alt_text_coverage:   homepage_alt_text_coverage,
+        homepage_alt_text_coverage: homepage_alt_text_coverage,
         other_links: otherLinks.length > 0 ? otherLinks : "not found",
         raw_html: html,
         status_code: statusCode,
