@@ -88,6 +88,26 @@ export async function getPageSpeedData(url: string) {
     // SEO audits
     const seoAuditIds = lighthouse.categories["seo"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
     const seoAudits = seoAuditIds.map(getAudit);
+
+
+
+  // const LCP = lighthouse?.largest_contentful_paint?.display_value || 'N/A';
+  // const TBT = lighthouse?.total_blocking_time?.display_value || 'N/A';
+  // const CLS = lighthouse?.cumulative_layout_shift?.display_value || 'N/A';
+
+  const LCP = lighthouse?.audits["largest-contentful-paint"]?.numericValue;
+  const TBT = lighthouse?.audits["total-blocking-time"]?.numericValue;
+  const CLS = lighthouse?.audits["cumulative-layout-shift"]?.numericValue;
+
+  const lcpSeconds = LCP / 1000;
+  const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10);
+  const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
+
+    console.log("Revenue Loss Formula:");
+    console.log(fullExpression);
+  
+  // console.log("revenueLossPercent",revenueLossPercent)
+
     
     return {
       categories: {
@@ -111,6 +131,8 @@ export async function getPageSpeedData(url: string) {
         user_access_readiness: user_access_readiness,
         seoAudits: seoAudits,
       },
+
+      revenueLossPercent:revenueLossPercent
     };
   } catch (err: any) {
     console.error(`PageSpeed fetch failed for ${url}:`, err.message);

@@ -1,7 +1,3 @@
-
-
-
-
 import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import * as microdata from 'microdata-node';

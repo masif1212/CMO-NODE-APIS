@@ -9,11 +9,7 @@ interface CMORecommendationInput {
   website_id: string;
 }
 
-interface DashboardRecommendations {
-  dashboard1?: string; // Website analytics
-  dashboard2?: string; // Social media
-  dashboard3?: string; // Competitor analysis
-}
+
 
 interface CMORecommendationOutput {
   recommendation_by_cmo: string;
@@ -31,7 +27,7 @@ export class CMORecommendationService {
   }
 
   private async fetchRecommendations(user_id: string, website_id: string) {
-    const [llmResponse, website, requirement] = await Promise.all([
+    const [llmResponse, website, requirement,analysis_status] = await Promise.all([
       this.prisma.llm_responses.findUnique({
         where: { website_id },
         select: {
@@ -58,6 +54,13 @@ export class CMORecommendationService {
           USP: true,
         },
       }),
+      this.prisma.analysis_status.findUnique({
+        where: { user_id_website_id: { user_id, website_id } },
+        select: {
+          user_id: true,
+          competitor_details: true,
+        },
+      }),
     ]);
 
     if (!website || website.user_id !== user_id) {
@@ -70,6 +73,7 @@ export class CMORecommendationService {
       dashboard3: llmResponse?.recommendation_by_mo_dashboard3 || null,
       website,
       requirement,
+      competitor_details: analysis_status?.competitor_details || null, 
     };
   }
 
@@ -81,12 +85,15 @@ export class CMORecommendationService {
         dashboard3: competitor_analysis,
         website,
         requirement,
+        competitor_details,
       } = await this.fetchRecommendations(input.user_id, input.website_id);
 
       const allData = {
         website_analytics,
         social_media,
         competitor_analysis,
+        competitor_details,
+
       };
 
       const executiveCMOPrompt = `
@@ -104,8 +111,8 @@ Act as the Chief Marketing Officer for the following brand, and generate a full 
 ### Data Inputs
 ${website_analytics ? '- Website Analytics: available' : ''}
 ${social_media ? '- Social Media Performance: available' : ''}
-${competitor_analysis ? '- Competitor Analysis: available' : ''}
-${!website_analytics && !social_media && !competitor_analysis ? '- No performance data available. Use best practices.' : ''}
+${competitor_analysis ? ' - Competitor Analysis: available' : ''}
+${competitor_details ? '- Competitor Details (raw): available' : ''}
 
 ---
 
