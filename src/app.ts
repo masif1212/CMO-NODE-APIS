@@ -1,17 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
-import * as expressSession from "express-session";
-import MySQLStoreFactory from "express-mysql-session";
-import mysql from "mysql2";
-
-// All routers must be express.Router() objects
+import session from "express-session";
 import usersRouter from "./modules/users/router";
 import pageSpeedRouter from "./modules/dashboard1/website_audit/router";
-import authRouter from "./modules/dashboard1/traffic_analysis/router";
-import { dashboardRouter1 } from "./modules/dashboard1/traffic_analysis/router";
+import authRouter, { dashboardRouter1 } from "./modules/dashboard1/traffic_analysis/router";
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/dashboard2/router";
@@ -24,52 +19,44 @@ import cmoRecommendationRouter from "./modules/dashboard4/router";
 
 const app = express();
 
-// Basic middlewares
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check routes (explicitly typed)
-
+// Health check
 app.get("/", (_req, res) => {
-  res.send("Hello"); // ✅ Will NOT throw error unless something above breaks Express types
+  res.send("Hello");
 });
-app.get("/healthz", (_req: Request, res: Response) => {
+
+app.get("/healthz", (req, res) => {
   res.status(200).send("OK");
 });
 
-// CORS setup
+// === ✅ CORS CONFIGURATION ===
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_BASE_URL,
-    credentials: true,
+    origin: process.env.NEXT_PUBLIC_BASE_URL, // e.g. https://your-frontend.com
+    credentials: true, // Required to allow cookies to be sent
   })
 );
 
-// Enable 'trust proxy' if behind reverse proxy (e.g. Google Cloud Run)
-app.set("trust proxy", 1);
-
-// ✅ MySQL session store using URI and Pool, with types bypassed for compatibility
-const pool = mysql.createPool(process.env.DATABASE_URL!);
-const MySQLStore = MySQLStoreFactory(expressSession) as any;
-const sessionStore = new MySQLStore({}, pool);
-
-// ✅ Session middleware
+// === ✅ SESSION CONFIGURATION ===
 app.use(
-  expressSession.default({
+  session({
+    name: "connect.sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
-    store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24,
+      secure: true, // Must be true on HTTPS (Cloud Run)
+      sameSite: "none", // Must be "none" for cross-origin cookies
+      maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
   })
 );
 
-// ✅ API Routes — all must be Router objects
+// Routers
 app.use("/api/main_dashboard", mainDashboard);
 app.use("/api/user-requirements", userRequirementsRouter);
 app.use("/api/scrape", routes);

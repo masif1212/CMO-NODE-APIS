@@ -24,7 +24,6 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - NODE_ENV_SECRET # Added NODE_ENV secret
     args:
       - "-c"
       - |
@@ -42,7 +41,6 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --set-secrets=NODE_ENV=NODE_ENV_SECRET:latest \ # Added NODE_ENV secret
           --max-retries=3 \
           --task-timeout=10m
 
@@ -73,7 +71,6 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - NODE_ENV_SECRET # Added NODE_ENV secret
     args:
       - "-c"
       - |
@@ -92,7 +89,6 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
-          --set-secrets=NODE_ENV=NODE_ENV_SECRET:latest \ # Added NODE_ENV secret
           --no-allow-unauthenticated \
           --port=3001
 
@@ -118,8 +114,6 @@ availableSecrets:
       env: "OPENAI_API_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/next-public-base-url/versions/latest
       env: "NEXT_PUBLIC_BASE_URL_SECRET"
-    - versionName: projects/$PROJECT_ID/secrets/node-env/versions/latest # Added NODE_ENV secret mapping
-      env: "NODE_ENV_SECRET"
 
 options:
   logging: CLOUD_LOGGING_ONLY
