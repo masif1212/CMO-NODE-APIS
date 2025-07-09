@@ -48,53 +48,26 @@ app.use(
 // Cloud Run acts as a reverse proxy, and without this, Express/express-session
 // will not correctly identify the connection as HTTPS, even if it is.
 // This is crucial for the 'secure' cookie flag to work.
-app.set("trust proxy", 1);
+app.set("trust proxy", 1); // Crucial for Cloud Run
 
-// Configure MySQL session store options using a single connection URI
-const sessionStoreOptions = {
-  // Use 'uri' to provide the full connection string from your environment variables
-  uri: process.env.DATABASE_URL,
-  clearExpired: true, // Clear expired sessions from the database
-  checkExpirationInterval: 900000, // How frequently to check for expired sessions (15 minutes)
-  expiration: 1000 * 60 * 60 * 24, // The maximum age of a valid session (1 day)
-  createDatabaseTable: true, // Create the sessions table automatically if it doesn't exist
-  endConnectionOnClose: true, // End the MySQL connection when the store is closed
-};
-
-// Create a new MySQLStore instance
-const sessionStore = new MySQLStore(sessionStoreOptions);
-
-// Session setup for Google auth
 app.use(
   session({
-    secret: process.env.SESSION_SECRET!, // A strong, randomly generated secret is crucial for production
-    resave: false, // Do not save session if unmodified
-    saveUninitialized: false, // Do not create a session until something is stored (e.g., after successful login)
-
-    // Configure the MySQL session store
-    store: sessionStore,
-
+    secret: process.env.SESSION_SECRET!,
+    resave: false,
+    saveUninitialized: false,
+    store: new MySQLStore({
+      uri: process.env.DATABASE_URL,
+      clearExpired: true,
+      checkExpirationInterval: 900000,
+      expiration: 1000 * 60 * 60 * 24,
+      createDatabaseTable: true,
+      endConnectionOnClose: true,
+    }),
     cookie: {
-      // Set 'secure' to true in production. This ensures the cookie is only sent over HTTPS.
-      // This requires 'app.set("trust proxy", 1)' if behind a proxy like Cloud Run.
       secure: process.env.NODE_ENV === "production",
-
-      // 'httpOnly' prevents client-side JavaScript from accessing the cookie, enhancing security.
       httpOnly: true,
-
-      // 'sameSite' is critical for cross-origin requests.
-      // 'none' allows cross-site cookies, but REQUIRES 'secure: true'.
-      // 'lax' is a good default for same-site, but might not work for your OAuth redirect if domains differ.
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-
-      // 'maxAge' sets the expiration time for the cookie (in milliseconds).
-      // This should match the 'expiration' setting in your MySQLStore options.
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
-
-      // 'domain' can be set if your frontend and backend are on different subdomains
-      // of the same main domain (e.g., app.example.com and api.example.com).
-      // Otherwise, leave it undefined; the browser will set it to the host that set the cookie.
-      // domain: process.env.NODE_ENV === "production" ? ".yourdomain.com" : undefined,
+      maxAge: 1000 * 60 * 60 * 24,
     },
   })
 );
