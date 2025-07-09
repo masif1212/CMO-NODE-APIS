@@ -28,7 +28,7 @@ export const startGoogleAuth = (req: Request, res: Response) => {
     prompt: "consent",
     scope: scopes,
   });
-  console.log(authUrl, "THIS IS THE REDIRECT URL TO THE GOOGLE AUTH PAGE");
+
   res.redirect(authUrl);
 };
 
@@ -72,35 +72,22 @@ export const startGoogleAuth = (req: Request, res: Response) => {
 
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
-  console.log("Received Authorization Code:", code);
-
+  // console.log("Received Authorization Code:", code);
+  // console.log("Configured Redirect URI:", oAuth2Client.redirectUri); // Cannot access private property
   try {
     const { tokens } = await oAuth2Client.getToken(code);
-    console.log("Tokens Received (Access Token Present):", !!tokens.access_token); // Log presence of access token
+    // console.log("Tokens Received:", tokens.access_token, tokens.refresh_token);
     oAuth2Client.setCredentials(tokens);
     const idToken = tokens.id_token;
     const decodedToken = jwt.decode(idToken as string);
     const userId = (decodedToken as any).sub;
-
-    // Before setting session, log current session ID (might be new or existing)
-    console.log("Session ID BEFORE assignment:", req.session.id);
-
     req.session.user = {
       userId,
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token,
       profile: decodedToken,
     };
-
-    // After setting session, log the new/updated session ID
-    console.log("Session ID AFTER assignment:", req.session.id);
-    console.log("Session User Data Set:", req.session.user);
-
-    // Log the Set-Cookie header that Express is sending
-    // This is the most crucial part for debugging the cookie issue
-    const setCookieHeader = res.getHeader("Set-Cookie");
-    console.log("Response Set-Cookie Header:", setCookieHeader);
-
+    // console.log("Session Updated:", req.session.user);
     res.send(`
       <script>
         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');

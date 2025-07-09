@@ -23,20 +23,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get("/", (_req, res) => {
-  res.send("Hello");
-});
-
-app.get("/healthz", (req, res) => {
-  res.status(200).send("OK");
-});
+// ✅ Trust the first proxy hop (essential for Cloud Run)
+app.set("trust proxy", 1);
 
 // === ✅ CORS CONFIGURATION ===
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_BASE_URL || "https://cmo-nextjs-app-199341392650.us-central1.run.app", // e.g. https://your-frontend.com
-    credentials: true, // Required to allow cookies to be sent
+    origin: process.env.NEXT_PUBLIC_BASE_URL || "https://cmo-nextjs-app-199341392650.us-central1.run.app",
+    credentials: true,
   })
 );
 
@@ -49,13 +43,12 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true, // Must be true on HTTPS (Cloud Run)
-      sameSite: "none", // Must be "none" for cross-origin cookies
+      secure: true, // This now works correctly because of 'trust proxy'
+      sameSite: "none", // Required for cross-domain cookies
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
   })
 );
-
 // Routers
 app.use("/api/main_dashboard", mainDashboard);
 app.use("/api/user-requirements", userRequirementsRouter);

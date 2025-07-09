@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/faatimamir/CMO-NODE-APIS#readme",
   "dependencies": {
+    "@google-cloud/connect-firestore": "^3.0.0",
     "@prisma/client": "^6.6.0",
     "@types/express-mysql-session": "^3.0.6",
     "ajv": "^8.17.1",
