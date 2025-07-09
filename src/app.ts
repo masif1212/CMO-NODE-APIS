@@ -35,7 +35,7 @@ app.get("/healthz", (req, res) => {
 // === ✅ CORS CONFIGURATION ===
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_BASE_URL, // e.g. https://your-frontend.com
+    origin: process.env.NEXT_PUBLIC_BASE_URL || "https://cmo-nextjs-app-199341392650.us-central1.run.app", // e.g. https://your-frontend.com
     credentials: true, // Required to allow cookies to be sent
   })
 );
