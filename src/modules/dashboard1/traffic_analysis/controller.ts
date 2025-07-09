@@ -4,7 +4,7 @@ import { getUserProperties, getAnalyticsSummary } from "./service";
 import jwt from "jsonwebtoken";
 import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import { generateLLMTrafficReport } from "../llm_dashboard1";
 
 import * as cheerio from "cheerio";
@@ -28,7 +28,7 @@ export const startGoogleAuth = (req: Request, res: Response) => {
     prompt: "consent",
     scope: scopes,
   });
-
+  console.log(authUrl, "THIS IS THE REDIRECT URL TO THE GOOGLE AUTH PAGE");
   res.redirect(authUrl);
 };
 
@@ -69,7 +69,6 @@ export const startGoogleAuth = (req: Request, res: Response) => {
 //     `);
 //   }
 // };
-
 
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
@@ -147,7 +146,7 @@ export const fetchProperties = async (req: Request, res: Response) => {
     return res.status(500).json({ error: err.message });
   }
 };
-  
+
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   const { property_id, website_id, user_id } = req.body;
   console.log("Request Body:", req.body);
@@ -203,59 +202,55 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
         updated_at: new Date(),
       },
     });
- const scrapedMeta = await prisma.website_scraped_data.findUnique({
-  where: { website_id },
-  select: {
-    page_title: true,
-    meta_description: true,
-    meta_keywords: true,
-    og_title: true,
-    og_description: true,
-    og_image: true,
-    ctr_loss_percent: true,
-    raw_html: true,
-    homepage_alt_text_coverage: true,
-    status_message: true,
-    status_code: true,
-    ip_address: true,
-    response_time_ms: true,
-    
-  },
-});
+    const scrapedMeta = await prisma.website_scraped_data.findUnique({
+      where: { website_id },
+      select: {
+        page_title: true,
+        meta_description: true,
+        meta_keywords: true,
+        og_title: true,
+        og_description: true,
+        og_image: true,
+        ctr_loss_percent: true,
+        raw_html: true,
+        homepage_alt_text_coverage: true,
+        status_message: true,
+        status_code: true,
+        ip_address: true,
+        response_time_ms: true,
+      },
+    });
 
-  let h1Text = "Not Found";
+    let h1Text = "Not Found";
 
-if (scrapedMeta?.raw_html ) {
-  try {
-    console.log("parsing HTML...");
-    // console.log("Raw HTML Length:", scrapedMeta.raw_html);
-    const $ = cheerio.load(scrapedMeta.raw_html);
+    if (scrapedMeta?.raw_html) {
+      try {
+        console.log("parsing HTML...");
+        // console.log("Raw HTML Length:", scrapedMeta.raw_html);
+        const $ = cheerio.load(scrapedMeta.raw_html);
 
-    h1Text = $("h1").first().text().trim() || "Not Found";
-    console.log("H1 Text:", h1Text);
-  } catch (err) {
-    if (err instanceof Error) {
-      console.warn("Cheerio failed to parse HTML:", err.message);
+        h1Text = $("h1").first().text().trim() || "Not Found";
+        console.log("H1 Text:", h1Text);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.warn("Cheerio failed to parse HTML:", err.message);
+        } else {
+          console.warn("Cheerio failed to parse HTML:", err);
+        }
+        // Skips setting h1Text if error happens
+      }
     } else {
-      console.warn("Cheerio failed to parse HTML:", err);
+      console.warn("Cheerio.load not available or raw_html missing");
     }
-    // Skips setting h1Text if error happens
-  }
-} else {
-  console.warn("Cheerio.load not available or raw_html missing");
-}
 
- const {
-  raw_html, 
-  ...metaDataWithoutRawHtml
-} = scrapedMeta || {};
+    const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
 
     return res.status(200).json({
       message: "seo audit",
       traffic_anaylsis: savedTraffic,
-      onpage_opptimization:{
-      h1Text,
-      metaDataWithoutRawHtml,
+      onpage_opptimization: {
+        h1Text,
+        metaDataWithoutRawHtml,
       },
       // raw_html: scrapedMeta?.raw_html,
     });
@@ -268,18 +263,16 @@ if (scrapedMeta?.raw_html ) {
   }
 };
 
-
-
 export const dashborad1_Recommendation = async (req: Request, res: Response) => {
   // console.log("dashborad1_Recommendation called");
-  const {website_id, user_id } = req.body;
+  const { website_id, user_id } = req.body;
 
   console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_res = await generateLLMTrafficReport(website_id,user_id)
+    const llm_res = await generateLLMTrafficReport(website_id, user_id);
 
     if (!llm_res) {
       return res.status(404).json({ message: "No recommendations found" });
@@ -292,41 +285,41 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
         },
       },
       update: {
-        dashboard1: "true", 
+        dashboard1: "true",
         updated_at: new Date(),
       },
       create: {
         user_id,
         website_id,
-        dashboard1: "true", 
+        dashboard1: "true",
         created_at: new Date(),
         updated_at: new Date(),
       },
     });
     let recommendation = null;
-          console.log("in ana")
-          recommendation = await prisma.llm_responses.findUnique({
-            where: { website_id: website_id }, // Updated to use website_id
-            select: {
-              id: true,
-              website_id: true,
-              recommendation_by_mo_dashboard1: true,
-              // recommendation_by_mo_dashboard2:true,
-              // recommendation_by_mo_dashboard3:true,
-              // geo_llm:true,
-              // recommendation_by_cmo: true,
-            },
-          });
-          function safeParse(jsonStr: any) {
-  try {
-    return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-  } catch (e) {
-    console.error("JSON parse failed:", e);
-    return jsonStr; // fallback to raw string
-  }
-}
-      const recommendation_by_mo_dashboard1 = safeParse(recommendation?.recommendation_by_mo_dashboard1);
-return res.status(200).json({ recommendation_by_mo_dashboard1 });
+    console.log("in ana");
+    recommendation = await prisma.llm_responses.findUnique({
+      where: { website_id: website_id }, // Updated to use website_id
+      select: {
+        id: true,
+        website_id: true,
+        recommendation_by_mo_dashboard1: true,
+        // recommendation_by_mo_dashboard2:true,
+        // recommendation_by_mo_dashboard3:true,
+        // geo_llm:true,
+        // recommendation_by_cmo: true,
+      },
+    });
+    function safeParse(jsonStr: any) {
+      try {
+        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      } catch (e) {
+        console.error("JSON parse failed:", e);
+        return jsonStr; // fallback to raw string
+      }
+    }
+    const recommendation_by_mo_dashboard1 = safeParse(recommendation?.recommendation_by_mo_dashboard1);
+    return res.status(200).json({ recommendation_by_mo_dashboard1 });
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
