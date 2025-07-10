@@ -529,8 +529,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
       },
     });
-    // console.log("LLM response saved successfully for website_id:", combinedOutput);
-    // Update analysis status
+   
     await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
@@ -539,12 +538,12 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         },
       },
       update: {
-        recommendation_by_mo1: JSON.stringify({recommendation_by_mo_dashboard1: combinedOutput}),
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
       create: {
         user_id,
         website_id,
-        recommendation_by_mo1: JSON.stringify({recommendation_by_mo_dashboard1: combinedOutput}),
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
     });
     console.log("LLM response saved successfully for website_id:", website_id);

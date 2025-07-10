@@ -32,45 +32,6 @@ export const startGoogleAuth = (req: Request, res: Response) => {
   res.redirect(authUrl);
 };
 
-// export const handleGoogleCallback = async (req: Request, res: Response) => {
-//   const code = req.query.code as string;
-
-//   if (!code) return res.status(400).send("Missing authorization code");
-
-//   try {
-//     const { tokens } = await oAuth2Client.getToken(code);
-//     oAuth2Client.setCredentials(tokens);
-
-//     const idToken = tokens.id_token;
-//     const decodedToken = jwt.decode(idToken as string);
-//     const userId = (decodedToken as any).sub;
-
-//     req.session.user = {
-//       userId,
-//       accessToken: tokens.access_token!,
-//       refreshToken: tokens.refresh_token,
-//       profile: decodedToken,
-//     };
-
-//     // Send HTML response that will close the popup and notify the parent window
-//     res.send(`
-//       <script>
-//         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
-//         window.close();
-//       </script>
-//     `);
-//   } catch (err) {
-//     console.error("OAuth2 callback error:", err);
-//     res.send(`
-//       <script>
-//         window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
-//         window.close();
-//       </script>
-//     `);
-//   }
-// };
-
-
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
   // console.log("Received Authorization Code:", code);

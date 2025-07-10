@@ -471,8 +471,8 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     if (analysisStatus?.recommendation_by_mo1 != null) {
       responsePayload.recommendation_by_mo_dashboard1 = safeParse(analysisStatus.recommendation_by_mo1);
     }
-    if (recommendation?.recommendation_by_mo_dashboard2 != null) {
-      responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
+    if (analysisStatus?.recommendation_by_mo2 != null) {
+      responsePayload.recommendation_by_mo_dashboard2 = safeParse(analysisStatus.recommendation_by_mo2);
     }
     if (analysisStatus?.recommendation_by_mo3 != null) {
       responsePayload.recommendation_by_mo_dashboard3 = safeParse(analysisStatus.recommendation_by_mo3);

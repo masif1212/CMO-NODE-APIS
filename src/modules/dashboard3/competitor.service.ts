@@ -110,10 +110,10 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
   const processedUrls = new Set<string>([website_url]);
   const processedNames = new Set<string>();
 
-  await prisma.competitor_details.deleteMany({ where: { website_id } });
-  console.log(`[T+${performance.now() - t0}ms] Cleared old competitor_details`);
+  // await prisma.competitor_details.deleteMany({ where: { website_id } });
+  // console.log(`[T+${performance.now() - t0}ms] Cleared old competitor_details`);
 
-  const limit = pLimit(2); // adjust concurrency as needed
+  const limit = pLimit(4); // adjust concurrency as needed
   let orderIndex = 0;
   const browser = await puppeteer.launch({ headless: true });
 
