@@ -124,9 +124,14 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
   const CLS = lighthouse?.audits["cumulative-layout-shift"]?.numericValue;
 
   const lcpSeconds = LCP / 1000;
-  const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10);
+  // const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10).toFixed(2);
+  // const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
+    const rawRevenueLoss = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10);
+const revenueLossPercent = Number(rawRevenueLoss.toFixed(2));
   const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
 
+    console.log("Revenue Loss Formula:");
+    console.log(fullExpression);
     console.log("Revenue Loss Formula:");
     console.log(fullExpression);
   
