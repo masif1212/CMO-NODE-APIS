@@ -1,12 +1,24 @@
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { PayAsYouGo, Subscription, WebHook } from './paymentController';
+// -------------------------------------------------
+// FILE: paymentRoutes.ts (Corrected)
+// -------------------------------------------------
+import { Router } from "express";
+import { authenticateToken } from "../middleware/auth"; // Assuming this middleware exists
+import { payAsYouGo, savePaymentMethod, getPaymentHistory, webhookHandler } from "./paymentController";
+import express from "express";
 
-const PaymentRouter = Router();
+const paymentRouter = Router();
 
-PaymentRouter.post('/subscribe', authenticateToken, Subscription);
-PaymentRouter.post('/analyze', authenticateToken, PayAsYouGo)
-PaymentRouter.post('/webhook', WebHook)
+// Route for pay-as-you-go analysis
+paymentRouter.post("/analyze", authenticateToken, payAsYouGo);
 
+// Route to save a payment method
+paymentRouter.post("/methods", authenticateToken, savePaymentMethod);
 
-export default PaymentRouter;
+// Route to get payment history
+paymentRouter.get("/history", authenticateToken, getPaymentHistory);
+
+// Webhook route for Checkout.com
+// It needs a raw body, so we use express.raw() middleware
+paymentRouter.post("/webhook", express.raw({ type: "application/json" }), webhookHandler);
+
+export default paymentRouter;
