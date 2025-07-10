@@ -73,6 +73,7 @@ export interface CTRLossPercent {
 }
 
 export interface BrandProfile_logo {
+  website_url: string | null;
   logo_url: string | null;
   ctr_loss_percent:CTRLossPercent | null,
 }

@@ -1,30 +1,25 @@
 import { PrismaClient } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
-import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM, createComparisonPrompt } from './llm';
-import { parseCompetitorData } from './parser';
-import { getPageSpeedData } from './pagespeed';
 import OpenAI from 'openai';
 import 'dotenv/config';
 import * as cheerio from "cheerio";
-import axios from 'axios';
 import { promisify } from 'util';
 import dns from 'dns'; // Node.js built-in DNS module
 const resolve4 = promisify(dns.resolve4);
-import puppeteer from 'puppeteer';
-import { url } from 'inspector';
-import { string, boolean } from 'zod';
-
+import puppeteer, { Browser } from 'puppeteer';
+import fetch from 'node-fetch'; 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
-const model = process.env.OPENAI_MODEL || 'gpt-4.1';
+
+
+type ValidationResult = {
+  isValid: boolean;
+  preferredUrl?: string;
+  reason?: string;
+};
+import pLimit from 'p-limit';
 
 const prisma = new PrismaClient();
-
-
-
-
-
 
 export  function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
   const passedAudits: { title: string; description: string }[] = [];
@@ -118,179 +113,247 @@ export  function processSeoAudits(auditData: any[]): { passedAudits: { title: st
 
   return { passedAudits, failedAudits };
 }
-async function extractMetaRedirect(html: string): Promise<string | null> {
-    const $ = cheerio.load(html);
-    const metaRefresh = $('meta[http-equiv="refresh" i]');
-    if (metaRefresh.length > 0) {
-      const content = metaRefresh.attr('content');
-      if (content) {
-        const match = content.match(/url=(.+)/i);
-        if (match && match[1]) {
-          console.log(`Found meta refresh redirect to: ${match[1]}`);
-          return match[1].trim();
-        }
-      }
-    }
-    return null;
+
+const dnsCache = new Map<string, string[]>();
+
+export async function resolveDnsCached(hostname: string): Promise<string[]> {
+  if (dnsCache.has(hostname)) {
+    const cached = dnsCache.get(hostname);
+    return Array.isArray(cached) ? cached : [];
   }
 
-  // Helper function to resolve DNS
-async function resolveDns(hostname: string): Promise<string[]> {
   try {
     const addresses = await resolve4(hostname);
-    console.log(`DNS resolved for ${hostname}: ${addresses.join(', ')}`);
+    dnsCache.set(hostname, addresses);
     return addresses;
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error(`DNS resolution failed for ${hostname}: ${errorMessage}`);
+    console.warn(`DNS resolve failed for ${hostname}: ${err}`);
+    dnsCache.set(hostname, []); // cache negative result
     return [];
   }
 }
 
-  // Helper function to validate URLs
+
+async function extractMetaRedirect(html: string): Promise<string | null> {
+  const $ = cheerio.load(html);
+  const meta = $('meta[http-equiv="refresh" i]');
+  const content = meta.attr('content');
+  if (content) {
+    const match = content.match(/url=(.+)/i);
+    if (match?.[1]) return match[1].trim();
+  }
+  return null;
+}
+
+function isHomepagePath(path: string): boolean {
+  const normalized = path.replace(/\/+$/, '').toLowerCase() || '/';
+
+  const acceptedHomepagePaths = new Set([
+    '/', '/home', '/index', '/welcome',
+    '/en', '/us', '/uk', // common locale codes
+  ]);
+
+  return (
+    acceptedHomepagePaths.has(normalized) ||
+    /^\/(country\/[a-z]{2}|[a-z]{2})$/i.test(normalized)
+  );
+}
+// async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
+//   let page;
+//   try {
+//     page = await browser.newPage();
+//     await page.setUserAgent('Mozilla/5.0');
+//     await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 });
+
+//     let finalUrl = page.url();
+//     const html = await page.content();
+
+//     const metaRedirect = await extractMetaRedirect(html);
+//     if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
+
+//     const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, '') || '/';
+//     return { valid: isHomepagePath(finalPath), finalUrl };
+//   } catch (err) {
+//     console.error(`Check failed for ${url}: ${err}`);
+//     return { valid: false };
+//   } finally {
+//     if (page) {
+//       try {
+//         await page.close();
+//       } catch (err) {
+//         console.warn(`Failed to close page for ${url}:`, err);
+//       }
+//     }
+//   }
+// }
+
+async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
+  let page;
+  try {
+    page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0');
+
+    // Fail fast (lower timeout), and don't wait for all resources
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+
+    let finalUrl = page.url();
+    const html = await page.content();
+
+    const metaRedirect = await extractMetaRedirect(html);
+    if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
+
+    const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, '') || '/';
+    return { valid: isHomepagePath(finalPath), finalUrl };
+  } catch (err) {
+    console.error(`Check failed for ${url}: ${err}`);
+    return { valid: false };
+  } finally {
+    if (page) {
+      try {
+        await page.close();
+      } catch (err) {
+        console.warn(`Failed to close page for ${url}:`, err);
+      }
+    }
+  }
+}
+
+async function isHttpStatus200(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+    return res.status === 200;
+  } catch (err) {
+    console.warn(`Quick status check failed for ${url}:`, err);
+    return false;
+  }
+}
+
 export async function isValidCompetitorUrl(
   url: string,
-  competitorName?: string
-): Promise<{ isValid: boolean; preferredUrl?: string }> {
+  competitorName?: string,
+  sharedBrowser?: Browser
+): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
+  let browser: Browser | null = sharedBrowser || null;
+  let browserLaunchedHere = false;
+
   try {
-    console.log(`Validating URL format for ${url}`);
-    const parsedUrl = new URL(url);
     if (!/^https?:\/\//.test(url)) {
-      console.log(`URL ${url} failed format validation`);
-      return { isValid: false };
+      return { isValid: false, reason: 'URL does not use HTTP or HTTPS' };
     }
 
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+
     const blocklist = [
-      'facebook.com',
-      'twitter.com',
-      'google.com',
-      'youtube.com',
-      'instagram.com',
-      'linkedin.com',
-      'tiktok.com',
-      'example.com',
-      'nonexistent.com',
+      'facebook.com', 'twitter.com', 'google.com', 'youtube.com',
+      'instagram.com', 'linkedin.com', 'tiktok.com', 'example.com', 'nonexistent.com',
     ];
-
-    const { hostname, pathname } = parsedUrl;
-
-    if (blocklist.some(blocked => hostname.includes(blocked))) {
-      console.log(`URL ${url} is in blocklist`);
-      return { isValid: false };
+    if (blocklist.some(b => hostname.includes(b))) {
+      return { isValid: false, reason: `Hostname "${hostname}" is in the blocklist` };
     }
 
     if (competitorName) {
       const normalizedName = competitorName.toLowerCase().replace(/\s+/g, '');
       if (!hostname.toLowerCase().includes(normalizedName)) {
-        console.log(`URL ${url} does not match competitor name ${competitorName}`);
-        return { isValid: false };
+        return { isValid: false, reason: `Hostname does not include normalized competitor name "${normalizedName}"` };
       }
     }
 
-    const allowedPaths = ['/', '/login', '/signup'];
-    const normalizedPath = pathname.endsWith('/') ? pathname : `${pathname}/`;
-    const normalizedAllowedPaths = allowedPaths.map(path => path.endsWith('/') ? path : `${path}/`);
-
-    if (!normalizedAllowedPaths.includes(normalizedPath)) {
-      console.log(`URL ${url} does not point to homepage, /login, or /signup`);
-      return { isValid: false };
+    // ⚡ Fast HTTP check before launching Puppeteer
+    const isLive = await isHttpStatus200(url);
+    if (!isLive) {
+      return { isValid: false, reason: 'Fast HTTP check failed (non-200 or unreachable)' };
     }
 
-    await resolveDns(hostname);
-
-    let nonWwwUrl: string;
-    let wwwUrl: string;
-    if (hostname.startsWith('www.')) {
-      nonWwwUrl = url.replace('www.', '');
-      wwwUrl = url;
-      await resolveDns(nonWwwUrl.replace(/^https?:\/\//, ''));
-    } else {
-      nonWwwUrl = url;
-      wwwUrl = url.replace(/^https?:\/\/([^/]+)/, 'https://www.$1');
-      await resolveDns(wwwUrl.replace(/^https?:\/\//, ''));
+    const originalDns = await resolveDnsCached(hostname);
+    if (!originalDns.length) {
+      const reason = `DNS resolution failed for hostname "${hostname}"`;
+      console.warn(reason);
+      return { isValid: false, reason };
     }
 
-    let finalUrl = url;
-    let finalPath = normalizedPath;
-    let responseHeaders: Record<string, string> = {};
-    let pageContent: string | null = null;
-    let is301Redirect = false;
-    let redirectTarget: string | null = null;
-
-    try {
-      const browser = await puppeteer.launch({ headless: true });
-      const page = await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 ...');
-      await page.setRequestInterception(true);
-      page.on('request', request => request.continue());
-      page.on('response', response => {
-        if (response.url() === url) {
-          responseHeaders = response.headers();
-          if (response.status() === 301 || response.status() === 302) {
-            is301Redirect = response.status() === 301;
-            redirectTarget = responseHeaders['location'] || null;
-          }
-        }
-      });
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
-
-      const jsRedirect = await page.evaluate(() => window.location.href);
-      if (jsRedirect !== finalUrl) {
-        finalUrl = jsRedirect;
-      }
-
-      finalUrl = page.url();
-      pageContent = await page.content();
-      const finalParsedUrl = new URL(finalUrl);
-      finalPath = finalParsedUrl.pathname.endsWith('/') ? finalParsedUrl.pathname : `${finalParsedUrl.pathname}/`;
-
-      if (pageContent) {
-        const metaRedirect = await extractMetaRedirect(pageContent);
-        if (metaRedirect) {
-          finalUrl = new URL(metaRedirect, url).toString();
-          const metaParsedUrl = new URL(finalUrl);
-          finalPath = metaParsedUrl.pathname.endsWith('/') ? metaParsedUrl.pathname : `${metaParsedUrl.pathname}/`;
-        }
-      }
-
-      await browser.close();
-    } catch (err) {
-      console.error(`Puppeteer failed: ${err instanceof Error ? err.message : err}`);
+    if (!browser) {
+      browser = await puppeteer.launch({ headless: true });
+      browserLaunchedHere = true;
     }
 
-    // Handle 301
-    if (is301Redirect && redirectTarget) {
-      const redirectPath = new URL(redirectTarget).pathname;
-      const normalizedRedirectPath = redirectPath.endsWith('/') ? redirectPath : `${redirectPath}/`;
-      if (normalizedAllowedPaths.includes(normalizedRedirectPath)) {
-        return { isValid: true, preferredUrl: redirectTarget };
-      } else {
-        return { isValid: false };
+    const firstCheck = await checkLandingHomepage(url, browser);
+    if (firstCheck.valid) {
+      return { isValid: true, preferredUrl: firstCheck.finalUrl };
+    }
+
+    // Try alternate www/non-www version
+    const hasWWW = hostname.startsWith('www.');
+    const altHostname = hasWWW ? hostname.replace(/^www\./, '') : `www.${hostname}`;
+    const altUrl = url.replace(hostname, altHostname);
+
+    const altDns = await resolveDnsCached(altHostname);
+    if (!altDns.length) {
+      const reason = `Alternate DNS resolution failed for hostname "${altHostname}"`;
+      console.warn(reason);
+      return { isValid: false, reason };
+    }
+
+    const secondCheck = await checkLandingHomepage(altUrl, browser);
+    if (secondCheck.valid) {
+      return { isValid: true, preferredUrl: secondCheck.finalUrl };
+    }
+
+    return { isValid: false, reason: 'Neither original nor alternate URL led to a valid homepage' };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Validation failed for ${url}:`, err);
+    return { isValid: false, reason: `Unexpected error: ${errorMessage}` };
+  } finally {
+    if (browserLaunchedHere && browser) {
+      try {
+        await browser.close();
+      } catch (err) {
+        console.warn("Failed to close browser:", err);
       }
     }
-
-    const wwwNormalized = url.startsWith('https://www.') ? url : `https://www.${hostname}${finalPath}`;
-const nonWwwNormalized = url.startsWith('https://www.') ? url.replace('www.', '') : url;
-
-if (finalPath === '/') {
-  // If homepage is reached and it's the www version
-  if (hostname.startsWith('www.')) {
-    return { isValid: true, preferredUrl: wwwUrl };
-  } else {
-    // Check if www version redirects to same homepage — no need to use both
-    return { isValid: true, preferredUrl: nonWwwUrl };
   }
 }
 
-// Handle /login or /signup
-if (finalPath === '/login/' || finalPath === '/signup/') {
-  return { isValid: true, preferredUrl: finalUrl };
-}
+const MAX_CONCURRENT_VALIDATIONS = 2;
 
-// Default case
-return { isValid: true, preferredUrl: finalUrl };
+export async function validateCompetitorUrlsInParallel(
+  urls: string[],
+  competitorNames?: (string | undefined)[]
+): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
+  const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
+  let browser: Browser | null = null;
+
+  try {
+    browser = await puppeteer.launch({ headless: true });
+
+    const results = await Promise.all(
+      urls.map((url, index) =>
+        limit(async () => {
+          try {
+            const name = competitorNames?.[index];
+            // const result = await isValidCompetitorUrl(url, name, browser);
+            const result = await isValidCompetitorUrl(url, name, browser ?? undefined);
+            return { url, result };
+          } catch (err) {
+            console.error(`Validation failed for ${url}:`, err);
+            return { url, result: { isValid: false } };
+          }
+        })
+      )
+    );
+
+    return results;
   } catch (err) {
-    console.error(`Validation failed for ${url}: ${err instanceof Error ? err.message : err}`);
-    return { isValid: false };
+    console.error("Failed to validate competitor URLs:", err);
+    return urls.map(url => ({ url, result: { isValid: false } }));
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (err) {
+        console.warn("Failed to close shared browser:", err);
+      }
+    }
   }
 }

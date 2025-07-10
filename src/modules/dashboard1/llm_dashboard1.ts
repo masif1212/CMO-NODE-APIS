@@ -490,7 +490,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     // const seoDisabledPrompt = prompt_web_only;
 
     // Generate LLM response with ratings
-    console.log("Generating LLM response...");
+    console.log("Generating LLM response (recommendation by mo1)...");
     const llmResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
@@ -522,14 +522,14 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     await prisma.llm_responses.upsert({
       where: { website_id },
       update: {
-        recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
+        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
       },
       create: {
         website_id,
-        recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
+        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
       },
     });
-    
+    // console.log("LLM response saved successfully for website_id:", combinedOutput);
     // Update analysis status
     await prisma.analysis_status.upsert({
       where: {
@@ -539,12 +539,12 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         },
       },
       update: {
-        recommendation_by_mo1: "true",
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
       create: {
         user_id,
         website_id,
-        recommendation_by_mo1: "true",
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
     });
     console.log("LLM response saved successfully for website_id:", website_id);
@@ -556,243 +556,3 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
   }
 };
 
-
-
-// Main function to generate LLM traffic report with seo enable 
-// export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
-//   if (!website_id || !user_id) {
-//     return Response.json({ error: "Missing website_id or user_id" }, { status: 400 });
-//   } else {
-//     console.log("Report generation started for website_id:", website_id);
-//   }
-
-//   try {
-//     // Check SEO audit status
-//     const analysisStatus = await prisma.analysis_status.findUnique({
-//       where: {
-//         user_id_website_id: {
-//           user_id,
-//           website_id,
-//         },
-//       },
-//       select: {
-//         seo_audit: true,
-//       },
-//     });
-
-//     const isSeoAuditEnabled = analysisStatus?.seo_audit != null;
-//     console.log("isSeoAuditEnabled", isSeoAuditEnabled);
-
-//     // Fetch data
-//     const [scraped, analysis, traffic, llm_Response] = await Promise.all([
-//       prisma.website_scraped_data.findUnique({ where: { website_id } }),
-//       prisma.brand_website_analysis.findFirst({
-//         where: { website_id },
-//         orderBy: { created_at: "desc" },
-//       }),
-//       isSeoAuditEnabled
-//         ? prisma.brand_traffic_analysis.findFirst({
-//             where: { website_id },
-//             orderBy: { created_at: "desc" },
-//           })
-//         : null,
-//       isSeoAuditEnabled
-//         ? prisma.llm_responses.findFirst({
-//             where: { website_id },
-//             orderBy: { created_at: "desc" },
-//             select: {
-//               geo_llm: true,
-//             },
-//           })
-//         : null,
-//     ]);
-
-//     // Extract H1
-//     let h1Text = "Not Found";
-//     if (scraped?.raw_html) {
-//       const $ = cheerio.load(scraped.raw_html);
-//       h1Text = $("h1").first().text().trim() || "Not Found";
-//     }
-
-//     // Extract optimization opportunities
-//     let optimization_opportunities: any = "None";
-//     if (isSeoAuditEnabled && analysis?.audit_details) {
-//       try {
-//         const auditDetails =
-//           typeof analysis.audit_details === "string"
-//             ? JSON.parse(analysis.audit_details)
-//             : analysis.audit_details;
-//         optimization_opportunities = auditDetails?.optimization_opportunities || "None";
-//       } catch (error) {
-//         console.error("Error parsing audit_details:", error);
-//         optimization_opportunities = "None";
-//       }
-//     }
-
-//     // Extract user access readiness
-//     let user_access_readiness: any = "None";
-//     if (isSeoAuditEnabled && analysis?.audit_details) {
-//       try {
-//         const auditDetails =
-//           typeof analysis.audit_details === "string"
-//             ? JSON.parse(analysis.audit_details)
-//             : analysis.audit_details;
-//         user_access_readiness = auditDetails?.user_access_readiness || "None";
-//       } catch (error) {
-//         console.error("Error parsing audit_details:", error);
-//         user_access_readiness = "None";
-//       }
-//     }
-
-//     // Construct allData
-//     const allData: any = {
-//       Analytics: {
-//         revenue_loss_definition: `*Formula:*
-
-// 1.  *Average Revenue Conversion Loss (Percentage):*
-//     RevenueLoss% = ((LCP - 2.5) × 7) + (((TBT - 200) / 100) × 3) + (CLS × 10)
-
-// *Assumptions and Metric Impacts:*
-
-// * *LCP (Largest Contentful Paint):*
-//     * *Threshold:* 2.5 seconds (s)
-//     * *Impact:* For every 1 second (s) that LCP exceeds 2.5s, there is an estimated 7% drop in conversions.
-// * *TBT (Total Blocking Time):*
-//     * *Threshold:* 200 milliseconds (ms)
-//     * *Impact:* For every 100 milliseconds (ms) that TBT exceeds 200ms, there is an estimated 3% drop in conversions.
-// * *CLS (Cumulative Layout Shift):*
-//     * *Threshold:* 0.1 units
-//     * *Impact:* For every 1.0 unit increase in CLS, there is an estimated 10% drop in conversions.
-
-// *Interpretation of Results:*
-
-// * *Positive RevenueLoss%:*
-//     * A positive result indicates a *projected revenue loss* due to the current performance metrics exceeding the defined thresholds. The higher the positive number, the greater the anticipated negative impact on conversion rates, and by extension, revenue.
-// * *Negative RevenueLoss%:*
-//     * A negative result indicates that the current performance metrics are *better than the defined thresholds*.
-//     * This suggests that these specific performance aspects are not contributing to conversion loss, and may even be positively impacting user experience, leading to potentially higher conversions. In essence, a negative value signifies a "good" or "optimal" performance state relative to these thresholds, indicating no estimated revenue loss from these factors. 
-//         Current value: ${analysis?.revenue_loss_percent ?? "N/A"}%`,
-//         ctr_loss_percent: scraped?.ctr_loss_percent ?? "N/A",
-//       },
-//       website_audit: {
-//         lcp: analysis?.largest_contentful_paint ?? "N/A",
-//         cls: analysis?.cumulative_layout_shift ?? "N/A",
-//         fcp: analysis?.first_contentful_paint ?? "N/A",
-//         speed_index: analysis?.speed_index ?? "N/A",
-//         tti: analysis?.time_to_interactive ?? "N/A",
-//         tbt: analysis?.total_blocking_time ?? "N/A",
-//         performance_score: analysis?.performance_score ?? "N/A",
-//         // optimization_opportunities: optimization_opportunities,
-//       },
-//     };
-
-//     if (isSeoAuditEnabled && traffic) {
-//       allData.traffic = {
-//         avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
-//         engagement_rate: traffic?.engagement_rate ?? "N/A",
-//         engaged_sessions: traffic?.engaged_sessions ?? "N/A",
-//         total_visitors: traffic?.total_visitors ?? "N/A",
-//         unique_visitors: traffic?.unassigned ?? "N/A",
-        
-//         new_vs_returning: traffic?.new_vs_returning ?? "N/A",
-//         top_countries: traffic?.top_countries ?? "N/A",
-//         top_devices: traffic?.top_devices ?? "N/A",
-//       };
-
-//       allData.onpage_opptimization = {
-//         title: scraped?.page_title ?? "N/A",
-//         description: scraped?.meta_description ?? "N/A",
-//         keywords: scraped?.meta_keywords ?? "N/A",
-//         h1: h1Text,
-//         og: {
-//           title: scraped?.og_title ?? "N/A",
-//           description: scraped?.og_description ?? "N/A",
-//           image: scraped?.og_image ? "Present" : "Missing",
-//         },
-//         homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
-//       };
-
-//       allData.technical_seo = {
-//         schema: scraped?.schema_analysis ?? "None",
-//         no_of_broken_links: analysis?.total_broken_links ?? "N/A",
-//         broken_links: analysis?.broken_links ?? "N/A",
-//         // user_access_readiness: user_access_readiness ?? "None",
-//       };
-
-//       allData.Geo = {
-//         schema: scraped?.schema_analysis ?? "None",
-//         AI_discovilibilty: llm_Response?.geo_llm ?? "None",
-//         appears_accross_bing: traffic?.top_sources ?? "N/A",
-//       };
-//     }
-
-//     // Define prompts
-//     const seoEnabledPrompt = prompt_web_and_seo; // Use updated prompt for both cases; update prompt_web_and_seo if needed
-//     const seoDisabledPrompt = prompt_web_only;
-
-//     // Generate LLM response with ratings
-//     console.log("Generating LLM response...");
-//     const llmResponse = await openai.chat.completions.create({
-//       model: model,
-//       temperature: 0.5,
-//       response_format: { type: "json_object" },
-//       messages: [
-//         {
-//           role: "system",
-//           content: isSeoAuditEnabled ? seoEnabledPrompt : seoDisabledPrompt,
-//         },
-//         { role: "user", content: JSON.stringify(allData) },
-//       ],
-//     });
-
-//     const llmContent = llmResponse.choices[0].message.content
-//       ? JSON.parse(llmResponse.choices[0].message.content)
-//       : { whats_working: {}, what_needs_fixing: {}, recommendations: {} };
-
-//     // Validate recommendations
-//     const validatedContent = validateRecommendations(llmContent);
-
-//     // Normalize output
-//     const combinedOutput = normalizeAuditOutput(validatedContent);
-//     if (combinedOutput) {
-//       console.log("LLM response generated successfully:");
-//     }
-
-//     // Save to database
-//     console.log("Saving LLM response to database...");
-//     await prisma.llm_responses.upsert({
-//       where: { website_id },
-//       update: {
-//         recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
-//       },
-//       create: {
-//         website_id,
-//         recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
-//       },
-//     });
-    
-//     // Update analysis status
-//     await prisma.analysis_status.upsert({
-//       where: {
-//         user_id_website_id: {
-//           user_id,
-//           website_id,
-//         },
-//       },
-//       update: {
-//         recommendation_by_mo1: "true",
-//       },
-//       create: {
-//         user_id,
-//         website_id,
-//         recommendation_by_mo1: "true",
-//       },
-//     });
-//     console.log("LLM response saved successfully for website_id:", website_id);
-
-//     return { recommendation_by_mo_dashboard1: combinedOutput };
-//   } catch (err) {
-//     console.error("LLM Audit Error:", err);
-//     return Response.json({ error: "Internal Server Error" }, { status: 500 });
-//   }
-// };

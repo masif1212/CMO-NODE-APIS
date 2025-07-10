@@ -26,7 +26,7 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
         error: data.error || "Scraping failed",
       });
     }
-    
+    console.log("Scraping compelted successfully");
     return res.status(200).json({
       success: true,
       website_id: data.website_id,

@@ -2,21 +2,30 @@
 import OpenAI from 'openai';
 import 'dotenv/config';
 import axios from 'axios';
+
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export const openai = new OpenAI({
      apiKey: process.env.OPENAI_API_KEY
 });
 
+
+
+
+
+
+
 export async function fetchCompetitorsFromLLM(
+  user_id: string,
+  website_id: string,
   site: any,
   userRequirement: any,
-  competitorsToGenerate: number = 5,
+  // competitorsToGenerate: number = 8,
   existingUrls: string[] = [],
   existingNames: string[] = []
 ): Promise<string> {
   const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **exactly 5 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+You are an expert market research assistant specializing in competitor analysis. Your task is to identify **exactly 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
 - **Market leaders or top-tier** in the same industry.
@@ -43,7 +52,7 @@ You are an expert market research assistant specializing in competitor analysis.
 - USP: ${userRequirement.USP ?? 'Unknown'}
 
 **Output Format**:
-Return a valid **JSON array** of exactly 5 competitors, ordered by prominence (most famous first). Each must contain:
+Return a valid **JSON array** of exactly 6 competitors, ordered by prominence (most famous first). Each must contain:
 
 - "name": Company name (e.g., "Nike")
 - "website_url": Homepage URL (e.g., "https://www.nike.com")
@@ -102,20 +111,47 @@ If no valid competitors are found, return an empty array: [].
 Please generate competitors now based on the actual website and metadata provided above.
 `;
 
-  try {
-    const response = await openai.chat.completions.create({
+  // try {
+  //   const response = await openai.chat.completions.create({
+  //     model: 'gpt-4o',
+  //     messages: [{ role: 'user', content: prompt }],
+  //     temperature: 0.5,
+  //     max_tokens: 2000,
+      
+  //   });
+    try {
+    const response = await openai.responses.create({
       model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.5,
-      max_tokens: 2000,
+      input: prompt,
+      tools: [
+        {
+          type: 'web_search_preview',
+          search_context_size: 'medium',
+          user_location: {
+            type: 'approximate',
+            region: userRequirement.target_location  || 'Unknown',
+          },
+        },
+      ],
     });
-
-    const output = response.choices[0]?.message?.content?.trim();
+    const output = response.output_text?.trim();
     if (!output) {
       console.warn(`LLM returned empty response for website_id: ${site.website_id}`);
       return '[]';
     }
+    
 
+
+    await prisma.llm_responses.upsert({
+      where: { website_id },
+      update: {
+        dashboard3_competi_camparison: JSON.stringify(output),
+      },
+      create: {
+        website_id,
+        dashboard3_competi_camparison: JSON.stringify(output),
+      },
+    });    
     let fixedOutput = output
       .replace(/```json\n|\n```|```/g, '')
       .replace(/,\s*([\]}])/g, '$1')
@@ -143,12 +179,15 @@ Please generate competitors now based on the actual website and metadata provide
       !existingNames.includes(comp.name)
     );
 
-    return JSON.stringify(validCompetitors.slice(0, competitorsToGenerate));
+    return JSON.stringify(validCompetitors.slice(0,6));
   } catch (err: any) {
     console.error(`Error fetching competitors from LLM for website_id: ${site.website_id}: ${err.message}`);
     return '[]';
   }
 }
+
+
+
 
 
 export async function extractCompetitorDataFromLLM(scrapedData: any): Promise<any | null> {
@@ -191,34 +230,29 @@ If data is insufficient, return null without wrapping in code blocks or backtick
 }
 
 export async function createComparisonPrompt(website_id: string) {
- let recommendation = null;
-      recommendation = await prisma.llm_responses.findUnique({
-        where: { website_id: website_id }, // Updated to use website_id
-        select: {
-          id: true,
-          website_id: true,
-          dashboard3_competi_camparison:true,
-         
-        },
-      });
+ 
 
 
-//     function safeParse(jsonStr: any) {
-//   try {
-//     return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-//   } catch (e) {
-//     console.error("JSON parse failed:", e);
-//     return jsonStr; // fallback to raw string
-//   }
-// }
-
+ const analysisStatus = await prisma.analysis_status.findFirst({
+      where: { website_id },
+      select: {
+        // website_audit: true,
+        // seo_audit: true,
+        competitor_details: true,
+        // social_media_analysis: true,
+        // recommendation_by_mo1: true,
+        // recommendation_by_mo2: true,
+        // recommendation_by_mo3: true,
+        // recommendation_by_cmo: true,
+      },
+    });
 
 
 return `
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and accessibility metrics compared to industry competitors. Your goal is to identify( as many as you can)  high-impact, and cross-functional recommendations* that a moderately technical client can execute. Each recommendation must reference a *specific competitor* that performs better in that area and explain how the client can match or outperform them.
 
 ### Input Data
-- ${(recommendation && recommendation.dashboard3_competi_camparison) ? recommendation.dashboard3_competi_camparison : 'No competitor comparison data available.'}
+- ${(analysisStatus && analysisStatus.competitor_details) ? analysisStatus.competitor_details : 'No competitor comparison data available.'}
 
 ### Task
 Generate a JSON response with a single key, "recommendations", containing an array of objects. Each object should identify one underperforming area of the main website, using **competitor benchmarks** or **industry best practices** (e.g., Core Web Vitals, accessibility standards).

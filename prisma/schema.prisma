@@ -356,7 +356,9 @@ model competitor_details {
   usp              String?  @db.LongText
   created_at       DateTime @default(now())
   updated_at       DateTime @default(now()) @updatedAt
-
+  order_index           Int?     // For maintaining competitor order
+  @@index([website_id])
+  @@index([website_id, order_index])
   // relations
   website_scraped_data    website_scraped_data     @relation("SiteCompetitors", fields: [website_id], references: [website_id])
   competitor_data competitor_data?

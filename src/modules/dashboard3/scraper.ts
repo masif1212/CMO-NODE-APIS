@@ -274,7 +274,7 @@ if (!finalLogoUrl) {
   const allSitemapUrls = [...new Set<string>([url, ...sitemapLinks.map((u) => u.trim())])];
 
   let selectedKeyPages: string[];
-  if (allSitemapUrls.length > 10) {
+  if (allSitemapUrls.length > 7) {
     const homepage = url;
     const importantKeywords = [
       "about", "services", "service", "contact", "pricing", "plans",
@@ -302,7 +302,7 @@ if (!finalLogoUrl) {
 
     const merged = [homepage, ...keywordMatched, ...shallowPages]
       .filter((v, i, self) => self.indexOf(v) === i)
-      .slice(0, 10);
+      .slice(0, 7);
 
     selectedKeyPages = merged;
   } else {
@@ -401,7 +401,7 @@ export const fetchBrands = async (
   if (!websiteEntry) {
     throw new Error(`Website entry not found for this user and website.`);
   }
-  console.log('Website Entry in geo', websiteEntry);
+  // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
   let userReq = await prisma.user_requirements.findFirst({
