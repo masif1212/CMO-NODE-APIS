@@ -539,12 +539,12 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         },
       },
       update: {
-        recommendation_by_mo1: JSON.stringify(combinedOutput),
+        recommendation_by_mo1: JSON.stringify({recommendation_by_mo_dashboard1: combinedOutput}),
       },
       create: {
         user_id,
         website_id,
-        recommendation_by_mo1: JSON.stringify(combinedOutput),
+        recommendation_by_mo1: JSON.stringify({recommendation_by_mo_dashboard1: combinedOutput}),
       },
     });
     console.log("LLM response saved successfully for website_id:", website_id);

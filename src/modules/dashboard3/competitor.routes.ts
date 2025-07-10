@@ -63,22 +63,22 @@ competitorRouter.post('/recommendations', async (req, res, next) => {
     if (!website_id) throw new Error("website_id is required");
 
     const data = await CompetitorService.getComparisonRecommendations(website_id);
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      update: {
-        recommendation_by_mo3: "true",
-      },
-      create: {
-        user_id,
-        website_id,
-        recommendation_by_mo3: "true",
-      },
-    });
+    // await prisma.analysis_status.upsert({
+    //   where: {
+    //     user_id_website_id: {
+    //       user_id,
+    //       website_id,
+    //     },
+    //   },
+    //   update: {
+    //     recommendation_by_mo3: "true",
+    //   },
+    //   create: {
+    //     user_id,
+    //     website_id,
+    //     recommendation_by_mo3: "true",
+    //   },
+    // });
     console.log("competitors recommendations complete ")
     res.status(200).json({ recommendation_by_mo_dashboard3: data });
   } catch (e) {

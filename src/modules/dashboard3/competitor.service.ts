@@ -836,8 +836,8 @@ static async website_audit(user_id: string, website_id: string) {
       parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       await prisma.llm_responses.upsert({
         where: { website_id },
-        update: { recommendation_by_mo_dashboard3: JSON.stringify(raw) },
-        create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(raw) },
+        update: { recommendation_by_mo_dashboard3: JSON.stringify(response) },
+        create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(response) },
       });
       await prisma.analysis_status.upsert({
         where: { user_id_website_id: { user_id: userRequirementRaw?.user_id ?? '', website_id } },
@@ -850,7 +850,7 @@ static async website_audit(user_id: string, website_id: string) {
       parsed = { recommendations: [] };
     }
 
-    return { parsed, raw };
+    return parsed;
   }
 }
 
