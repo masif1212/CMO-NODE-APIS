@@ -390,19 +390,19 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     }
 
     // Extract user access readiness
-    let user_access_readiness: any = "None";
-    if (analysis?.audit_details) {
-      try {
-        const auditDetails =
-          typeof analysis.audit_details === "string"
-            ? JSON.parse(analysis.audit_details)
-            : analysis.audit_details;
-        user_access_readiness = auditDetails?.user_access_readiness || "None";
-      } catch (error) {
-        console.error("Error parsing audit_details:", error);
-        user_access_readiness = "None";
-      }
-    }
+    // let user_access_readiness: any = "None";
+    // if (analysis?.audit_details) {
+    //   try {
+    //     const auditDetails =
+    //       typeof analysis.audit_details === "string"
+    //         ? JSON.parse(analysis.audit_details)
+    //         : analysis.audit_details;
+    //     user_access_readiness = auditDetails?.user_access_readiness || "None";
+    //   } catch (error) {
+    //     console.error("Error parsing audit_details:", error);
+    //     user_access_readiness = "None";
+    //   }
+    // }
 
     // Construct allData
     const allData: any = {
