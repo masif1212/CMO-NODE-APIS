@@ -549,6 +549,8 @@ static async website_audit(user_id: string, website_id: string) {
         logo_url?: string | null;
         primary_offering?: string | null;
         unique_selling_point?: string | null;
+        ctr_loss_percent?: number | string | boolean | object|null; // ✅ Add this line
+        
       };
       website_audit: {
         performance_insights: {
@@ -618,6 +620,8 @@ static async website_audit(user_id: string, website_id: string) {
             logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
             primary_offering: primary_offering || null,
             unique_selling_point: usp || null,
+            ctr_loss_percent: competitorDataMap.get(competitor_id)?.ctr_loss_percent ?? null,
+
           },
           website_audit: {
             performance_insights: {
@@ -675,6 +679,7 @@ static async website_audit(user_id: string, website_id: string) {
             logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
             primary_offering: primary_offering || null,
             unique_selling_point: usp || null,
+            
           },
           website_audit: {
             performance_insights: {
@@ -714,7 +719,7 @@ static async website_audit(user_id: string, website_id: string) {
   const labeledResults: Record<string, any> = {
     main_website: mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData) ? {
       brand_profile: {
-        title: mainH1Heading || null,
+        title: websiteScraped?.page_title || 'Unknown',
         website_url: website_url,
         revenueLossPercent: mainPageSpeedData.revenueLossPercent || null,
         unique_selling_point: userRequirements?.USP || null,
