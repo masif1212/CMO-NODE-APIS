@@ -714,7 +714,7 @@ static async website_audit(user_id: string, website_id: string) {
   const labeledResults: Record<string, any> = {
     main_website: mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData) ? {
       brand_profile: {
-        title: website_url,
+        title: mainH1Heading || null,
         website_url: website_url,
         revenueLossPercent: mainPageSpeedData.revenueLossPercent || null,
         unique_selling_point: userRequirements?.USP || null,

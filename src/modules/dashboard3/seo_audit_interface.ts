@@ -92,6 +92,7 @@ export interface SeoAuditResponse {
     [key: string]: {
       seo_audit: SeoAudit;
       brand_profile: BrandProfile_logo;
+      error_message?: string; // Optional error message for competitors
     };
   };
 }

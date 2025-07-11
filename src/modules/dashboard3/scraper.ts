@@ -344,7 +344,6 @@ if (!finalLogoUrl) {
       og_title: p.og_title ?? null,
       meta_keywords: p.meta_keywords ?? "not found",
     }));
-
   const totalKeyPages = filteredPages.length;
   const CTR_Loss_Percent = {
     total_key_pages: totalKeyPages,
@@ -353,7 +352,7 @@ if (!finalLogoUrl) {
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
 
-
+  console.log("CTR_Loss_Percent",CTR_Loss_Percent)
     console.log("homepage_alt_text_coverage",homepage_alt_text_coverage)
     return {
       website_url: url,

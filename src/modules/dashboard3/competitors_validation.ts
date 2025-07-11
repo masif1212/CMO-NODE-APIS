@@ -194,7 +194,7 @@ async function checkLandingHomepage(url: string, browser: Browser): Promise<{ va
     await page.setUserAgent('Mozilla/5.0');
 
     // Fail fast (lower timeout), and don't wait for all resources
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
     let finalUrl = page.url();
     const html = await page.content();
