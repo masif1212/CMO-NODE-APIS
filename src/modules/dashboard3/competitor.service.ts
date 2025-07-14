@@ -100,7 +100,7 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
       : [],
   };
 
-  const MIN_COMPETITORS = 6;
+  const MIN_COMPETITORS = 3;
   const competitorResults: ProcessedResult[] = [];
   const processedUrls = new Set<string>([website_url]);
   const processedNames = new Set<string>();
@@ -231,7 +231,7 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
     const parsed = parseCompetitorData(aiResponse);
 
     for (const comp of parsed) {
-      if (competitorResults.length >= MIN_COMPETITORS) break;
+      // if (competitorResults.length >= MIN_COMPETITORS) break;
 
       const name = comp.name || `Competitor ${competitorResults.length + 1}`;
       const url = comp.website_url;
@@ -596,6 +596,7 @@ static async website_audit(user_id: string, website_id: string) {
 
   const competitorDataMap = new Map(competitors_data.map((item) => [item.competitor_id, item]));
   interface CompetitorResult {
+    competitor_id:any;
       brand_profile: {
         title: string;
         website_url: string;
@@ -667,6 +668,7 @@ static async website_audit(user_id: string, website_id: string) {
         const h1_heading = await extractH1(rawHtml);
 
         competitorResults.push({
+          competitor_id,
           brand_profile: {
             title: name ?? '',
             website_url: competitor_website_url,
@@ -726,6 +728,7 @@ static async website_audit(user_id: string, website_id: string) {
         const errorMsg = err instanceof Error ? err.message : String(err);
 
         competitorResults.push({
+          competitor_id,
           brand_profile: {
             title: name ?? '',
             website_url: competitor_website_url,
