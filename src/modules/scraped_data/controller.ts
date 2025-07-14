@@ -3,18 +3,18 @@ import { Request, Response } from "express";
 import { scrapeWebsite } from "./service";
 
 export async function scrapeWebsitehandle(req: Request, res: Response) {
-  const { user_id, website_url } = req.body;
+  const { user_id, website_id } = req.body;
 
-  if (!user_id || !website_url) {
+  if (!user_id || !website_id) {
     return res.status(400).json({
       success: false,
-      error: "Missing required fields: user_id and website_url are required",
+      error: "Missing required fields: user_id and website_id are required",
     });
   }
 
   try {
     console.log("Scraping started...");
-    const data = await scrapeWebsite(user_id, website_url);
+    const data = await scrapeWebsite(user_id, website_id);
 
     if (!data.success) {
       const status = data.status_code === 429 ? 429
