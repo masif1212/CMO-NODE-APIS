@@ -16,6 +16,7 @@ export interface BrandProfile {
 
 export interface ProcessedResult {
   brand_profile: BrandProfile;
+  competitor_id?: string; // Optional for main website
 }
 
 export interface ScrapedData {

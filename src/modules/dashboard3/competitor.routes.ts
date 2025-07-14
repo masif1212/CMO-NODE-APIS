@@ -11,7 +11,7 @@ competitorRouter.post('/brandprofile', async (req, res, next) => {
     console.log("competitors identification started.. ")
     const data = await CompetitorService.brandprofile(user_id,website_id);
    
-    // console.log("competitors identification complete ")
+    console.log("competitors identification complete ")
     res.status(200).json({ competitors: data });
   } catch (e) {
     next(e);

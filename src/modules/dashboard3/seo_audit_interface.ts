@@ -83,16 +83,43 @@ export interface BrandProfile_logo {
 //   brand_profile: BrandProfile_logo;
 // }
 
-export interface SeoAuditResponse {
-  competitors: {
-    mainWebsite: {
-      seo_audit: SeoAudit;
-      brand_profile: BrandProfile_logo;
-    };
-    [key: string]: {
-      seo_audit: SeoAudit;
-      brand_profile: BrandProfile_logo;
-      error_message?: string; // Optional error message for competitors
-    };
+// export interface SeoAuditResponse {
+//   competitors: {
+//     mainWebsite: {
+//       seo_audit: SeoAudit;
+//       brand_profile: BrandProfile_logo;
+//     };
+//     [key: string]: {
+//       seo_audit: SeoAudit;
+//       brand_profile: BrandProfile_logo;
+//       error_message?: string; // Optional error message for competitors
+//     };
+//   };
+// }
+
+
+// export interface SeoAuditResponse  {
+//   mainWebsite: {
+//     seo_audit: SeoAudit;
+//     brand_profile: BrandProfile_logo;
+//   };
+//   competitors: {
+//     competitor_id: string;
+//     seo_audit: SeoAudit;
+//     brand_profile: BrandProfile_logo;
+//   }[];
+// };
+
+
+
+export type SeoAuditResponse = {
+  mainWebsite: {
+    seo_audit: SeoAudit;
+    brand_profile: BrandProfile_logo;
   };
-}
+  competitors: {
+    competitor_id: string;
+    seo_audit: SeoAudit;
+    brand_profile: BrandProfile_logo;
+  }[];
+};
