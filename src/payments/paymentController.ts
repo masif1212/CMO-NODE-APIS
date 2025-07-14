@@ -111,7 +111,7 @@ export const savePaymentMethod = async (req: Request, res: Response): Promise<vo
 export const payAsYouGo = async (req: Request, res: Response): Promise<void> => {
   const { token, analysis_type, save_card, source_id } = req.body;
   const { user_id, email } = (req as any).user;
-
+  console.log(req, "REQUEST FROM THE API");
   if (!analysis_type || (!token && !source_id)) {
     res.status(400).json({ error: "Missing required fields" });
     return;

@@ -37,6 +37,7 @@ async function main() {
           { permission_name: "read:all", description: "Can read all data", updated_at: now },
           { permission_name: "write:own", description: "Can write own data", updated_at: now },
           { permission_name: "admin:control", description: "Administrative privileges", updated_at: now },
+          { permission_name: "user_authentication", description: "Allows user authentication", updated_at: now },
         ],
         skipDuplicates: true,
       });
