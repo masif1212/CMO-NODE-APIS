@@ -27,8 +27,7 @@ You are an expert market research assistant specializing in competitor analysis.
 3. **Third**, if no local competitors are found, consider **top-tier companies** in the same industry that have a significant online presence and are relevant to the main website's offerings.
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
-- **Market leaders or top-tier** in the same industry.
-- Highly relevant to the main website's industry 
+- **Market leaders or top-tier** in the same industry as the given website . {${userRequirement.industry}}.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
 
@@ -261,6 +260,3 @@ For each recommendation:
 
 
 }
-
-
-
