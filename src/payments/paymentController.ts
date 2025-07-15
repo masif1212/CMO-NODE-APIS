@@ -15,6 +15,7 @@ export const Subscription = async (req: Request, res: Response): Promise<void> =
   }
 
   try {
+    // Fetch plan details
     const plan = await prisma.plans.findUnique({ where: { plan_id } });
     if (!plan) {
       res.status(404).json({ error: "Plan not found" });
