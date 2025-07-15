@@ -110,7 +110,6 @@ async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   }
 }
 
-
 async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   try {
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
