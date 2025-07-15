@@ -213,6 +213,8 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
     const parsed = parseCompetitorData(aiResponse);
 
     for (const comp of parsed) {
+      // if (competitorResults.length >= MIN_COMPETITORS) break;
+     console.log(comp)
       const name = comp.name || `Competitor ${competitorResults.length + 1}`;
       const url = comp.website_url;
 
@@ -286,6 +288,12 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
     },
     competitors: competitorResults,
   };
+
+  // competitorResults.forEach((r, i) => {
+  //   labeledResults[`competitor${i + 1}`] = r;
+  // });
+
+
 }
 
 
