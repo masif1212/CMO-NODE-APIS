@@ -263,7 +263,7 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
 
   const t1 = performance.now();
   console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
-
+  console.log("competitorResults:", competitorResults);
   return {
     mainWebsite: {
       brand_profile: {

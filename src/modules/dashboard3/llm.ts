@@ -18,109 +18,23 @@ export async function fetchCompetitorsFromLLM(
   existingUrls: string[] = [],
   existingNames: string[] = []
 ): Promise<string> {
-//   const prompt = `
-// You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+  const prompt = `
+You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
-// - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
-// - **Market leaders or top-tier** in the same industry.
-// - Highly relevant to the main website's industry and Target Location: ${userRequirement.target_location ?? 'Unknown'}
-// - Targeting a similar audience.
-// - Offering distinct but related products/services with a clear USP.
-// - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
-// - Not social media, generic platforms, or marketplaces.
-// - Diverse in offerings or regional focus.
-// - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
-
-// **Main Website Metadata**:
-// - Website URL: ${site.website_url ?? 'Unknown'}
-// - Title: ${site.page_title ?? 'None'}
-// - Description: ${site.meta_description ?? 'None'}
-// - Keywords: ${site.meta_keywords ?? 'None'}
-
-// **User Requirements**:
-// - Industry: ${userRequirement.industry ?? 'Unknown'}
-// - Target Location: ${userRequirement.target_location ?? 'Unknown'}
-// - Target Audience: ${userRequirement.target_audience ?? 'Unknown'}
-// - Primary Offering: ${userRequirement.primary_offering ?? 'Unknown'}
-// - USP: ${userRequirement.USP ?? 'Unknown'}
-
-// **Output Format**:
-// Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first). Each must contain:
-
-// - "name": Company name (e.g., "Nike")
-// - "website_url": Homepage URL (e.g., "https://www.nike.com")
-// - "industry": Specific industry (e.g., "Athletic Apparel")
-// - "primary_offering": Main product/service (e.g., "Sportswear and footwear")
-// - "usp": Unique selling proposition (e.g., "High-performance athletic gear worn by top athletes")
-// - "logo_url": Favicon or logo URL (e.g., "https://www.nike.com/favicon.ico")
-
-// Do **not** wrap the JSON in markdown code blocks.
-
-// ---
-
-// **Example Output for Apple Inc.**:
-// [
-//   {
-//     "name": "Samsung",
-//     "website_url": "https://www.samsung.com",
-//     "industry": "Consumer Electronics",
-//     "primary_offering": "Smartphones, tablets, and electronics",
-//     "usp": "Innovative Android devices with diverse price points",
-//   },
-//   {
-//     "name": "Google",
-//     "website_url": "https://store.google.com",
-//     "industry": "Consumer Electronics",
-//     "primary_offering": "Pixel phones and smart devices",
-//     "usp": "Android-powered devices with Google ecosystem integration",
-//   },
-//   {
-//     "name": "Microsoft",
-//     "website_url": "https://www.microsoft.com",
-//     "industry": "Technology",
-//     "primary_offering": "Surface laptops and tablets",
-//     "usp": "Productivity-focused devices for business and personal use",
-  
-//   },
-//   {
-//     "name": "Dell",
-//     "website_url": "https://www.dell.com",
-//     "industry": "Computer Hardware",
-//     "primary_offering": "Laptops and desktops",
-//     "usp": "Customizable PCs for personal and business users",
-//   },
-//   {
-//     "name": "Lenovo",
-//     "website_url": "https://www.lenovo.com",
-//     "industry": "Computer Hardware",
-//     "primary_offering": "Laptops, desktops, tablets",
-//     "usp": "Wide range of devices with competitive pricing",
-//   }
-// ]
-
-// ---
-
-// Please generate competitors now based on the actual website and metadata provided above.
-// `;
-
-
-const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximum 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+### Selection Logic:
+1. **First**, check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
+2. **Second**, if a global company **does not serve the target region**, skip it and look for **top local or regional competitors** that are active and well-known in that location.
+3. **Third**, if no local competitors are found, consider **top-tier companies** in the same industry that have a significant online presence and are relevant to the main website's offerings.
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
 - **Market leaders or top-tier** in the same industry.
-- Highly relevant to the main website's industry and Target Location: ${userRequirement.target_location ?? 'Unknown'}
+- Highly relevant to the main website's industry 
 - Targeting a similar audience.
 - Offering distinct but related products/services with a clear USP.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
 - Not social media, generic platforms, or marketplaces.
 - Diverse in offerings or regional focus.
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
-
-You must also assess and assign a **"threat_level"** for each competitor using the following scale:
-- "high": Strong overlap in product, audience, pricing, or logistics — directly threatens the main business.
-- "medium": Competes in one or more key areas (e.g., category, audience), but with lower scale or focus.
-- "low": Niche or indirect competitor with limited overlap.
 
 **Main Website Metadata**:
 - Website URL: ${site.website_url ?? 'Unknown'}
@@ -136,46 +50,54 @@ You must also assess and assign a **"threat_level"** for each competitor using t
 - USP: ${userRequirement.USP ?? 'Unknown'}
 
 **Output Format**:
-Return a valid **JSON array** of up to 6 competitors, ordered by prominence. Each object must include:
+Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first). Each must contain:
 
 - "name": Company name (e.g., "Nike")
 - "website_url": Homepage URL (e.g., "https://www.nike.com")
 - "industry": Specific industry (e.g., "Athletic Apparel")
 - "primary_offering": Main product/service (e.g., "Sportswear and footwear")
 - "usp": Unique selling proposition (e.g., "High-performance athletic gear worn by top athletes")
-- "logo_url": Favicon or logo URL (e.g., "https://www.nike.com/favicon.ico")
-- **"threat_level"**: One of "high", "medium", or "low"
 
-Do **not** wrap the JSON in markdown code blocks.
+Return the result strictly as raw JSON. Do **not** wrap it in code blocks or markdown. Do **not** explain anything. Just output the JSON object.
 
 ---
 
-**Example Output for Apple Inc.**:
+**Example Output for Daraz.pk.**:
+
 [
   {
-    "name": "Samsung",
-    "website_url": "https://www.samsung.com",
-    "industry": "Consumer Electronics",
-    "primary_offering": "Smartphones, tablets, and electronics",
-    "usp": "Innovative Android devices with diverse price points",
-    "logo_url": "https://www.samsung.com/favicon.ico",
-    "threat_level": "high"
+    "website_url": "https://www.aliexpress.com",
+    "industry": "E-commerce",
+    "primary_offering": "Online marketplace for diverse products",
+    "usp": "Low-cost global marketplace with fast shipping",
   },
   {
-    "name": "Dell",
-    "website_url": "https://www.dell.com",
-    "industry": "Computer Hardware",
-    "primary_offering": "Laptops and desktops",
-    "usp": "Customizable PCs for personal and business users",
-    "logo_url": "https://www.dell.com/favicon.ico",
-    "threat_level": "medium"
+    "name": "Temu",
+    "website_url": "https://www.temu.com",
+    "industry": "E-commerce",
+    "primary_offering": "Online marketplace for affordable products",
+    "usp": "Competitive pricing with rapid market expansion",
+  },
+  {{
+    "name": "PriceOye",
+    "website_url": "https://priceoye.pk",
+    "industry": "E-commerce",
+    "primary_offering": "Electronics and gadgets marketplace",
+    "usp": "Price comparison and deals for Pakistani consumers",
+    "logo_url": "https://priceoye.pk/favicon.ico"
   }
+  
+  },
+  
 ]
 
 ---
 
 Please generate competitors now based on the actual website and metadata provided above.
 `;
+
+
+
 
 
  
@@ -186,11 +108,11 @@ Please generate competitors now based on the actual website and metadata provide
       tools: [
         {
           type: 'web_search_preview',
-          search_context_size: 'medium',
-          user_location: {
-            type: 'approximate',
-            region: userRequirement.target_location  || 'Unknown',
-          },
+          search_context_size: 'high',
+          // user_location: {
+          //   type: 'approximate',
+          //   region: userRequirement.target_location  || 'Unknown',
+          // },
         },
       ],
     });
@@ -245,14 +167,6 @@ Please generate competitors now based on the actual website and metadata provide
     return '[]';
   }
 }
-
-
-
-
-
-
-
-
 
 export async function extractCompetitorDataFromLLM(scrapedData: any): Promise<any | null> {
   const prompt = `
