@@ -47,6 +47,14 @@ interface PageSpeedData {
   };
     revenueLossPercent?: number | null;
   }
+function safeParse(jsonStr: any) {
+      try {
+        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      } catch (e) {
+        console.error("JSON parse failed:", e);
+        return jsonStr;
+      }
+    }
 
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   const website = await prisma.user_websites.findUnique({
@@ -511,10 +519,18 @@ static async website_audit(user_id: string, website_id: string) {
     throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
   }
 
-  const [userRequirements, websiteScraped, mainPageSpeedData] = await Promise.all([
+  const [userRequirements, websiteScraped, mainPageSpeedData,geo_llm] = await Promise.all([
     prisma.user_requirements.findFirst({ where: { website_id } }),
     prisma.website_scraped_data.findFirst({ where: { website_id } }),
     getPageSpeedData(website_url),
+
+    prisma.llm_responses.findFirst({
+      where: { website_id },
+      orderBy: { created_at: 'desc' },
+      select: {
+        geo_llm: true,
+      },
+    }),
   ]);
 
   let mainWebsitePageSpeed: any = null;
@@ -552,6 +568,8 @@ static async website_audit(user_id: string, website_id: string) {
       competitor_website_url: true,
       usp: true,
       primary_offering: true,
+      industry: true,
+      order_index: true,
     },
     orderBy: { order_index: 'asc' },
     take: 7,
@@ -571,6 +589,7 @@ static async website_audit(user_id: string, website_id: string) {
         title: string;
         website_url: string;
         revenueLossPercent?: number | null;
+        industry?: string | null;
         logo_url?: string | null;
         primary_offering?: string | null;
         unique_selling_point?: string | null;
@@ -596,11 +615,13 @@ static async website_audit(user_id: string, website_id: string) {
         brandAuditseo: any;
         meta_description: string | null;
         page_title: string | null;
-        schema_analysis: any;
+        meta_keywords?: string | null; // ✅ Add this line
+        schema_markup_status: any;
         isCrawlable: boolean | null;
         headingAnalysis: any;
-        homepage_alt_text_coverage: any;
+        alt_text_coverage: any;
         h1_heading: string | null;
+        AI_Discoverability?: string | null; // ✅ Add this line
       };
     }
   const competitorResults: CompetitorResult[] = [];
@@ -610,7 +631,7 @@ static async website_audit(user_id: string, website_id: string) {
 
   const competitorTasks = competitors.map((competitor) =>
     limit(async () => {
-      const { competitor_id, name, competitor_website_url, usp, primary_offering } = competitor;
+      const { competitor_id, name, competitor_website_url, usp, primary_offering ,industry} = competitor;
       if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
         console.log(`Skipping competitor ${competitor_id} due to missing or duplicate URL: ${competitor_website_url}`);
         return;
@@ -643,6 +664,7 @@ static async website_audit(user_id: string, website_id: string) {
             title: name ?? '',
             website_url: competitor_website_url,
             revenueLossPercent: revenueLossPercent || null,
+            industry: industry || null,
             logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
             primary_offering: primary_offering || null,
             unique_selling_point: usp || null,
@@ -685,10 +707,10 @@ static async website_audit(user_id: string, website_id: string) {
               : null,
             meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
             page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
-            schema_analysis: competitorDataMap.get(competitor_id)?.schema_analysis ?? null,
+            schema_markup_status: safeParse(competitorDataMap.get(competitor_id)?.schema_analysis) ?? null,
             isCrawlable: competitorDataMap.get(competitor_id)?.isCrawlable ?? null,
             headingAnalysis: competitorDataMap.get(competitor_id)?.headingAnalysis ?? null,
-            homepage_alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
+            alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
             h1_heading: h1_heading || null,
           },
         });
@@ -727,11 +749,13 @@ static async website_audit(user_id: string, website_id: string) {
             brandAuditseo: null,
             meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
             page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
-            schema_analysis: competitorDataMap.get(competitor_id)?.schema_analysis ?? null,
+            meta_keywords: competitorDataMap.get(competitor_id)?.meta_keywords ?? null,
+            schema_markup_status: safeParse(competitorDataMap.get(competitor_id)?.schema_analysis) ?? null,
             isCrawlable: competitorDataMap.get(competitor_id)?.isCrawlable ?? null,
             headingAnalysis: competitorDataMap.get(competitor_id)?.headingAnalysis ?? null,
-            homepage_alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
+            alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
             h1_heading,
+            AI_Discoverability: 'True',
           },
         });
 
@@ -749,6 +773,7 @@ static async website_audit(user_id: string, website_id: string) {
         title: websiteScraped?.page_title || 'Unknown',
         website_url: website_url,
         revenueLossPercent: mainPageSpeedData.revenueLossPercent || null,
+        industry: userRequirements?.industry || null,
         unique_selling_point: userRequirements?.USP || null,
         primary_offering: userRequirements?.primary_offering || null,
         logo_url: websiteScraped?.logo_url || null,
@@ -790,11 +815,12 @@ static async website_audit(user_id: string, website_id: string) {
           : null,
         meta_description: websiteScraped?.meta_description || null,
         page_title: websiteScraped?.page_title || null,
-        schema_analysis: websiteScraped?.schema_analysis || null,
+        schema_markup_status: safeParse(websiteScraped?.schema_analysis) || null,
         isCrawlable: websiteScraped?.isCrawlable || null,
         headingAnalysis: websiteScraped?.headingAnalysis || null,
         homepage_alt_text_coverage: websiteScraped?.homepage_alt_text_coverage || null,
         h1_heading: mainH1Heading || null,
+        AI_Discoverability: geo_llm?.geo_llm || 'False',
       },
     } : null,
     competitors: [], 

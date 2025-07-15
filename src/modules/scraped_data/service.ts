@@ -101,7 +101,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
 async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
-      timeout: 5000,
+      timeout:20000,
       validateStatus: () => true // Don't throw on 404/500
     });
     return response.status === 200;
@@ -226,7 +226,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
   const start = Date.now();
   const website_url  = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
-
+  console.log("domain ",domain)
   let statusCode = 0;
   let ipAddress = "N/A";
   let message = "Unknown error";
@@ -234,6 +234,8 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
 
   try {
     const response = await axios.get(website_url);
+    console.log("Response received from website:", response.status);
+    
     html = response.data;
     statusCode = response.status;
     const dnsResult = await dns.lookup(domain);
@@ -292,7 +294,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
     og_description: $('meta[property="og:description"]').attr("content") || "not found",
     og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
-
+  console.log("Meta tags extracted:", meta);
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
   const otherLinks: string[] = [];
 

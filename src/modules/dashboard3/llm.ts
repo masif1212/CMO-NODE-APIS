@@ -19,7 +19,7 @@ export async function fetchCompetitorsFromLLM(
   existingNames: string[] = []
 ): Promise<string> {
   const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 4y unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
 ### Selection Logic:
 1. **First**, check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
@@ -29,39 +29,17 @@ You are an expert market research assistant specializing in competitor analysis.
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
 - **Market leaders or top-tier** in the same industry.
 - Highly relevant to the main website's industry 
-- Targeting a similar audience.
-- Offering distinct but related products/services with a clear USP.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
-- Not social media, generic platforms, or marketplaces.
-- Diverse in offerings or regional focus.
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
 
-**Main Website Metadata**:
+**Main Website **:
 - Website URL: ${site.website_url ?? 'Unknown'}
-- Title: ${site.page_title ?? 'None'}
-- Description: ${site.meta_description ?? 'None'}
-- Keywords: ${site.meta_keywords ?? 'None'}
+-
 
-**User Requirements**:
-- Industry: ${userRequirement.industry ?? 'Unknown'}
-- Target Location: ${userRequirement.target_location ?? 'Unknown'}
-- Target Audience: ${userRequirement.target_audience ?? 'Unknown'}
-- Primary Offering: ${userRequirement.primary_offering ?? 'Unknown'}
-- USP: ${userRequirement.USP ?? 'Unknown'}
+
 
 **Output Format**:
-Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first). Each must contain:
-
-- "name": Company name (e.g., "Nike")
-- "website_url": Homepage URL (e.g., "https://www.nike.com")
-- "industry": Specific industry (e.g., "Athletic Apparel")
-- "primary_offering": Main product/service (e.g., "Sportswear and footwear")
-- "usp": Unique selling proposition (e.g., "High-performance athletic gear worn by top athletes")
-
-Return the result strictly as raw JSON. Do **not** wrap it in code blocks or markdown. Do **not** explain anything. Just output the JSON object.
-
----
-
+Return a valid **JSON array** of  4 competitors, ordered by prominence (most famous first).
 **Example Output for Daraz.pk.**:
 
 [
@@ -93,7 +71,7 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
 
 ---
 
-Please generate competitors now based on the actual website and metadata provided above.
+Return the result strictly as raw JSON. Do **not** wrap it in code blocks or markdown. Do **not** explain anything. Just output the JSON object.
 `;
 
 
@@ -103,17 +81,20 @@ Please generate competitors now based on the actual website and metadata provide
  
     try {
     const response = await openai.responses.create({
-      model: 'gpt-4o',
+      // model: 'o4-mini-deep-research-2025-06-26',
+      model: "gpt-4.1",
       input: prompt,
       tools: [
         {
           type: 'web_search_preview',
           search_context_size: 'high',
+         
           // user_location: {
           //   type: 'approximate',
           //   region: userRequirement.target_location  || 'Unknown',
           // },
         },
+        
       ],
     });
     const output = response.output_text?.trim();
