@@ -9,12 +9,6 @@ export const openai = new OpenAI({
      apiKey: process.env.OPENAI_API_KEY
 });
 
-
-
-
-
-
-
 export async function fetchCompetitorsFromLLM(
   user_id: string,
   website_id: string,
@@ -24,18 +18,109 @@ export async function fetchCompetitorsFromLLM(
   existingUrls: string[] = [],
   existingNames: string[] = []
 ): Promise<string> {
-  const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **exactly 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+//   const prompt = `
+// You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+
+// - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
+// - **Market leaders or top-tier** in the same industry.
+// - Highly relevant to the main website's industry and Target Location: ${userRequirement.target_location ?? 'Unknown'}
+// - Targeting a similar audience.
+// - Offering distinct but related products/services with a clear USP.
+// - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
+// - Not social media, generic platforms, or marketplaces.
+// - Diverse in offerings or regional focus.
+// - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
+
+// **Main Website Metadata**:
+// - Website URL: ${site.website_url ?? 'Unknown'}
+// - Title: ${site.page_title ?? 'None'}
+// - Description: ${site.meta_description ?? 'None'}
+// - Keywords: ${site.meta_keywords ?? 'None'}
+
+// **User Requirements**:
+// - Industry: ${userRequirement.industry ?? 'Unknown'}
+// - Target Location: ${userRequirement.target_location ?? 'Unknown'}
+// - Target Audience: ${userRequirement.target_audience ?? 'Unknown'}
+// - Primary Offering: ${userRequirement.primary_offering ?? 'Unknown'}
+// - USP: ${userRequirement.USP ?? 'Unknown'}
+
+// **Output Format**:
+// Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first). Each must contain:
+
+// - "name": Company name (e.g., "Nike")
+// - "website_url": Homepage URL (e.g., "https://www.nike.com")
+// - "industry": Specific industry (e.g., "Athletic Apparel")
+// - "primary_offering": Main product/service (e.g., "Sportswear and footwear")
+// - "usp": Unique selling proposition (e.g., "High-performance athletic gear worn by top athletes")
+// - "logo_url": Favicon or logo URL (e.g., "https://www.nike.com/favicon.ico")
+
+// Do **not** wrap the JSON in markdown code blocks.
+
+// ---
+
+// **Example Output for Apple Inc.**:
+// [
+//   {
+//     "name": "Samsung",
+//     "website_url": "https://www.samsung.com",
+//     "industry": "Consumer Electronics",
+//     "primary_offering": "Smartphones, tablets, and electronics",
+//     "usp": "Innovative Android devices with diverse price points",
+//   },
+//   {
+//     "name": "Google",
+//     "website_url": "https://store.google.com",
+//     "industry": "Consumer Electronics",
+//     "primary_offering": "Pixel phones and smart devices",
+//     "usp": "Android-powered devices with Google ecosystem integration",
+//   },
+//   {
+//     "name": "Microsoft",
+//     "website_url": "https://www.microsoft.com",
+//     "industry": "Technology",
+//     "primary_offering": "Surface laptops and tablets",
+//     "usp": "Productivity-focused devices for business and personal use",
+  
+//   },
+//   {
+//     "name": "Dell",
+//     "website_url": "https://www.dell.com",
+//     "industry": "Computer Hardware",
+//     "primary_offering": "Laptops and desktops",
+//     "usp": "Customizable PCs for personal and business users",
+//   },
+//   {
+//     "name": "Lenovo",
+//     "website_url": "https://www.lenovo.com",
+//     "industry": "Computer Hardware",
+//     "primary_offering": "Laptops, desktops, tablets",
+//     "usp": "Wide range of devices with competitive pricing",
+//   }
+// ]
+
+// ---
+
+// Please generate competitors now based on the actual website and metadata provided above.
+// `;
+
+
+const prompt = `
+You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximum 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
 - **Market leaders or top-tier** in the same industry.
-- Highly relevant to the main website's industry and region.
+- Highly relevant to the main website's industry and Target Location: ${userRequirement.target_location ?? 'Unknown'}
 - Targeting a similar audience.
 - Offering distinct but related products/services with a clear USP.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
 - Not social media, generic platforms, or marketplaces.
 - Diverse in offerings or regional focus.
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
+
+You must also assess and assign a **"threat_level"** for each competitor using the following scale:
+- "high": Strong overlap in product, audience, pricing, or logistics — directly threatens the main business.
+- "medium": Competes in one or more key areas (e.g., category, audience), but with lower scale or focus.
+- "low": Niche or indirect competitor with limited overlap.
 
 **Main Website Metadata**:
 - Website URL: ${site.website_url ?? 'Unknown'}
@@ -45,14 +130,13 @@ You are an expert market research assistant specializing in competitor analysis.
 
 **User Requirements**:
 - Industry: ${userRequirement.industry ?? 'Unknown'}
-- Region of Operation: ${userRequirement.region_of_operation ?? 'Unknown'}
 - Target Location: ${userRequirement.target_location ?? 'Unknown'}
 - Target Audience: ${userRequirement.target_audience ?? 'Unknown'}
 - Primary Offering: ${userRequirement.primary_offering ?? 'Unknown'}
 - USP: ${userRequirement.USP ?? 'Unknown'}
 
 **Output Format**:
-Return a valid **JSON array** of exactly 6 competitors, ordered by prominence (most famous first). Each must contain:
+Return a valid **JSON array** of up to 6 competitors, ordered by prominence. Each object must include:
 
 - "name": Company name (e.g., "Nike")
 - "website_url": Homepage URL (e.g., "https://www.nike.com")
@@ -60,9 +144,9 @@ Return a valid **JSON array** of exactly 6 competitors, ordered by prominence (m
 - "primary_offering": Main product/service (e.g., "Sportswear and footwear")
 - "usp": Unique selling proposition (e.g., "High-performance athletic gear worn by top athletes")
 - "logo_url": Favicon or logo URL (e.g., "https://www.nike.com/favicon.ico")
+- **"threat_level"**: One of "high", "medium", or "low"
 
 Do **not** wrap the JSON in markdown code blocks.
-If no valid competitors are found, return an empty array: [].
 
 ---
 
@@ -74,21 +158,8 @@ If no valid competitors are found, return an empty array: [].
     "industry": "Consumer Electronics",
     "primary_offering": "Smartphones, tablets, and electronics",
     "usp": "Innovative Android devices with diverse price points",
-  },
-  {
-    "name": "Google",
-    "website_url": "https://store.google.com",
-    "industry": "Consumer Electronics",
-    "primary_offering": "Pixel phones and smart devices",
-    "usp": "Android-powered devices with Google ecosystem integration",
-  },
-  {
-    "name": "Microsoft",
-    "website_url": "https://www.microsoft.com",
-    "industry": "Technology",
-    "primary_offering": "Surface laptops and tablets",
-    "usp": "Productivity-focused devices for business and personal use",
-  
+    "logo_url": "https://www.samsung.com/favicon.ico",
+    "threat_level": "high"
   },
   {
     "name": "Dell",
@@ -96,13 +167,8 @@ If no valid competitors are found, return an empty array: [].
     "industry": "Computer Hardware",
     "primary_offering": "Laptops and desktops",
     "usp": "Customizable PCs for personal and business users",
-  },
-  {
-    "name": "Lenovo",
-    "website_url": "https://www.lenovo.com",
-    "industry": "Computer Hardware",
-    "primary_offering": "Laptops, desktops, tablets",
-    "usp": "Wide range of devices with competitive pricing",
+    "logo_url": "https://www.dell.com/favicon.ico",
+    "threat_level": "medium"
   }
 ]
 
@@ -111,14 +177,8 @@ If no valid competitors are found, return an empty array: [].
 Please generate competitors now based on the actual website and metadata provided above.
 `;
 
-  // try {
-  //   const response = await openai.chat.completions.create({
-  //     model: 'gpt-4o',
-  //     messages: [{ role: 'user', content: prompt }],
-  //     temperature: 0.5,
-  //     max_tokens: 2000,
-      
-  //   });
+
+ 
     try {
     const response = await openai.responses.create({
       model: 'gpt-4o',
@@ -190,6 +250,10 @@ Please generate competitors now based on the actual website and metadata provide
 
 
 
+
+
+
+
 export async function extractCompetitorDataFromLLM(scrapedData: any): Promise<any | null> {
   const prompt = `
 You are a market research assistant. Given the following scraped website data, identify and return the Unique Selling Proposition (USP) and other relevant details of the competitor. If no clear details are identifiable, return a concise inferred set of details based on the data provided.
@@ -236,14 +300,9 @@ export async function createComparisonPrompt(website_id: string) {
  const analysisStatus = await prisma.analysis_status.findFirst({
       where: { website_id },
       select: {
-        // website_audit: true,
-        // seo_audit: true,
+        
         competitor_details: true,
-        // social_media_analysis: true,
-        // recommendation_by_mo1: true,
-        // recommendation_by_mo2: true,
-        // recommendation_by_mo3: true,
-        // recommendation_by_cmo: true,
+      
       },
     });
 

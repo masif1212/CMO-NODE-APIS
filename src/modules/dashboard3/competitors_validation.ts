@@ -158,34 +158,6 @@ function isHomepagePath(path: string): boolean {
     /^\/(country\/[a-z]{2}|[a-z]{2})$/i.test(normalized)
   );
 }
-// async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
-//   let page;
-//   try {
-//     page = await browser.newPage();
-//     await page.setUserAgent('Mozilla/5.0');
-//     await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 });
-
-//     let finalUrl = page.url();
-//     const html = await page.content();
-
-//     const metaRedirect = await extractMetaRedirect(html);
-//     if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
-
-//     const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, '') || '/';
-//     return { valid: isHomepagePath(finalPath), finalUrl };
-//   } catch (err) {
-//     console.error(`Check failed for ${url}: ${err}`);
-//     return { valid: false };
-//   } finally {
-//     if (page) {
-//       try {
-//         await page.close();
-//       } catch (err) {
-//         console.warn(`Failed to close page for ${url}:`, err);
-//       }
-//     }
-//   }
-// }
 
 async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
   let page;
@@ -194,7 +166,7 @@ async function checkLandingHomepage(url: string, browser: Browser): Promise<{ va
     await page.setUserAgent('Mozilla/5.0');
 
     // Fail fast (lower timeout), and don't wait for all resources
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
     let finalUrl = page.url();
     const html = await page.content();
