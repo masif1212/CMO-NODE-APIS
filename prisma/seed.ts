@@ -75,6 +75,76 @@ async function main() {
     } else {
       console.log("Role permissions already exist, skipping seeding role_permissions...");
     }
+
+    // 4. Seed Analysis Services
+    console.log("Checking for existing analysis services...");
+    const existingServices = await prisma.analysisServices.findMany();
+    console.log(`Found ${existingServices.length} existing services.`);
+    if (existingServices.length === 0) {
+      console.log("No existing services found, seeding new services...");
+      await prisma.analysisServices.createMany({
+        data: [
+          {
+            type: "website_audit",
+            name: "Comprehensive Website Audit",
+            price: 0,
+            description: "A full audit of your website's performance, SEO, and user experience.",
+          },
+          {
+            type: "seo_audit",
+            name: "SEO Audit",
+            price: 12,
+            description: "In-depth analysis of your current keyword rankings and opportunities for growth.",
+          },
+          {
+            type: "strength_and_issues",
+            name: "Strength and Issues",
+            price: 6.0,
+            description: "A detailed look at your top competitors' online strategies.",
+          },
+          {
+            type: "recommendations",
+            name: "Recommendations",
+            price: 4.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+          {
+            type: "social_media_analysis",
+            name: "Social Media Analysis",
+            price: 6.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+          {
+            type: "social_media_strength_and_issues",
+            name: "Strength and Issues (Social Media)",
+            price: 6.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+          {
+            type: "recommendations_by_mo",
+            name: "Recommendations by Team Mo",
+            price: 4.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+          {
+            type: "competitor_analysis",
+            name: "Competitor Analysis",
+            price: 14.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+          {
+            type: "cmo_recommendations_competitors_analysis",
+            name: "CMO Recommendations",
+            price: 4.0,
+            description: "Review and optimization suggestions for your Pay-Per-Click advertising campaigns.",
+          },
+        ],
+        skipDuplicates: true,
+      });
+      console.log("Seeded analysis services successfully.");
+    } else {
+      console.log("Analysis services already exist, skipping seeding.");
+    }
   } catch (error) {
     console.error("Error during seeding:", error);
     throw error; // Ensure the script fails explicitly

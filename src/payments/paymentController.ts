@@ -1,5 +1,5 @@
 // -------------------------------------------------
-// FILE: paymentController.ts (Corrected)
+// FILE: paymentController.ts (Updated)
 // -------------------------------------------------
 import { Request, Response } from "express";
 import { Checkout, Webhooks } from "checkout-sdk-node";
@@ -9,7 +9,6 @@ const prisma = new PrismaClient();
 const cko = new Checkout(process.env.CHECKOUT_SECRET_KEY!);
 
 // --- TYPE DEFINITIONS ---
-// This interface helps TypeScript understand the structure of the payment response.
 interface CkoPaymentResponse {
   id: string;
   status: string;
@@ -18,41 +17,40 @@ interface CkoPaymentResponse {
     scheme: string;
     last4: string;
   };
-  // Add other properties from the Checkout.com response as needed
 }
 
-// This interface helps TypeScript understand the structure of the webhook event.
 interface WebhookEvent {
   type: string;
   data: {
     id: string;
-    // other properties from the event data can be added here
   };
-  // other top-level event properties can be added here
 }
 
-// This interface helps TypeScript understand the structure of the customer response.
 interface CkoCustomerResponse {
   id: string;
-  // other customer properties can be added here
 }
 
-// Helper to get or create a Checkout.com customer
-const getOrCreateCustomer = async (user_id: string, email: string) => {
+interface AuthenticatedRequest extends Request {
+  user?: {
+    user_id: string;
+    email: string;
+  };
+}
+
+// --- HELPER FUNCTIONS ---
+const getOrCreateCustomer = async (user_id: string, email: string): Promise<string> => {
   const user = await prisma.users.findUnique({ where: { user_id } });
 
   if (user?.checkout_customer_id) {
     return user.checkout_customer_id;
   }
 
-  // Cast the customer creation response to our interface.
   const customer = (await cko.customers.create({
     email: email,
-    name: user?.first_name + " " + user?.last_name,
+    name: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
     metadata: { internal_id: user_id },
   })) as CkoCustomerResponse;
 
-  // This will now work without type errors.
   await prisma.users.update({
     where: { user_id },
     data: { checkout_customer_id: customer.id },
@@ -61,20 +59,35 @@ const getOrCreateCustomer = async (user_id: string, email: string) => {
   return customer.id;
 };
 
-// API to save a payment method
-export const savePaymentMethod = async (req: Request, res: Response): Promise<void> => {
+// --- API CONTROLLERS ---
+
+// NEW: Function to get saved payment methods
+export const getPaymentMethods = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { user_id } = req.user!;
+  try {
+    const methods = await prisma.paymentMethods.findMany({
+      where: { user_id },
+      orderBy: { created_at: "asc" },
+    });
+    res.json({ success: true, methods });
+  } catch (error) {
+    console.error("Get payment methods error:", error);
+    res.status(500).json({ error: "Failed to retrieve payment methods." });
+  }
+};
+
+export const savePaymentMethod = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { token } = req.body;
-  const { user_id, email } = (req as any).user;
+  const { user_id, email } = req.user!;
 
   if (!token) {
-    res.status(400).json({ error: "Missing required field: token" });
+    res.status(400).json({ error: "A payment token is required." });
     return;
   }
 
   try {
     const customer_id = await getOrCreateCustomer(user_id, email);
 
-    // We cast to 'any' to bypass potential strict type checking issues with the SDK version.
     const source = await (cko.sources as any).request({
       type: "token",
       token: token,
@@ -86,7 +99,7 @@ export const savePaymentMethod = async (req: Request, res: Response): Promise<vo
     });
 
     if (existingMethod) {
-      res.json({ success: true, message: "Payment method already exists." });
+      res.json({ success: true, message: "Payment method already exists.", method: existingMethod });
       return;
     }
 
@@ -100,56 +113,50 @@ export const savePaymentMethod = async (req: Request, res: Response): Promise<vo
       },
     });
 
-    res.json({ success: true, method: newMethod });
+    res.status(201).json({ success: true, method: newMethod });
   } catch (error: any) {
     console.error("Save payment method error:", error);
-    res.status(500).json({ error: "Internal server error", details: error.body });
+    res.status(500).json({ error: "Could not save payment method.", details: error.body });
   }
 };
 
-// Pay-as-You-Go Payment API
-export const payAsYouGo = async (req: Request, res: Response): Promise<void> => {
-  const { token, analysis_type, save_card, source_id } = req.body;
-  const { user_id, email } = (req as any).user;
-  console.log(req, "REQUEST FROM THE API");
-  if (!analysis_type || (!token && !source_id)) {
-    res.status(400).json({ error: "Missing required fields" });
+export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { token, analysis_types, save_card, source_id } = req.body;
+  const { user_id, email } = req.user!;
+
+  if (!analysis_types || !Array.isArray(analysis_types) || analysis_types.length === 0) {
+    res.status(400).json({ error: "You must select at least one analysis service." });
     return;
   }
-
-  const analysisService = await prisma.analysisServices.findUnique({
-    where: { type: analysis_type },
-  });
-
-  if (!analysisService) {
-    res.status(400).json({ error: "Invalid analysis type" });
+  if (!token && !source_id) {
+    res.status(400).json({ error: "A payment method (new or saved) is required." });
     return;
   }
-
-  const cost = analysisService.price;
 
   try {
-    const customer_id = await getOrCreateCustomer(user_id, email);
-    let paymentSource: any;
+    const analysisServices = await prisma.analysisServices.findMany({
+      where: { type: { in: analysis_types } },
+    });
 
-    if (source_id) {
-      paymentSource = { type: "id", id: source_id };
-    } else if (token) {
-      paymentSource = { type: "token", token };
+    if (analysisServices.length !== analysis_types.length) {
+      res.status(400).json({ error: "One or more selected analysis types are invalid." });
+      return;
     }
 
-    // Cast the response to our interface to solve the type mismatch error.
+    const totalCost = analysisServices.reduce((sum, service) => sum + Number(service.price), 0);
+    const customer_id = await getOrCreateCustomer(user_id, email);
+
     const payment = (await cko.payments.request({
-      source: paymentSource,
-      amount: Math.round(Number(cost) * 100),
+      source: source_id ? { id: source_id } : { type: "token", token },
+      amount: Math.round(totalCost * 100),
       currency: "USD",
-      reference: `analysis_${analysis_type}_${user_id}`,
-      metadata: { user_id, analysis_type },
-      customer: { id: customer_id },
+      reference: `analysis-${analysis_types.join("-")}-${user_id}`,
+      metadata: { user_id, analysis_types: analysis_types.join(",") },
+      customer: { id: customer_id, email: email },
+      processing_channel_id: process.env.CKO_PROCESSING_CHANNEL_ID,
       capture: true,
     })) as CkoPaymentResponse;
 
-    // This block will now work without TypeScript errors.
     if (save_card && token && payment.source?.id) {
       const existingMethod = await prisma.paymentMethods.findFirst({
         where: { checkout_source_id: payment.source.id },
@@ -167,31 +174,31 @@ export const payAsYouGo = async (req: Request, res: Response): Promise<void> => 
       }
     }
 
+    const paymentRecord = await prisma.payments.create({
+      data: {
+        user_id,
+        amount: totalCost,
+        currency: "USD",
+        payment_method: payment.source?.scheme || "card",
+        payment_status: payment.status,
+        transaction_id: payment.id,
+        analysis_type: analysis_types.join(","),
+      },
+    });
+
     if (payment.status === "Authorized" || payment.status === "Captured") {
-      const paymentRecord = await prisma.payments.create({
-        data: {
-          user_id,
-          amount: cost,
-          currency: "USD",
-          payment_method: "card",
-          payment_status: payment.status,
-          transaction_id: payment.id,
-          analysis_type,
-        },
-      });
       res.json({ success: true, payment: paymentRecord });
     } else {
-      res.status(400).json({ error: "Payment not authorized", details: payment });
+      res.status(400).json({ success: false, error: "Payment was not successful.", details: payment });
     }
   } catch (error: any) {
-    console.error("Analysis payment error:", error);
-    res.status(500).json({ error: "Internal server error", details: error.body });
+    console.error("Pay-as-you-go error:", error);
+    res.status(500).json({ error: "An internal error occurred during payment processing.", details: error.body });
   }
 };
 
-// API to get payment history
-export const getPaymentHistory = async (req: Request, res: Response): Promise<void> => {
-  const { user_id } = (req as any).user;
+export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { user_id } = req.user!;
   try {
     const payments = await prisma.payments.findMany({
       where: { user_id },
@@ -200,50 +207,39 @@ export const getPaymentHistory = async (req: Request, res: Response): Promise<vo
     res.json({ success: true, history: payments });
   } catch (error) {
     console.error("Get payment history error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Failed to retrieve payment history." });
   }
 };
 
-// Webhook Handler
 export const webhookHandler = async (req: Request, res: Response): Promise<void> => {
   const authHeader = req.headers["authorization"];
   const expectedAuthKey = process.env.CHECKOUT_WEBHOOK_AUTH_KEY;
-
   if (expectedAuthKey && authHeader !== expectedAuthKey) {
-    console.warn("Webhook received with invalid Authorization Header Key.");
-    // To enforce this check, you would uncomment the following lines:
-    // res.status(401).send('Unauthorized');
-    // return;
+    res.status(401).send("Unauthorized");
+    return;
   }
 
   const ckoSignature = req.headers["cko-signature"] as string;
   const rawBody = (req as any).rawBody;
 
   try {
-    // The Webhooks class has a static 'verify' method.
-    // This avoids all instantiation issues and correctly verifies the signature.
-    // The result is cast to our WebhookEvent interface to satisfy TypeScript.
     const event: WebhookEvent = (Webhooks as any).verify(rawBody, process.env.CHECKOUT_WEBHOOK_SECRET!, ckoSignature);
-
-    // This will now work without type errors.
     const transaction_id = event.data.id;
 
-    if (event.type === "payment_captured") {
-      const payment = await prisma.payments.findFirst({
-        where: { transaction_id },
-      });
+    let newStatus = "";
+    switch (event.type) {
+      case "payment_captured":
+        newStatus = "Captured";
+        break;
+      case "payment_declined":
+        newStatus = "Declined";
+        break;
+    }
 
-      if (payment) {
-        await prisma.payments.updateMany({
-          where: { transaction_id: transaction_id },
-          data: { payment_status: "Captured" },
-        });
-        console.log(`Payment captured for user ${payment.user_id}`);
-      }
-    } else if (event.type === "payment_declined") {
+    if (newStatus) {
       await prisma.payments.updateMany({
-        where: { transaction_id: transaction_id },
-        data: { payment_status: "Declined" },
+        where: { transaction_id },
+        data: { payment_status: newStatus },
       });
     }
 

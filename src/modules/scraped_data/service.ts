@@ -247,11 +247,10 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   }
 
   const responseTimeMs = Date.now() - start;
-
   const newWebsite = await prisma.user_websites.create({
     data: {
+      user_id,
       website_url: url,
-      users: { connect: { user_id } },
     },
     select: { website_id: true },
   });
