@@ -71,8 +71,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
     }
   }
 
-  const headingHierarchyIssues =
-    !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
+  const headingHierarchyIssues = !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
 
   let message = "Heading structure looks good.";
   if (!hasH1) {
@@ -101,8 +100,8 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
 async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
-      timeout:20000,
-      validateStatus: () => true // Don't throw on 404/500
+      timeout: 20000,
+      validateStatus: () => true, // Don't throw on 404/500
     });
     return response.status === 200;
   } catch (error) {
@@ -132,7 +131,7 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 
     for (const agent of disallowedAgents) {
       const disallows = disallowedMap[agent];
-      if (disallows && disallows.some(path => path === "/" || path === "/*")) {
+      if (disallows && disallows.some((path) => path === "/" || path === "/*")) {
         return false;
       }
     }
@@ -203,7 +202,6 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
-
     where: {
       user_id_website_id: {
         user_id,
@@ -224,9 +222,9 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
 
 export async function scrapeWebsite(user_id: string, website_id: string): Promise<ScrapeResult> {
   const start = Date.now();
-  const website_url  = await getWebsiteUrlById(user_id, website_id);
+  const website_url = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
-  console.log("domain ",domain)
+  console.log("domain ", domain);
   let statusCode = 0;
   let ipAddress = "N/A";
   let message = "Unknown error";
@@ -235,7 +233,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
   try {
     const response = await axios.get(website_url);
     console.log("Response received from website:", response.status);
-    
+
     html = response.data;
     statusCode = response.status;
     const dnsResult = await dns.lookup(domain);
@@ -272,17 +270,16 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
   }
 
   const responseTimeMs = Date.now() - start;
-
   const $ = cheerio.load(html);
   const headingAnalysis = evaluateHeadingHierarchy($);
 
   function extractTitleTags(): object {
-    const titles = $("title").map((_, el) => $(el).text().trim()).get().filter(Boolean);
+    const titles = $("title")
+      .map((_, el) => $(el).text().trim())
+      .get()
+      .filter(Boolean);
     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
-    const message =
-      titles.length > 1
-        ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-        : titles[0] || "not found";
+    const message = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
     return { status, titles, message };
   }
 
@@ -322,10 +319,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
   let selectedKeyPages: string[];
   if (allSitemapUrls.length > 10) {
     const homepage = website_url;
-    const importantKeywords = [
-      "about", "services", "service", "contact", "pricing", "plans",
-      "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"
-    ];
+    const importantKeywords = ["about", "services", "service", "contact", "pricing", "plans", "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"];
 
     const keywordMatched = allSitemapUrls.filter((link) => {
       try {
@@ -346,9 +340,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
       }
     });
 
-    const merged = [homepage, ...keywordMatched, ...shallowPages]
-      .filter((v, i, self) => self.indexOf(v) === i)
-      .slice(0, 10);
+    const merged = [homepage, ...keywordMatched, ...shallowPages].filter((v, i, self) => self.indexOf(v) === i).slice(0, 10);
 
     selectedKeyPages = merged;
   } else {
@@ -362,15 +354,14 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
         const res = await axios.get(pageUrl);
         if (res.status >= 200 && res.status < 400) {
           const $$ = cheerio.load(res.data);
-          const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
-          const title =
-            titles.length > 1
-              ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-              : titles[0] || "not found";
+          const titles = $$("title")
+            .map((_, el) => $$(el).text().trim())
+            .get()
+            .filter(Boolean);
+          const title = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
           const meta_description = $$('meta[name="description"]').attr("content") || "not found";
           const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
           const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
-          
 
           const missingAny = !(title && meta_description && og_title && meta_keywords);
           if (missingAny) affectedPagesCount++;
@@ -411,13 +402,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
     }
 
     if (!finalLogoUrl) {
-      const logoSelectors = [
-        'link[rel="icon"]',
-        'link[rel="shortcut icon"]',
-        'link[rel="apple-touch-icon"]',
-        'img[alt*="logo"]',
-        'img[src*="logo"]',
-      ];
+      const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
 
       for (const selector of logoSelectors) {
         const el = $(selector).first();
@@ -433,7 +418,6 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
         }
       }
     }
-
     const record = await prisma.website_scraped_data.create({
       data: {
         website_id: website_id,
@@ -478,4 +462,3 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
     };
   }
 }
-
