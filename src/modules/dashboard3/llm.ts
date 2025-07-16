@@ -14,12 +14,11 @@ export async function fetchCompetitorsFromLLM(
   website_id: string,
   site: any,
   userRequirement: any,
-  // competitorsToGenerate: number = 8,
   existingUrls: string[] = [],
   existingNames: string[] = []
 ): Promise<string> {
   const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 4y unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
+You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
 ### Selection Logic:
 1. **First**, check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
@@ -27,7 +26,7 @@ You are an expert market research assistant specializing in competitor analysis.
 3. **Third**, if no local competitors are found, consider **top-tier companies** in the same industry that have a significant online presence and are relevant to the main website's offerings.
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
-- **Market leaders or top-tier** in the same industry as the given website . {${userRequirement.industry}}.
+- **Market leaders or top-tier** in the same industry as the given website : {${userRequirement.industry} || '' and has  audience in {${userRequirement.target_location}}|| ''}.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
 
@@ -38,10 +37,10 @@ You are an expert market research assistant specializing in competitor analysis.
 
 
 **Output Format**:
-Return a valid **JSON array** of  4 competitors, ordered by prominence (most famous first).
+Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first).
 **Example Output for Daraz.pk.**:
 
-[
+
   {
     "website_url": "https://www.aliexpress.com",
     "industry": "E-commerce",
@@ -66,7 +65,7 @@ Return a valid **JSON array** of  4 competitors, ordered by prominence (most fam
   
   },
   
-]
+
 
 ---
 
@@ -97,10 +96,12 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
       ],
     });
     const output = response.output_text?.trim();
+
     if (!output) {
       console.warn(`LLM returned empty response for website_id: ${site.website_id}`);
       return '[]';
     }
+    console.log(`LLM response for website_id ${site.website_id}:`, output);
     
 
 
