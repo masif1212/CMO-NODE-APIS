@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 import * as cheerio from "cheerio";
+import { any } from "zod";
 
 
 export const getUserDashboard = async (req: Request, res: Response) => {
@@ -20,10 +21,10 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           { website_audit: { not: null } },
           { seo_audit: { not: null } },
           { social_media_analysis: { not: null } },
-          // { recommendation_by_mo1: { not: null } },
-          // { recommendation_by_mo2: { not: null } },
+          { recommendation_by_mo1: { not: null } },
+          { recommendation_by_mo2: { not: null } },
           // {competitor_analysis:{not:null}},
-          // { recommendation_by_mo3: { not: null } },
+          { recommendation_by_mo3: { not: null } },
           { recommendation_by_cmo: { not: null } }
         ]
       },
@@ -209,33 +210,33 @@ interface GeoData {
  
 }
 
-interface CompetitorAnalysis {
-  competitor_id: string;
-  name: string | null;
-  website_url: string | null;
-  industry: string | null;
-  region: string | null;
-  target_audience: string | null;
-  primary_offering: string | null;
-  usp: string | null;
-  page_title: string | null;
-  logo_url: string | null;
-  meta_description: string | null;
-  meta_keywords: string | null;
-  social_handles: {
-    twitter: string | null;
-    facebook: string | null;
-    instagram: string | null;
-    linkedin: string | null;
-    youtube: string | null;
-    tiktok: string | null;
-  };
-  ctr_loss_percent: any;
-  revenue_loss_percent: number | null;
-  schema_analysis: any;
-  page_speed: any;
-  other_links: any;
-}
+// interface CompetitorAnalysis {
+//   competitor_id: string;
+//   name: string | null;
+//   website_url: string | null;
+//   industry: string | null;
+//   region: string | null;
+//   target_audience: string | null;
+//   primary_offering: string | null;
+//   usp: string | null;
+//   page_title: string | null;
+//   logo_url: string | null;
+//   meta_description: string | null;
+//   meta_keywords: string | null;
+//   social_handles: {
+//     twitter: string | null;
+//     facebook: string | null;
+//     instagram: string | null;
+//     linkedin: string | null;
+//     youtube: string | null;
+//     tiktok: string | null;
+//   };
+//   ctr_loss_percent: any;
+//   revenue_loss_percent: number | null;
+//   schema_analysis: any;
+//   page_speed: any;
+//   other_links: any;
+// }
 
 
 
@@ -298,17 +299,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
   },
 });
 
-    // Availability Tracker
-    // if (scrapedData) {
-    //   website_health.availability_tracker = {
-    //     status_message: scrapedData.status_message ?? "Unknown",
-    //     status_code: scrapedData.status_code ?? 0,
-    //     ip_address: scrapedData.ip_address ?? "N/A",
-    //     response_time_ms: scrapedData.response_time_ms ?? 0,
-    //     logo: scrapedData.logo_url ?? null,
-    //   };
-    //   responsePayload.website_health = website_health;
-    // }
+   
 
     // SEO Audit and Traffic Analysis
     if (analysisStatus.seo_audit != null) {
@@ -351,11 +342,11 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
         id: true,
         website_id: true,
         dashboard3_competi_camparison: true,
-        recommendation_by_mo_dashboard1: true,
+        // recommendation_by_mo_dashboard1: true,
         recommendation_by_mo_dashboard2: true,
         recommendation_by_mo_dashboard3: true,
         geo_llm: true,
-        recommendation_by_cmo: true,
+        // recommendation_by_cmo: true,
       },
     });
 
@@ -475,19 +466,19 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     }
 
     if (analysisStatus.competitor_details != null) {
-      responsePayload.competitors = safeParse(recommendation?.dashboard3_competi_camparison);
+      responsePayload.competitors = safeParse(analysisStatus?.competitor_details);
     }
-    if (recommendation?.recommendation_by_mo_dashboard1 != null) {
-      responsePayload.recommendation_by_mo_dashboard1 = safeParse(recommendation.recommendation_by_mo_dashboard1);
+    if (analysisStatus?.recommendation_by_mo1 != null) {
+      responsePayload.recommendation_by_mo_dashboard1 = safeParse(analysisStatus.recommendation_by_mo1);
     }
-    if (recommendation?.recommendation_by_mo_dashboard2 != null) {
-      responsePayload.recommendation_by_mo_dashboard2 = safeParse(recommendation.recommendation_by_mo_dashboard2);
+    if (analysisStatus?.recommendation_by_mo2 != null) {
+      responsePayload.recommendation_by_mo_dashboard2 = safeParse(analysisStatus.recommendation_by_mo2);
     }
-    if (recommendation?.recommendation_by_mo_dashboard3 != null) {
-      responsePayload.recommendation_by_mo_dashboard3 = safeParse(recommendation.recommendation_by_mo_dashboard3);
+    if (analysisStatus?.recommendation_by_mo3 != null) {
+      responsePayload.recommendation_by_mo_dashboard3 = safeParse(analysisStatus.recommendation_by_mo3);
     }
-    if (recommendation?.recommendation_by_cmo != null) {
-      responsePayload.cmo_recommendation = recommendation.recommendation_by_cmo;
+    if (analysisStatus?.recommendation_by_cmo != null) {
+      responsePayload.cmo_recommendation = {cmo_recommendation:analysisStatus.recommendation_by_cmo};
     }
 
     // Add traffic-related data only if traffic_anaylsis is non-empty

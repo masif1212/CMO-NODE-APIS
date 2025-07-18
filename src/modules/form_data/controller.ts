@@ -4,6 +4,7 @@ import { createBrandProfile} from "./service";
 // Handles POST /brand-profile
 
 export const handleBrandProfileForm: RequestHandler = async (req, res) => {
+
   try {
     const {
       brand_offering,
@@ -15,7 +16,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       user_id,
       website_id,
     } = req.body;
-
+    console.log("user:id", user_id, "website_id:", website_id)
     if (!user_id || !website_id) {
       res.status(400).json({
         success: false,
@@ -40,8 +41,3 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };
-
-
-// Handles POST /update-user-type
-
-

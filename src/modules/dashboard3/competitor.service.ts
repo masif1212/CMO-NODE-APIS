@@ -1,15 +1,21 @@
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
-import { scrapeWebsitecompetitos ,fetchBrands} from './scraper';
+import { scrapeWebsiteCompetitors ,fetchBrands} from './scraper';
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM, createComparisonPrompt } from './llm';
 import { parseCompetitorData } from './parser';
 import { getPageSpeedData } from './pagespeed';
 import OpenAI from 'openai';
 import 'dotenv/config';
 import * as cheerio from "cheerio";
-import axios from 'axios';
+import { performance } from 'perf_hooks';
+import pLimit from 'p-limit';
+import puppeteer from 'puppeteer';
+const dnsCache = new Map<string, string[]>();
 
 
+import {SchemaMarkupStatus,SeoAudit,SeoAuditResponse,BrandProfile_logo,CTRLossPercent} from './seo_audit_interface'
+import {isValidCompetitorUrl,processSeoAudits,validateCompetitorUrlsInParallel} from './competitors_validation'
+import { UserRequirement,  ProcessedResult,LlmCompetitor } from './brandprofile_interface';
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -17,7 +23,38 @@ const model = process.env.OPENAI_MODEL || 'gpt-4.1';
 
 const prisma = new PrismaClient();
 
-
+interface PageSpeedData {
+  categories: {
+    performance: number | null;
+    seo: number | null;
+    accessibility: number | null;
+    best_practices: number | null;
+    pwa: number | null;
+  };
+  audits: {
+    speed_index?: { display_value: string; score: number | null };
+    first_contentful_paint?: { display_value: string; score: number | null };
+    total_blocking_time?: { display_value: string; score: number | null };
+    interactive?: { display_value: string; score: number | null };
+    largest_contentful_paint?: { display_value: string; score: number | null };
+    cumulative_layout_shift?: { display_value: string; score: number | null };
+  };
+  audit_details: {
+    allAudits?: any;
+    optimization_opportunities?: any;
+    user_access_readiness?: any;
+    seoAudits?: any[];
+  };
+    revenueLossPercent?: number | null;
+  }
+function safeParse(jsonStr: any) {
+      try {
+        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      } catch (e) {
+        console.error("JSON parse failed:", e);
+        return jsonStr;
+      }
+    }
 
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   const website = await prisma.user_websites.findUnique({
@@ -40,1427 +77,1018 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-
-
-// export class CompetitorService {
-//   // Helper function to validate URLs (retained for other parts of the code)
-//   static async isValidCompetitorUrl(url: string, competitorName?: string): Promise<boolean> {
-//     try {
-//       new URL(url);
-//       if (!/^https?:\/\//.test(url)) return false;
-//     } catch {
-//       return false;
-//     }
-
-//     const blocklist = [
-//       'facebook.com',
-//       'twitter.com',
-//       'google.com',
-//       'youtube.com',
-//       'instagram.com',
-//       'linkedin.com',
-//       'tiktok.com',
-//       'example.com',
-//       'nonexistent.com',
-//     ];
-
-//     const { hostname } = new URL(url);
-//     if (blocklist.some(blocked => hostname.includes(blocked))) {
-//       console.log(`URL ${url} is in blocklist`);
-//       return false;
-//     }
-
-//     if (competitorName) {
-//       const normalizedName = competitorName.toLowerCase().replace(/\s+/g, '');
-//       if (!hostname.toLowerCase().includes(normalizedName)) {
-//         console.log(`URL ${url} does not match competitor name ${competitorName}`);
-//         return false;
-//       }
-//     }
-
-//     try {
-//       const response = await axios.head(url, { timeout: 5000 });
-//       return response.status >= 200 && response.status < 400;
-//     } catch (err) {
-//       console.log(`URL ${url} is inaccessible: ${err instanceof Error ? err.message : err}`);
-//       return false;
-//     }
-//   }
-
-//   // Helper function to extract H1
-//   static extractH1(rawHtml: string | null): string {
-//     if (!rawHtml) return 'Not Found';
-//     const $ = cheerio.load(rawHtml);
-//     return $('h1').first().text().trim() || 'Not Found';
-//   }
- 
-
-
-//   static async process(website_id: string, user_id: string) {
-//     if (!website_id || !user_id) {
-//       throw new Error('website_id and user_id are required');
-//     }
-
-//     console.log(`Getting website URL for user_id ${user_id}, website_id: ${website_id}`);
-//     const website_url = await getWebsiteUrlById(user_id, website_id);
-//     if (!website_url) {
-//       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
-//     }
-//     console.log('Website URL retrieved:', website_url);
-
-//     const [scrapedMain, analysis, userRequirementRaw] = await Promise.all([
-//       prisma.website_scraped_data.findUnique({ where: { website_id } }),
-//       prisma.brand_website_analysis.findFirst({
-//         where: { website_id },
-//         orderBy: { created_at: 'desc' },
-//       }),
-//       prisma.user_requirements.findFirst({ where: { website_id } }),
-//     ]);
-
-//     // Extract H1
-//     const h1Text = this.extractH1(scrapedMain?.raw_html ?? null);
-
-//     // Fetch and save PageSpeed data if it doesn't exist
-//     if (!analysis?.performance_score) {
-//       console.log(`Fetching PageSpeed data for ${website_url}`);
-//       const pageSpeed = await getPageSpeedData(website_url);
-//       if (pageSpeed) {
-//         await prisma.brand_website_analysis.create({
-//           data: {
-//             website_id,
-//             performance_score: pageSpeed.categories.performance || null,
-//             seo_score: pageSpeed.categories.seo || null,
-//             accessibility_score: pageSpeed.categories.accessibility || null,
-//             best_practices_score: pageSpeed.categories.best_practices || null,
-//             first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
-//             largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
-//             total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
-//             speed_index: pageSpeed.audits?.speed_index?.display_value || null,
-//             cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
-//             time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
-//             audit_details:pageSpeed.audit_details
-//           },
-//         });
-//       }
-//     } else {
-//       console.log(`PageSpeed data already exists for ${website_url}`);
-//     }
-
-//     const userRequirement = {
-//       industry: userRequirementRaw?.industry ?? 'Unknown',
-//       region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
-//       target_location: userRequirementRaw?.target_location ?? 'Unknown',
-//       target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
-//       primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
-//       USP: userRequirementRaw?.USP ?? 'Unknown',
-//       competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
-//         ? userRequirementRaw.competitor_urls
-//         : [],
-//     };
-
-//     const competitorUrls: string[] = Array.isArray(userRequirement.competitor_urls)
-//       ? (userRequirement.competitor_urls.filter((url): url is string => typeof url === 'string'))
-//       : [];
-//     const competitorResults = [];
-//     const processedUrls = new Set<string>();
-//     const processedNames = new Set<string>();
-
-//     // Helper function to handle schema_markup_status
-//     const getSchemaMarkupStatus = (scraped: any) => {
-//       if (typeof scraped === 'object' && scraped !== null && 'schema_analysis' in scraped) {
-//         const schema = scraped.schema_analysis;
-//         if (typeof schema === 'string') {
-//           try {
-//             return JSON.parse(schema);
-//           } catch (error) {
-//             console.error(`Failed to parse schema_analysis for ${scraped.website_url}: ${error instanceof Error ? error.message : String(error)}`);
-//             return schema;
-//           }
-//         } else if (schema !== undefined && schema !== null) {
-//           return schema;
-//         }
-//       }
-//       return null;
-//     };
-
-    
-//     // const result = await fetchBrands(user_id, website_id);
-//    const llmResponse = await prisma.llm_responses.findUnique({
-//     where: { website_id: website_id },
-//     select:{
-//     geo_llm : true
-//     }
-//   });
-
-//   let result: any;
-//   if (llmResponse?.geo_llm === null) {
-//     console.log("no geo llm response found")
-//     result = await fetchBrands(user_id, website_id);
-//     await prisma.analysis_status.upsert({
-//   where: {
-//     user_id_website_id: {
-//       user_id: user_id ?? '',
-//       website_id: website_id,
-//     },
-//   },
-//   update: { geo_llm: result },
-//   create: {
-//     user_id: user_id ?? '',
-//     website_id: website_id,
-//     geo_llm: result,
-//   },
-// })
-//   } else {
-//     result = llmResponse?.geo_llm;
-//     console.log("geo llm found")
-//   }
-   
-  
-//     // Process user-provided competitor URLs
-//     const competitorPromises = competitorUrls.filter(u => u.startsWith('http')).map(async (compUrl) => {
-//       try {
-//         const scraped = await scrapeWebsitecompetitos(compUrl);
-//         if (!scraped || typeof scraped !== 'object') throw new Error('Scrape failed');
-
-//         const competitorData = await extractCompetitorDataFromLLM(scraped);
-//         if (!competitorData) throw new Error('LLM parsing failed');
-
-//         const competitorName = competitorData.name || scraped.page_title || compUrl;
-
-//         if (processedUrls.has(compUrl) || processedNames.has(competitorName)) {
-//           console.log(`Skipping duplicate competitor: ${competitorName} (${compUrl})`);
-//           return null;
-//         }
-
-//         const competitor_id = uuidv4();
-//         const savedCompetitor = await prisma.competitor_details.create({
-//           data: {
-//             competitor_id,
-//             website_id,
-//             name: competitorName,
-//             competitor_website_url: compUrl,
-//             industry: competitorData.industry || userRequirement.industry || 'Unknown',
-//             region: competitorData.region || userRequirement.region_of_operation || 'Unknown',
-//             target_audience: competitorData.target_audience || userRequirement.target_audience || 'Unknown',
-//             primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
-//             usp: competitorData.usp || 'No clear USP identified',
-//           },
-//         });
-
-//         await prisma.competitor_data.upsert({
-//           where: { competitor_id },
-//           update: {
-//             ...(typeof scraped === 'object' && scraped !== null
-//               ? {
-//                   ...scraped,
-//                   schema_analysis:
-//                     scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-//                       ? JSON.stringify(scraped.schema_analysis)
-//                       : scraped.schema_analysis,
-//                 }
-//               : {}),
-//             updated_at: new Date(),
-//           },
-//           create: {
-//             competitor_id,
-//             website_id,
-//             ...(typeof scraped === 'object' && scraped !== null
-//               ? {
-//                   ...scraped,
-//                   schema_analysis:
-//                     scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-//                       ? JSON.stringify(scraped.schema_analysis)
-//                       : scraped.schema_analysis,
-//                 }
-//               : {}),
-//             website_url: scraped.website_url ?? compUrl,
-//           },
-//         });
-
-//         const pageSpeedData = await getPageSpeedData(compUrl);
-//         if (pageSpeedData) {
-//           await prisma.competitor_data.update({
-//             where: { competitor_id },
-//             data: { page_speed: pageSpeedData },
-//           });
-//         }
-
-//         const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-//           ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-//           : null;
-
-//         processedUrls.add(compUrl);
-//         processedNames.add(competitorName);
-
-//         return {
-//           brand_profile: {
-//             title: competitorName,
-//             industry: competitorData.industry || userRequirement.industry || 'Unknown',
-//             unique_selling_point: competitorData.usp || 'No clear USP identified',
-//             primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
-//             logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-
-//             website_url:competitorData.competitor_website_url || '', 
-//             meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-
-//           },
-//           website_audit: pageSpeedData ? {
-//                 performance_insights: {
-//                   performance: pageSpeedData.categories.performance || null,
-//                   seo: pageSpeedData.categories.seo || null,
-//                   accessibility: pageSpeedData.categories.accessibility || null,
-//                   best_practices: pageSpeedData.categories.best_practices || null,
-//                 },
-//                 website_health_matrix: {
-//                   speed_index: {
-//                       display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.speed_index?.score || null,
-//                     },
-//                   total_blocking_time: {
-//                     display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-//                     score: pageSpeedData.audits?.total_blocking_time?.score || null,
-//                   },
-//                   first_contentful_paint: {
-//                     display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-//                     score: pageSpeedData.audits?.first_contentful_paint?.score || null,
-//                   },
-//                   largest_contentful_paint: {
-//                     display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-//                     score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
-//                   },
-//                   cumulative_layout_shift: {
-//                     display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-//                     score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
-//                   },
-//                 },
-//               }
-//             : null,
-//           seo_audit: {
-//             h1_heading: h1_Text,
-//             meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
-//             meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-//             alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-//             schema_markup_status: getSchemaMarkupStatus(scraped),
-//             AI_Discoverability: "true",
-//             // brandAuditseo: pageSpeedData && pageSpeedData.brandAuditseo ? pageSpeedData.brandAuditseo.seo || null : null,
-//              brandAuditseo: pageSpeedData && pageSpeedData.audit_details.seoAudits ? pageSpeedData.audit_details.seoAudits || null : null,
-
-
-//           },
-//         };
-//       } catch (err) {
-//         console.error(`Failed processing competitor ${compUrl}: ${err instanceof Error ? err.message : err}`);
-//         return null;
-//       }
-//     });
-
-//     const results = await Promise.allSettled(competitorPromises);
-//     for (const res of results) {
-//       if (res.status === 'fulfilled' && res.value) {
-//         competitorResults.push(res.value);
-//       }
-//     }
-
-//     // Ensure at least 3 unique, valid competitors
-//     const MIN_COMPETITORS = 3;
-//     const MAX_RETRIES = 4;
-//     let retryCount = 0;
-
-//     while (competitorResults.length < MIN_COMPETITORS && retryCount < MAX_RETRIES) {
-//       try {
-//         const competitorsToGenerate = 6;
-//         console.log(`Fetching ${competitorsToGenerate} additional competitors (Retry ${retryCount + 1})`);
-
-//         const aiResponse = await fetchCompetitorsFromLLM(
-//           scrapedMain,
-//           userRequirement,
-//           competitorsToGenerate,
-//           Array.from(processedUrls),
-//           Array.from(processedNames)
-//         );
-
-//         await prisma.website_scraped_data.update({
-//           where: { website_id },
-//           data: { ai_response: aiResponse },
-//         });
-
-//         const parsedCompetitors = parseCompetitorData(aiResponse);
-
-//         interface ParsedCompetitor {
-//           competitor_website_url: string;
-//           website_url: string;
-//           name: string;
-//           industry?: string;
-//           region?: string;
-//           target_audience?: string;
-//           primary_offering?: string;
-//           usp?: string;
-//         }
-//         for (const comp of parsedCompetitors.slice(0, MIN_COMPETITORS - competitorResults.length) as ParsedCompetitor[]) {
-//           const url: string = (comp as ParsedCompetitor).website_url;
-//           const name: string = (comp as ParsedCompetitor).name;
-
-//           if (processedUrls.has(url) || processedNames.has(name) || competitorUrls.includes(url) || competitorResults.some(r => r.brand_profile.title === name)) {
-//             console.log(`Skipping duplicate competitor: ${name} (${url})`);
-//             continue;
-//           }
-
-//           try {
-//             const competitor_id = uuidv4();
-//             const savedCompetitor = await prisma.competitor_details.create({
-//               data: {
-//                 competitor_id,
-//                 website_id,
-//                 name,
-//                 competitor_website_url: url,
-//                 industry: comp.industry,
-//                 region: comp.region,
-//                 target_audience: comp.target_audience,
-//                 primary_offering: comp.primary_offering,
-//                 usp: comp.usp,
-//               },
-//             });
-
-//             const scraped = await scrapeWebsitecompetitos(url);
-//             if (scraped) {
-//               await prisma.competitor_data.upsert({
-//                 where: { competitor_id },
-//                 update: {
-//                   ...(typeof scraped === 'object' && scraped !== null
-//                     ? {
-//                         ...scraped,
-//                         schema_analysis:
-//                           scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-//                             ? JSON.stringify(scraped.schema_analysis)
-//                             : scraped.schema_analysis,
-//                       }
-//                     : {}),
-//                   updated_at: new Date(),
-//                 },
-//                 create: {
-//                   competitor_id,
-//                   website_id,
-//                   ...(typeof scraped === 'object' && scraped !== null
-//                     ? {
-//                         ...scraped,
-//                         schema_analysis:
-//                           scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-//                             ? JSON.stringify(scraped.schema_analysis)
-//                             : scraped.schema_analysis,
-//                       }
-//                     : {}),
-//                   website_url: (typeof scraped === 'object' && scraped !== null && 'website_url' in scraped) ? scraped.website_url : url,
-//                 },
-//               });
-
-//               const pageSpeedData = await getPageSpeedData(url);
-//               if (pageSpeedData) {
-//                 await prisma.competitor_data.update({
-//                   where: { competitor_id },
-//                   data: { page_speed: pageSpeedData },
-//                 });
-//               }
-
-//               const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-//                 ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-//                 : null;
-
-//               competitorResults.push({
-//                 brand_profile: {
-//                   title: name,
-//                   industry: comp.industry || userRequirement.industry || 'Unknown',
-//                   unique_selling_point: comp.usp || 'No clear USP identified',
-//                   primary_offering: comp.primary_offering || userRequirement.primary_offering || 'Unknown',
-//                   logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-//                   website_url:comp.website_url || '', 
-//                   meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-
-//                 },
-//                 website_audit: pageSpeedData ? {
-//                   performance_insights: {
-//                     performance: pageSpeedData.categories.performance || null,
-//                     seo: pageSpeedData.categories.seo || null,
-//                     accessibility: pageSpeedData.categories.accessibility || null,
-//                     best_practices: pageSpeedData.categories.best_practices || null,
-//                   },
-//                   website_health_matrix: {
-//                     speed_index: {
-//                       display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.speed_index?.score || null,
-//                     },
-
-//                     total_blocking_time: {
-//                       display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.total_blocking_time?.score || null,
-//                     },
-//                     first_contentful_paint: {
-//                       display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.first_contentful_paint?.score || null,
-//                     },
-
-                    
-//                     largest_contentful_paint: {
-//                       display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
-//                     },
-//                     cumulative_layout_shift: {
-//                       display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-//                       score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
-//                     },
-//                   },  } : null,
-//                   seo_audit: {
-//                     h1_heading: h1_Text,
-//                     meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
-//                     meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-//                     alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-//                     schema_markup_status: getSchemaMarkupStatus(scraped),
-//                     AI_Discoverability: "true",
-//                     brandAuditseo: pageSpeedData && pageSpeedData.audit_details.seoAudits ? pageSpeedData.audit_details.seoAudits || null : null,
-//                   },
-              
-//               });
-
-//               processedUrls.add(url);
-//               processedNames.add(name);
-//             }
-//           } catch (err) {
-//             console.error(`AI fallback competitor error for ${url}: ${err instanceof Error ? err.message : err}`);
-//           }
-//         }
-
-//         retryCount++;
-//         if (competitorResults.length < MIN_COMPETITORS && retryCount >= MAX_RETRIES) {
-//           console.warn(`Could not find ${MIN_COMPETITORS} unique, valid competitors after ${MAX_RETRIES} retries. Returning ${competitorResults.length} competitors.`);
-//         }
-//       } catch (err) {
-//         console.error(`Error during AI fallback competitor fetch (Retry ${retryCount + 1}): ${err instanceof Error ? err.message : err}`);
-//         retryCount++;
-//       }
-//     }
-
-//     const labeledResults: Record<string, any> = {};
-//     competitorResults.forEach((result, idx) => {
-//       labeledResults[`competitor${idx + 1}`] = result;
-//     });
-
-//     const brandWebsiteAnalysis = await prisma.brand_website_analysis.findFirst({
-//       where: { website_id },
-//       orderBy: { created_at: 'desc' },
-//     });
-
-//     let schema_markup_status = null;
-//     if (scrapedMain?.schema_analysis) {
-//       schema_markup_status = typeof scrapedMain.schema_analysis === "string"
-//         ? JSON.parse(scrapedMain.schema_analysis)
-//         : scrapedMain.schema_analysis;
-//     }
-
-//     let performance_insight = {
-//       performance: brandWebsiteAnalysis?.performance_score ?? 0,
-//       seo: brandWebsiteAnalysis?.seo_score ?? 0,
-//       accessibility: brandWebsiteAnalysis?.accessibility_score ?? 0,
-//       best_practices: brandWebsiteAnalysis?.best_practices_score ?? 0,
-
-      
-      
-//     };
-
-//     // let auditDetails: any = brandWebsiteAnalysis?.audit_details?? {};
-//     // if (typeof auditDetails === 'string') {
-//     //   try {
-//     //     auditDetails = JSON.parse(auditDetails);
-//     //   } catch {
-//     //     auditDetails = {};
-//     //   }
-//     // }
-
-//     // let website_health_matrix = {
-
-//     //   speed_index: {
-//     //     display_value: brandWebsiteAnalysis?.speed_index ?? "N/A",
-//     //     score: auditDetails?.metrics?.speed_index?.score ?? null,
-//     //   },
-      
-//     //   total_blocking_time: {
-//     //     display_value: brandWebsiteAnalysis?.total_blocking_time ?? "N/A",
-//     //     score: auditDetails?.metrics?.total_blocking_time?.score ?? null,
-//     //   },
-//     //   first_contentful_paint: {
-//     //     display_value: brandWebsiteAnalysis?.first_contentful_paint ?? "N/A",
-//     //     score: auditDetails?.metrics?.first_contentful_paint?.score ?? null,
-//     //   },
-//     //   largest_contentful_paint: {
-//     //     display_value: brandWebsiteAnalysis?.largest_contentful_paint ?? "N/A",
-//     //     score: auditDetails?.metrics?.largest_contentful_paint?.score ?? null,
-//     //   },
-//     //   cumulative_layout_shift: {
-//     //     display_value: brandWebsiteAnalysis?.cumulative_layout_shift ?? "N/A",
-//     //     score: auditDetails?.metrics?.cumulative_layout_shift?.score ?? null,
-//     //   },
-//     // };
-
-
-
-//     let auditDetails: any = brandWebsiteAnalysis?.audit_details ?? {};
-// if (typeof auditDetails === 'string') {
-//   try {
-//     auditDetails = JSON.parse(auditDetails);
-//   } catch {
-//     auditDetails = {};
-//   }
-// }
-
-// // Helper function to get audit by ID from allAudits
-// function getAuditById(id: string) {
-//   // console.log("All Audits:", auditDetails?.allAudits);
-//   return auditDetails?.allAudits?.find((a: any) => a.id === id) ?? {};
-  
-// }
-
-// let website_health_matrix = {
-//   speed_index: {
-//     display_value: getAuditById("speed-index").display_value ?? "N/A",
-//     score: getAuditById("speed-index").score ?? null,
-//   },
-//   total_blocking_time: {
-//     display_value: getAuditById("total-blocking-time").display_value ?? "N/A",
-//     score: getAuditById("total-blocking-time").score ?? null,
-//   },
-//   first_contentful_paint: {
-//     display_value: getAuditById("first-contentful-paint").display_value ?? "N/A",
-//     score: getAuditById("first-contentful-paint").score ?? null,
-//   },
-//   largest_contentful_paint: {
-//     display_value: getAuditById("largest-contentful-paint").display_value ?? "N/A",
-//     score: getAuditById("largest-contentful-paint").score ?? null,
-//   },
-//   cumulative_layout_shift: {
-//     display_value: getAuditById("cumulative-layout-shift").display_value ?? "N/A",
-//     score: getAuditById("cumulative-layout-shift").score ?? null,
-//   },
-// };
-
-
-//     const { raw_html, other_links, ctr_loss_percent, sitemap_pages, ai_response, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
-
-//     labeledResults['mainWebsite'] = {
-//       brand_profile: {
-//         title: 'page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title
-//           ? scrapedMainWithoutRawHtml.page_title
-//           : 'Unknown',
-//         industry: userRequirement.industry || 'Unknown',
-//         unique_selling_point: userRequirement.USP || 'Unknown',
-//         primary_offering: userRequirement.primary_offering || 'Unknown',
-//         logo_url: scrapedMain?.logo_url || null,
-//         meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
-//         website_url: website_url
-
-
-        
-//       },
-//       website_audit: {
-        
-//           performance_insight,
-//           website_health_matrix,
-//         },
-//       seo_audit: {
-//         h1_heading: h1Text,
-//         meta_title: ('page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title) ? scrapedMainWithoutRawHtml.page_title : null,
-//         meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
-//         alt_text_coverage: 'homepage_alt_text_coverage' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.homepage_alt_text_coverage : null,
-//         schema_markup_status: schema_markup_status,
-//         AI_Discoverability: result,
-//         // brandAuditseo: brandWebsiteAnalysis && brandWebsiteAnalysis.audit_details ? brandWebsiteAnalysis.audit_details : null,
-//         brandAuditseo: (() => {
-//           if (brandWebsiteAnalysis && brandWebsiteAnalysis.audit_details) {
-//             let auditDetailsObj: any = brandWebsiteAnalysis.audit_details;
-//             if (typeof auditDetailsObj === 'string') {
-//               try {
-//                 auditDetailsObj = JSON.parse(auditDetailsObj);
-//               } catch {
-//                 return null;
-//               }
-//             }
-//             return auditDetailsObj && auditDetailsObj.seoAudits ? auditDetailsObj.seoAudits : null;
-//           }
-//           return null;
-//         })(),
-
-       
-
-//       },
-//     };
-
-//     await prisma.llm_responses.upsert({
-//       where: { website_id },
-//       update: {
-//         dashboard3_competi_camparison: JSON.stringify(labeledResults),
-//       },
-//       create: {
-//         website_id,
-//         dashboard3_competi_camparison: JSON.stringify(labeledResults),
-//       },
-//     });
-
-//     await prisma.analysis_status.upsert({
-//   where: {
-//     user_id_website_id: {
-//       user_id,
-//       website_id,
-//     },
-//   },
-//   update: {
-//     geo_llm: result,
-//   },
-//   create: {
-//     user_id,
-//     website_id,
-//     geo_llm: result,
-//   },
-// });
-
-//     return labeledResults;
-// }
-
-
-
-// Helper function to process SEO audits with user-friendly titles and descriptions
-function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
-  const passedAudits: { title: string; description: string }[] = [];
-  const failedAudits: { title: string; description: string }[] = [];
-
-  if (!Array.isArray(auditData)) {
-    return { passedAudits: [], failedAudits: [] };
-  }
-
-  for (const audit of auditData) {
-    // Skip the structured-data audit
-    if (audit?.id === 'structured-data') {
-      continue;
-    }
-
-    // Define user-friendly titles and descriptions based on audit ID
-    let userFriendlyTitle: string;
-    let passedDescription: string;
-    let failedDescription: string;
-
-    switch (audit?.id) {
-      case 'is-crawlable':
-        userFriendlyTitle = 'Search Engines Can Find This Page';
-        passedDescription = 'Page allows search engines to find and index it, making it visible in search results.';
-        failedDescription = 'Page is blocked from search engines, which may prevent it from appearing in search results. Check for noindex tags or robots.txt restrictions.';
-        break;
-      case 'document-title':
-        userFriendlyTitle = 'Page Has a Clear and Useful Title';
-        passedDescription = 'Page has a title that helps users and search engines understand its content.';
-        failedDescription = 'Page is missing a title or has an unclear one, which can confuse users and search engines. Add a descriptive title tag.';
-        break;
-      case 'meta-description':
-        userFriendlyTitle = 'Page Has a Helpful Description';
-        passedDescription = 'Page includes a short summary that appears in search results, helping users know what it’s about.';
-        failedDescription = 'Page lacks a meta description, which may reduce click-through rates. Add a concise summary of the Page’s content.';
-        break;
-      case 'http-status-code':
-        userFriendlyTitle = 'Page Loads Without Errors';
-        passedDescription = 'Page returns a successful status code, ensuring search engines can access it properly.';
-        failedDescription = 'Page returns an error status code, preventing search engines from accessing it. Fix server or redirect issues.';
-        break;
-      case 'link-text':
-        userFriendlyTitle = 'Links Use Clear and Descriptive Text';
-        passedDescription = 'links use descriptive text, making it easier for users and search engines to understand them.';
-        failedDescription = 'Some links lack descriptive text , which can confuse users and search engines. Use meaningful link text.';
-        break;
-      case 'crawlable-anchors':
-        userFriendlyTitle = 'Links Can Be Followed by Search Engines';
-        passedDescription = 'Links are set up correctly, allowing search engines to explore  website effectively.';
-        failedDescription = 'Some links are not crawlable due to improper setup (e.g., JavaScript-based links). Ensure links use proper HTML anchor tags.';
-        break;
-      case 'robots-txt':
-        userFriendlyTitle = 'Robots.txt File Is Set Up Correctly';
-        passedDescription = 'Robots.txt file is properly configured, guiding search engines on how to crawl  site.';
-        failedDescription = 'Robots.txt file is missing or incorrectly configured, which may block search engines. Create or fix the robots.txt file.';
-        break;
-      case 'image-alt':
-        userFriendlyTitle = 'Images Have Descriptive Alt Text';
-        passedDescription = 'Images include alt text, helping search engines and screen readers understand them.';
-        failedDescription = 'Some images lack alt text, making them less accessible and harder for search engines to understand. Add descriptive alt text to all images.';
-        break;
-      case 'hreflang':
-        userFriendlyTitle = 'Page Shows the Right Language to the Right Users';
-        passedDescription = 'Page correctly specifies its language, helping search engines show it to the right audience.';
-        failedDescription = 'Page has missing or incorrect language settings, which may show it to the wrong audience. Add correct hreflang tags.';
-        break;
-      case 'canonical':
-        userFriendlyTitle = 'Page Shows Its Preferred URL';
-        passedDescription = 'Page uses a canonical link to tell search engines the preferred version, avoiding duplicate content issues.';
-        failedDescription = 'Page lacks a canonical link, which may cause duplicate content issues. Add a canonical tag to specify the preferred URL.';
-        break;
-      default:
-        userFriendlyTitle = audit?.title || 'Unknown Audit';
-        passedDescription = audit?.description || 'No description available';
-        failedDescription = audit?.description || 'This audit failed, but no specific guidance is available. Review the page configuration.';
-    }
-
-    // Create audit entry
-    const auditEntry = {
-      title: userFriendlyTitle,
-      description: audit?.score === 1 ? passedDescription : failedDescription,
-    };
-
-    // Categorize based on score
-    if (audit?.score === 1) {
-      passedAudits.push(auditEntry);
-    } else if (audit?.score === 0) {
-      failedAudits.push(auditEntry);
-    }
-  }
-
-  return { passedAudits, failedAudits };
-}
-
-export class CompetitorService {
-  // Helper function to validate URLs
-  static async isValidCompetitorUrl(url: string, competitorName?: string): Promise<boolean> {
-    try {
-      new URL(url);
-      if (!/^https?:\/\//.test(url)) return false;
-    } catch {
-      return false;
-    }
-
-    const blocklist = [
-      'facebook.com',
-      'twitter.com',
-      'google.com',
-      'youtube.com',
-      'instagram.com',
-      'linkedin.com',
-      'tiktok.com',
-      'example.com',
-      'nonexistent.com',
-    ];
-
-    const { hostname } = new URL(url);
-    if (blocklist.some(blocked => hostname.includes(blocked))) {
-      console.log(`URL ${url} is in blocklist`);
-      return false;
-    }
-
-    if (competitorName) {
-      const normalizedName = competitorName.toLowerCase().replace(/\s+/g, '');
-      if (!hostname.toLowerCase().includes(normalizedName)) {
-        console.log(`URL ${url} does not match competitor name ${competitorName}`);
-        return false;
-      }
-    }
-
-    try {
-      const response = await axios.head(url, { timeout: 5000 });
-      return response.status >= 200 && response.status < 400;
-    } catch (err) {
-      console.log(`URL ${url} is inaccessible: ${err instanceof Error ? err.message : err}`);
-      return false;
-    }
-  }
-
-  // Helper function to extract H1
-  static extractH1(rawHtml: string | null): string {
+async function extractH1(rawHtml: string | null): Promise<string> {
     if (!rawHtml) return 'Not Found';
     const $ = cheerio.load(rawHtml);
     return $('h1').first().text().trim() || 'Not Found';
   }
 
-  static async process(website_id: string, user_id: string) {
+
+export class CompetitorService {
+
+// static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
+//   const t0 = performance.now();
+//   console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
+
+//   if (!user_id || !website_id) throw new Error('user_id and website_id are required');
+
+//   const website_url = await getWebsiteUrlById(user_id, website_id);
+//   if (!website_url) throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
+//   console.log(`[brandprofile] Found main website URL: ${website_url}`);
+
+//   const [scrapedMain, userRequirementRaw] = await Promise.all([
+//     prisma.website_scraped_data.findUnique({ where: { website_id } }),
+//     prisma.user_requirements.findFirst({ where: { website_id } }),
+//   ]);
+
+//   if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for website_id=${website_id}`);
+//   console.log(`[brandprofile] Loaded scraped main website data`);
+
+//   const userRequirement: UserRequirement = {
+//     industry: userRequirementRaw?.industry ?? 'Unknown',
+//     primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
+//     USP: userRequirementRaw?.USP ?? 'Unknown',
+//     competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
+//       ? userRequirementRaw.competitor_urls.filter((url): url is string => typeof url === 'string')
+//       : [],
+//   };
+
+//   console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
+
+//   const MIN_COMPETITORS = 3;
+//   const competitorResults: ProcessedResult[] = [];
+//   const processedUrls = new Set<string>([website_url]);
+//   const processedNames = new Set<string>();
+//   const limit = pLimit(4);
+//   let orderIndex = 0;
+
+//   const browser = await puppeteer.launch({ headless: true });
+//   console.log(`[brandprofile] Puppeteer browser launched`);
+
+//   // Process user-provided competitors
+//   const competitorValidationResults = await Promise.all(
+//     userRequirement.competitor_urls.map(url =>
+//       limit(async () => {
+//         const result = await isValidCompetitorUrl(url, undefined, browser);
+//         console.log(`[brandprofile] Validation for ${url}: isValid=${result.isValid}`);
+//         return { ...result, originalUrl: url };
+//       })
+//     )
+//   );
+
+//   const processingPromises = competitorValidationResults
+//     .filter(({ isValid }) => isValid)
+//     .map(({ preferredUrl, originalUrl }) =>
+//       limit(async () => {
+//         if (!preferredUrl || processedUrls.has(preferredUrl)) {
+//           console.log(`[brandprofile] Skipping duplicate or invalid URL: ${preferredUrl || originalUrl}`);
+//           return;
+//         }
+
+//         try {
+//           console.log(`[brandprofile] Scraping and extracting user-provided competitor: ${preferredUrl}`);
+//           const scraped = await scrapeWebsiteCompetitors(preferredUrl);
+//           const competitorData = await extractCompetitorDataFromLLM(scraped);
+//           if (!competitorData) throw new Error('No competitor data extracted');
+
+//           const competitorName = competitorData.name || (typeof scraped === 'object' && scraped !== null ? scraped.page_title : null) || preferredUrl;
+
+//           if (processedNames.has(competitorName)) {
+//             console.log(`[brandprofile] Duplicate name detected, skipping: ${competitorName}`);
+//             return;
+//           }
+
+//           const competitor_id = uuidv4();
+//           await prisma.competitor_details.create({
+//             data: {
+//               competitor_id,
+//               website_id,
+//               name: competitorName,
+//               competitor_website_url: preferredUrl,
+//               industry: competitorData.industry || userRequirement.industry,
+//               primary_offering: competitorData.primary_offering || userRequirement.primary_offering,
+//               usp: competitorData.usp || 'No clear USP identified',
+//               order_index: orderIndex++,
+//             },
+//           });
+
+//           competitorResults.push({
+//             competitor_id,
+//             brand_profile: {
+//               title: competitorName,
+//               industry: competitorData.industry || userRequirement.industry,
+//               unique_selling_point: competitorData.usp || 'No clear USP identified',
+//               primary_offering: competitorData.primary_offering || userRequirement.primary_offering,
+//               logo_url: competitorData.logo_url || (typeof scraped === 'object' && scraped !== null ? scraped.logo_url : null) || null,
+//               website_url: preferredUrl,
+//             },
+//           });
+
+//           console.log(`[brandprofile] User-provided competitor saved: ${competitorName} (${preferredUrl})`);
+
+//           processedUrls.add(preferredUrl);
+//           processedNames.add(competitorName);
+//         } catch (err) {
+//           console.error(`[brandprofile] Error processing user competitor ${preferredUrl}: ${err}`);
+//         }
+//       })
+//     );
+
+//   await Promise.all(processingPromises);
+//   console.log(`[brandprofile] Finished processing user-provided competitors. Total valid: ${competitorResults.length}`);
+
+//   // LLM fallback (no extractCompetitorDataFromLLM here)
+//   if (competitorResults.length < MIN_COMPETITORS) {
+//     console.log(`[brandprofile] Less than ${MIN_COMPETITORS} competitors found. Fetching from LLM...`);
+
+//     const aiResponse = await fetchCompetitorsFromLLM(
+//       user_id,
+//       website_id,
+//       scrapedMain,
+//       userRequirement,
+//       Array.from(processedUrls),
+//       Array.from(processedNames)
+//     );
+
+//     const parsed = parseCompetitorData(aiResponse);
+
+//     for (const comp of parsed) {
+//       const name = comp.name || `Competitor ${competitorResults.length + 1}`;
+//       const url = comp.website_url;
+
+//       if (!url || processedUrls.has(url) || processedNames.has(name)) {
+//         console.log(`[brandprofile] Skipping duplicate or invalid AI-suggested: ${url}`);
+//         continue;
+//       }
+
+//       const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
+//       console.log(`[brandprofile] AI competitor validation: ${url}, isValid=${isValid}`);
+
+//       if (!isValid || !preferredUrl) {
+//         console.log(`[brandprofile] Skipping invalid AI-suggested URL: ${url}`);
+//         continue;
+//       }
+
+//       try {
+//         const competitor_id = uuidv4();
+//         await prisma.competitor_details.create({
+//           data: {
+//             competitor_id,
+//             website_id,
+//             name,
+//             competitor_website_url: preferredUrl,
+//             industry: comp.industry || userRequirement.industry,
+//             primary_offering: comp.primary_offering || userRequirement.primary_offering,
+//             usp: comp.usp || 'No clear USP identified',
+//             order_index: orderIndex++,
+//           },
+//         });
+
+//         competitorResults.push({
+//           competitor_id,
+//           brand_profile: {
+//             title: name,
+//             industry: comp.industry || userRequirement.industry,
+//             unique_selling_point: comp.usp || 'No clear USP identified',
+//             primary_offering: comp.primary_offering || userRequirement.primary_offering,
+//             website_url: preferredUrl,
+//             logo_url: null,
+//           },
+//         });
+
+//         processedUrls.add(preferredUrl);
+//         processedNames.add(name);
+
+//         console.log(`[brandprofile] AI competitor saved: ${name} (${preferredUrl})`);
+//       } catch (err) {
+//         console.error(`[brandprofile] Error saving AI competitor ${preferredUrl}: ${err}`);
+//       }
+//     }
+//   }
+
+//   await browser.close();
+//   console.log(`[brandprofile] Browser closed`);
+
+//   const t1 = performance.now();
+//   console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
+//   console.log("competitorResults:", competitorResults);
+//   return {
+//     mainWebsite: {
+//       brand_profile: {
+//         title: scrapedMain.page_title ?? 'Unknown',
+//         industry: userRequirement.industry,
+//         unique_selling_point: userRequirement.USP,
+//         primary_offering: userRequirement.primary_offering,
+//         logo_url: scrapedMain.logo_url || null,
+//         website_url,
+//         is_valid: true,
+//       },
+//     },
+//     competitors: competitorResults,
+//   };
+// }
+
+
+static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
+  const t0 = performance.now();
+  console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
+
+  if (!user_id || !website_id) throw new Error('user_id and website_id are required');
+
+  const website_url = await getWebsiteUrlById(user_id, website_id);
+  if (!website_url) throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
+  console.log(`[brandprofile] Found main website URL: ${website_url}`);
+
+  const [scrapedMain, userRequirementRaw] = await Promise.all([
+    prisma.website_scraped_data.findUnique({ where: { website_id } }),
+    prisma.user_requirements.findFirst({ where: { website_id } }),
+  ]);
+
+  if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for website_id=${website_id}`);
+  console.log(`[brandprofile] Loaded scraped main website data`);
+
+  const userRequirement: UserRequirement = {
+    industry: userRequirementRaw?.industry ?? 'Unknown',
+    primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
+    USP: userRequirementRaw?.USP ?? 'Unknown',
+    competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
+      ? userRequirementRaw.competitor_urls.filter((url): url is string => typeof url === 'string')
+      : [],
+  };
+
+  console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
+
+  const MAX_COMPETITORS = 3;
+  const competitorResults: ProcessedResult[] = [];
+  const processedUrls = new Set<string>([website_url]);
+  const processedNames = new Set<string>();
+  let orderIndex = 0;
+
+  const browser = await puppeteer.launch({ headless: true });
+  console.log(`[brandprofile] Puppeteer browser launched`);
+
+  // Process user-provided competitors
+  for (const originalUrl of userRequirement.competitor_urls) {
+    if (competitorResults.length >= MAX_COMPETITORS) break;
+
+    let preferredUrl = originalUrl;
+    let competitorData: any = null;
+    let scraped: any = null;
+    let name = originalUrl;
+
+    try {
+      const result = await isValidCompetitorUrl(originalUrl, undefined, browser);
+      console.log(`[brandprofile] Validation result for ${originalUrl}:`, result);
+
+      if (result.isValid && result.preferredUrl && !processedUrls.has(result.preferredUrl)) {
+        preferredUrl = result.preferredUrl;
+        scraped = await scrapeWebsiteCompetitors(preferredUrl);
+        competitorData = await extractCompetitorDataFromLLM(scraped);
+      } else {
+        // Not valid, use fallback data
+        preferredUrl = originalUrl;
+        competitorData = await extractCompetitorDataFromLLM(null);
+      }
+
+      name = competitorData?.name || scraped?.page_title || originalUrl;
+      if (processedNames.has(name)) {
+        console.log(`[brandprofile] Duplicate name, skipping user competitor: ${name}`);
+        continue;
+      }
+
+      const competitor_id = uuidv4();
+      await prisma.competitor_details.create({
+        data: {
+          competitor_id,
+          website_id,
+          name,
+          competitor_website_url: preferredUrl,
+          industry: competitorData?.industry || userRequirement.industry,
+          primary_offering: competitorData?.primary_offering || userRequirement.primary_offering,
+          usp: competitorData?.usp || 'No clear USP identified',
+          order_index: orderIndex++,
+        },
+      });
+
+      competitorResults.push({
+        competitor_id,
+        brand_profile: {
+          title: name,
+          industry: competitorData?.industry || userRequirement.industry,
+          unique_selling_point: competitorData?.usp || 'No clear USP identified',
+          primary_offering: competitorData?.primary_offering || userRequirement.primary_offering,
+          logo_url: competitorData?.logo_url || scraped?.logo_url || null,
+          website_url: preferredUrl,
+        },
+      });
+
+      processedUrls.add(preferredUrl);
+      processedNames.add(name);
+      console.log(`[brandprofile] Saved user competitor: ${name} (${preferredUrl})`);
+    } catch (err) {
+      console.error(`[brandprofile] Error processing user competitor ${originalUrl}: ${err}`);
+    }
+  }
+
+  // If fewer than MAX_COMPETITORS, fetch from LLM
+  if (competitorResults.length < MAX_COMPETITORS) {
+    console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
+
+    const aiResponse = await fetchCompetitorsFromLLM(
+      user_id,
+      website_id,
+      scrapedMain,
+      userRequirement,
+      Array.from(processedUrls),
+      Array.from(processedNames)
+    );
+
+    const parsed = parseCompetitorData(aiResponse);
+
+    for (const comp of parsed) {
+      if (competitorResults.length >= MAX_COMPETITORS) break;
+
+      const name = comp.name || `Competitor ${competitorResults.length + 1}`;
+      const url = comp.website_url;
+
+      if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
+
+      try {
+        const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
+        if (!isValid || !preferredUrl) continue;
+
+        const competitor_id = uuidv4();
+        await prisma.competitor_details.create({
+          data: {
+            competitor_id,
+            website_id,
+            name,
+            competitor_website_url: preferredUrl,
+            industry: comp.industry || userRequirement.industry,
+            primary_offering: comp.primary_offering || userRequirement.primary_offering,
+            usp: comp.usp || 'No clear USP identified',
+            order_index: orderIndex++,
+          },
+        });
+
+        competitorResults.push({
+          competitor_id,
+          brand_profile: {
+            title: name,
+            industry: comp.industry || userRequirement.industry,
+            unique_selling_point: comp.usp || 'No clear USP identified',
+            primary_offering: comp.primary_offering || userRequirement.primary_offering,
+            logo_url: null,
+            website_url: preferredUrl,
+          },
+        });
+
+        processedUrls.add(preferredUrl);
+        processedNames.add(name);
+        console.log(`[brandprofile] Saved LLM competitor: ${name} (${preferredUrl})`);
+      } catch (err) {
+        console.error(`[brandprofile] Error saving LLM competitor ${url}: ${err}`);
+      }
+    }
+  }
+
+  await browser.close();
+  console.log(`[brandprofile] Browser closed`);
+
+  const t1 = performance.now();
+  console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
+  console.log("competitorResults:", competitorResults);
+
+  return {
+    mainWebsite: {
+      brand_profile: {
+        title: scrapedMain.page_title ?? 'Unknown',
+        industry: userRequirement.industry,
+        unique_selling_point: userRequirement.USP,
+        primary_offering: userRequirement.primary_offering,
+        logo_url: scrapedMain.logo_url || null,
+        website_url,
+        is_valid: true,
+      },
+    },
+    competitors: competitorResults.slice(0, MAX_COMPETITORS),
+  };
+
+  // competitorResults.forEach((r, i) => {
+  //   labeledResults[`competitor${i + 1}`] = r;
+  // });
+
+
+}
+
+
+
+static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
+  const response: SeoAuditResponse = {
+  mainWebsite: {
+    brand_profile: {
+      website_url: null,
+      logo_url: null,
+      ctr_loss_percent: null
+    },
+    seo_audit: {} as SeoAudit,
+    
+  },
+  competitors: []
+};
     if (!website_id || !user_id) {
       throw new Error('website_id and user_id are required');
     }
 
-    console.log(`Getting website URL for user_id ${user_id}, website_id: ${website_id}`);
-    const website_url = await getWebsiteUrlById(user_id, website_id);
-    if (!website_url) {
+    console.log(`Fetching SEO audit data for user_id ${user_id}, website_id: ${website_id}`);
+    const main_website_url = await getWebsiteUrlById(user_id, website_id);
+    if (!main_website_url) {
       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
     }
-    console.log('Website URL retrieved:', website_url);
 
-    const [scrapedMain, analysis, userRequirementRaw] = await Promise.all([
-      prisma.website_scraped_data.findUnique({ where: { website_id } }),
-      prisma.brand_website_analysis.findFirst({
+    const [main_website_scrapeddata, geollm] = await Promise.all([
+      prisma.website_scraped_data.findUnique({
         where: { website_id },
-        orderBy: { created_at: 'desc' },
+        select: {
+          meta_description: true,
+          page_title: true,
+          homepage_alt_text_coverage: true,
+          schema_analysis: true,
+          raw_html: true,
+          isCrawlable: true,
+          headingAnalysis: true,
+          logo_url: true,
+          ctr_loss_percent: true,
+        },
       }),
-      prisma.user_requirements.findFirst({ where: { website_id } }),
+      prisma.llm_responses.findUnique({
+        where: { website_id },
+        select: { geo_llm: true },
+      }),
     ]);
-
-    // Extract H1
-    const h1Text = this.extractH1(scrapedMain?.raw_html ?? null);
-
-    // Fetch and save PageSpeed data if it doesn't exist
-    if (!analysis?.performance_score) {
-      console.log(`Fetching PageSpeed data for ${website_url}`);
-      const pageSpeed = await getPageSpeedData(website_url);
-      if (pageSpeed) {
-        await prisma.brand_website_analysis.create({
-          data: {
-            website_id,
-            performance_score: pageSpeed.categories.performance || null,
-            seo_score: pageSpeed.categories.seo || null,
-            accessibility_score: pageSpeed.categories.accessibility || null,
-            best_practices_score: pageSpeed.categories.best_practices || null,
-            first_contentful_paint: pageSpeed.audits?.first_contentful_paint?.display_value || null,
-            largest_contentful_paint: pageSpeed.audits?.largest_contentful_paint?.display_value || null,
-            total_blocking_time: pageSpeed.audits?.total_blocking_time?.display_value || null,
-            speed_index: pageSpeed.audits?.speed_index?.display_value || null,
-            cumulative_layout_shift: pageSpeed.audits?.cumulative_layout_shift?.display_value || null,
-            time_to_interactive: pageSpeed.audits?.interactive?.display_value || null,
-            audit_details: pageSpeed.audit_details,
-          },
-        });
-      }
-    } else {
-      console.log(`PageSpeed data already exists for ${website_url}`);
-    }
-
-    const userRequirement = {
-      industry: userRequirementRaw?.industry ?? 'Unknown',
-      region_of_operation: userRequirementRaw?.region_of_operation ?? 'Unknown',
-      target_location: userRequirementRaw?.target_location ?? 'Unknown',
-      target_audience: userRequirementRaw?.target_audience ?? 'Unknown',
-      primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
-      USP: userRequirementRaw?.USP ?? 'Unknown',
-      competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
-        ? userRequirementRaw.competitor_urls
-        : [],
-    };
-
-    const competitorUrls: string[] = Array.isArray(userRequirement.competitor_urls)
-      ? userRequirement.competitor_urls.filter((url): url is string => typeof url === 'string')
-      : [];
-    const competitorResults = [];
-    const processedUrls = new Set<string>();
-    const processedNames = new Set<string>();
-
-    // Helper function to handle schema_markup_status
-    const getSchemaMarkupStatus = (scraped: any) => {
-      if (typeof scraped === 'object' && scraped !== null && 'schema_analysis' in scraped) {
-        const schema = scraped.schema_analysis;
-        if (typeof schema === 'string') {
-          try {
-            return JSON.parse(schema);
-          } catch (error) {
-            console.error(`Failed to parse schema_analysis for ${scraped.website_url}: ${error instanceof Error ? error.message : String(error)}`);
-            return schema;
-          }
-        } else if (schema !== undefined && schema !== null) {
-          return schema;
-        }
-      }
-      return null;
-    };
-
-    const llmResponse = await prisma.llm_responses.findUnique({
-      where: { website_id: website_id },
-      select: { geo_llm: true },
-    });
-
-    let result: any;
-    if (!llmResponse || llmResponse.geo_llm === null) {
-      console.log('no geo llm response found');
-      result = await fetchBrands(user_id, website_id);
+    
+    let AI_Discoverability: any;
+    if (!geollm || geollm.geo_llm === null) {
+      console.log('No geo_llm response found');
+      AI_Discoverability = await fetchBrands(user_id, website_id);
+      console.log('geo_llm response fetched:', AI_Discoverability);
       await prisma.analysis_status.upsert({
-        where: {
-          user_id_website_id: {
-            user_id: user_id ?? '',
-            website_id: website_id,
-          },
-        },
-        update: { geo_llm: result },
-        create: {
-          user_id: user_id ?? '',
-          website_id: website_id,
-          geo_llm: result,
-        },
+        where: { user_id_website_id: { user_id, website_id } },
+        update: { geo_llm: AI_Discoverability },
+        create: { user_id, website_id, geo_llm: AI_Discoverability },
+
       });
     } else {
-      result = llmResponse?.geo_llm;
-      console.log('geo llm found');
+      AI_Discoverability = geollm.geo_llm;
+      console.log('geo_llm found');
     }
 
-    // Process user-provided competitor URLs
-    const competitorPromises = competitorUrls.filter(u => u.startsWith('http')).map(async (compUrl) => {
+   
+
+    if (main_website_scrapeddata) {
+      const main_h1_heading = main_website_scrapeddata.raw_html
+        ? await extractH1(main_website_scrapeddata.raw_html) || null
+        : null;
+
+      const main_schema_markup_status: SchemaMarkupStatus = {
+        url: main_website_url,
+        message: main_website_scrapeddata.schema_analysis ? 'Structured data detected' : 'No structured data detected',
+        schemas: {
+          summary: main_website_scrapeddata.schema_analysis
+            ? [{ type: 'Organization', format: 'JSON-LD', isValid: true }]
+            : [],
+          details: main_website_scrapeddata.schema_analysis
+            ? { Organization: [{ type: 'Organization', format: 'JSON-LD', isValid: true }] }
+            : {},
+        },
+      };
+
+      response.mainWebsite = {
+         brand_profile: {
+          website_url: main_website_url,
+
+          logo_url: main_website_scrapeddata.logo_url || null,
+          ctr_loss_percent: typeof main_website_scrapeddata.ctr_loss_percent === 'string'
+            ? JSON.parse(main_website_scrapeddata.ctr_loss_percent)
+            : main_website_scrapeddata.ctr_loss_percent || null,
+        },
+        seo_audit: {
+          h1_heading: main_h1_heading,
+          meta_title: main_website_scrapeddata.page_title || null,
+          meta_description: main_website_scrapeddata.meta_description || null,
+          alt_text_coverage: main_website_scrapeddata.homepage_alt_text_coverage,
+          isCrawlable: main_website_scrapeddata.isCrawlable || false,
+          headingAnalysis: main_website_scrapeddata.headingAnalysis as SeoAudit['headingAnalysis'],
+          schema_markup_status: main_schema_markup_status,
+          AI_Discoverability,
+        }
+       
+      };
+    } else {
+      console.warn(`No scraped data found for main website_id: ${website_id}`);
+      response.mainWebsite = {
+        brand_profile: { website_url:null,logo_url: null, ctr_loss_percent: null },
+
+        seo_audit: {
+          h1_heading: null,
+          meta_title: null,
+          meta_description: null,
+          alt_text_coverage: null,
+          isCrawlable: false,
+          headingAnalysis: null,
+          schema_markup_status: null,
+          AI_Discoverability: 'false',
+        },
+      };
+    }
+
+    // Fetch competitors sorted by order_index
+    const competitors = await prisma.competitor_details.findMany({
+      where: { website_id },
+      select: { competitor_id: true, name: true, competitor_website_url: true },
+      orderBy: { order_index: 'asc' },
+      take: 7,
+    });
+
+    if (!competitors || competitors.length === 0) {
+      console.warn(`No competitors found for website_id: ${website_id}`);
+      return response;
+    }
+
+    const processedNames = new Set<string>();
+    let competitorIndex = 1;
+
+    for (const competitor of competitors) {
+      const { competitor_id, name, competitor_website_url } = competitor;
+      if (!competitor_website_url || !name || processedNames.has(name)) {
+        console.log(`Skipping competitor ${competitor_id} due to missing URL or duplicate name: ${name}`);
+        continue;
+      }
+
       try {
-        const scraped = await scrapeWebsitecompetitos(compUrl);
-        if (!scraped || typeof scraped !== 'object') throw new Error('Scrape failed');
-
-        const competitorData = await extractCompetitorDataFromLLM(scraped);
-        if (!competitorData) throw new Error('LLM parsing failed');
-
-        const competitorName = competitorData.name || scraped.page_title || compUrl;
-
-        if (processedUrls.has(compUrl) || processedNames.has(competitorName)) {
-          console.log(`Skipping duplicate competitor: ${competitorName} (${compUrl})`);
-          return null;
+        console.log(`Scraping competitor URL: ${competitor_website_url}`);
+        const scraped = await scrapeWebsiteCompetitors(competitor_website_url);
+        if (typeof scraped === 'string') {
+          throw new Error(`Scrape failed for ${competitor_website_url}: ${scraped}`);
         }
 
-        const competitor_id = uuidv4();
-        const savedCompetitor = await prisma.competitor_details.create({
-          data: {
-            competitor_id,
-            website_id,
-            name: competitorName,
-            competitor_website_url: compUrl,
-            industry: competitorData.industry || userRequirement.industry || 'Unknown',
-            region: competitorData.region || userRequirement.region_of_operation || 'Unknown',
-            target_audience: competitorData.target_audience || userRequirement.target_audience || 'Unknown',
-            primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
-            usp: competitorData.usp || 'No clear USP identified',
+        const h1_heading = scraped.raw_html ? await extractH1(scraped.raw_html) || null : null;
+        const schema_markup_status: SchemaMarkupStatus = {
+          url: competitor_website_url,
+          message: scraped.schema_analysis ? 'Structured data detected' : 'No structured data detected',
+          schemas: {
+            summary: scraped.schema_analysis
+              ? [{ type: 'Organization', format: 'JSON-LD', isValid: true }]
+              : [],
+            details: scraped.schema_analysis
+              ? { Organization: [{ type: 'Organization', format: 'JSON-LD', isValid: true }] }
+              : {},
           },
-        });
+        };
+
+        const seo_audit: SeoAudit = {
+          h1_heading: h1_heading || null,
+          meta_title: scraped.page_title || null,
+          meta_description: scraped.meta_description || null,
+          alt_text_coverage: scraped.homepage_alt_text_coverage,
+          isCrawlable: scraped.isCrawlable || false,
+          headingAnalysis: scraped.headingAnalysis || null,
+          schema_markup_status,
+          AI_Discoverability: 'true',
+        };
+
+        const brand_profile: BrandProfile_logo = {
+          website_url: scraped.website_url || competitor_website_url,
+          logo_url: scraped.logo_url || null,
+          ctr_loss_percent: scraped.ctr_loss_percent || null,
+        };
 
         await prisma.competitor_data.upsert({
           where: { competitor_id },
           update: {
-            ...(typeof scraped === 'object' && scraped !== null
-              ? {
-                  ...scraped,
-                  schema_analysis:
-                    scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-                      ? JSON.stringify(scraped.schema_analysis)
-                      : scraped.schema_analysis,
-                }
-              : {}),
+            ...scraped,
+            schema_analysis: scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
+              ? JSON.stringify(scraped.schema_analysis)
+              : scraped.schema_analysis,
             updated_at: new Date(),
+            website_url: scraped.website_url || competitor_website_url,
           },
           create: {
             competitor_id,
             website_id,
-            ...(typeof scraped === 'object' && scraped !== null
-              ? {
-                  ...scraped,
-                  schema_analysis:
-                    scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-                      ? JSON.stringify(scraped.schema_analysis)
-                      : scraped.schema_analysis,
-                }
-              : {}),
-            website_url: scraped.website_url ?? compUrl,
+            ...scraped,
+            schema_analysis: scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
+              ? JSON.stringify(scraped.schema_analysis)
+              : scraped.schema_analysis,
+            website_url: scraped.website_url || competitor_website_url,
           },
         });
 
-        const pageSpeedData = await getPageSpeedData(compUrl);
-        if (pageSpeedData) {
-          await prisma.competitor_data.update({
-            where: { competitor_id },
-            data: { page_speed: pageSpeedData },
-          });
+        // response.competitors[`competitor${competitorIndex}`] = { seo_audit, brand_profile };
+        response.competitors.push({
+        competitor_id,
+         brand_profile,
+        seo_audit
+       
+      });
+
+        competitorIndex++;
+        processedNames.add(name);
+        console.log(`Successfully added competitor: ${name} (${competitor_website_url})`);
+      } catch (err) {
+        console.error(`Failed processing competitor ${competitor_website_url}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
+    console.log(`Successfully processed ${Object.keys(response.competitors).length - 1} competitors`);
+    return response;
+}
+
+static async website_audit(user_id: string, website_id: string) {
+  if (!website_id || !user_id) {
+    throw new Error('website_id and user_id are required');
+  }
+
+  console.log(`competitors website_audit-Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
+  const website_url = await getWebsiteUrlById(user_id, website_id);
+  if (!website_url) {
+    throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  }
+
+  const [userRequirements, websiteScraped, mainPageSpeedData,geo_llm] = await Promise.all([
+    prisma.user_requirements.findFirst({ where: { website_id } }),
+    prisma.website_scraped_data.findFirst({ where: { website_id } }),
+    getPageSpeedData(website_url),
+
+    prisma.llm_responses.findFirst({
+      where: { website_id },
+      orderBy: { created_at: 'desc' },
+      select: {
+        geo_llm: true,
+      },
+    }),
+  ]);
+
+  let mainWebsitePageSpeed: any = null;
+  if (mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData)) {
+    const audits = mainPageSpeedData.audits || {};
+    const getAuditValue = (id: string): string | null => {
+      const audit = (audits as Record<string, { display_value?: string }>)[id];
+      return audit?.display_value ?? null;
+    };
+
+    mainWebsitePageSpeed = await prisma.brand_website_analysis.create({
+      data: {
+        website_id,
+        performance_score: mainPageSpeedData.categories?.performance ?? null,
+        seo_score: mainPageSpeedData.categories?.seo ?? null,
+        accessibility_score: mainPageSpeedData.categories?.accessibility ?? null,
+        best_practices_score: mainPageSpeedData.categories?.best_practices ?? null,
+        first_contentful_paint: getAuditValue('first-contentful-paint'),
+        largest_contentful_paint: getAuditValue('largest-contentful-paint'),
+        total_blocking_time: getAuditValue('total-blocking-time'),
+        speed_index: getAuditValue('speed-index'),
+        cumulative_layout_shift: getAuditValue('cumulative-layout-shift'),
+        time_to_interactive: getAuditValue('interactive'),
+        audit_details: mainPageSpeedData.audit_details,
+        revenue_loss_percent: mainPageSpeedData.revenueLossPercent ?? null,
+      },
+    });
+  }
+
+  const competitors = await prisma.competitor_details.findMany({
+    where: { website_id },
+    select: {
+      competitor_id: true,
+      name: true,
+      competitor_website_url: true,
+      usp: true,
+      primary_offering: true,
+      industry: true,
+      order_index: true,
+    },
+    orderBy: { order_index: 'asc' },
+    take: 7,
+  });
+
+  console.log(`competitors website_audit - Fetched ${competitors.length} competitors for website_id: ${website_id}, URLs: ${competitors.map((c) => c.competitor_website_url).filter(Boolean).join(', ')}`);
+
+  const competitors_data = await prisma.competitor_data.findMany({
+    where: { website_id },
+    take: 7,
+  });
+
+  const competitorDataMap = new Map(competitors_data.map((item) => [item.competitor_id, item]));
+  interface CompetitorResult {
+    competitor_id:any;
+      brand_profile: {
+        title: string;
+        website_url: string;
+        revenueLossPercent?: number | null;
+        industry?: string | null;
+        logo_url?: string | null;
+        primary_offering?: string | null;
+        unique_selling_point?: string | null;
+        ctr_loss_percent?: number | string | boolean | object|null; // ✅ Add this line
+        
+      };
+      website_audit: {
+        performance_insights: {
+          performance: number | null;
+          seo: number | null;
+          accessibility: number | null;
+          best_practices: number | null;
+        };
+        website_health_matrix: {
+          speed_index: { display_value: string; score: number | null };
+          total_blocking_time: { display_value: string; score: number | null };
+          first_contentful_paint: { display_value: string; score: number | null };
+          largest_contentful_paint: { display_value: string; score: number | null };
+          cumulative_layout_shift: { display_value: string; score: number | null };
+        };
+      };
+      seo_audit: {
+        brandAuditseo: any;
+        meta_description: string | null;
+        page_title: string | null;
+        meta_keywords?: string | null; // ✅ Add this line
+        schema_markup_status: any;
+        isCrawlable: boolean | null;
+        headingAnalysis: any;
+        alt_text_coverage: any;
+        h1_heading: string | null;
+        AI_Discoverability?: string | null; // ✅ Add this line
+      };
+    }
+  const competitorResults: CompetitorResult[] = [];
+  const processedUrls = new Set<string>([website_url]);
+
+  const limit = pLimit(7); // Adjust concurrency here
+
+  const competitorTasks = competitors.map((competitor) =>
+    limit(async () => {
+      const { competitor_id, name, competitor_website_url, usp, primary_offering ,industry} = competitor;
+      if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
+        console.log(`Skipping competitor ${competitor_id} due to missing or duplicate URL: ${competitor_website_url}`);
+        return;
+      }
+      processedUrls.add(competitor_website_url);
+
+      try {
+        console.log(`Fetching PageSpeed data for ${competitor_website_url}`);
+        const pageSpeedData = await getPageSpeedData(competitor_website_url);
+
+        if (!pageSpeedData || !isValidPageSpeedData(pageSpeedData)) {
+          throw new Error('Site is taking too long to respond');
         }
 
-        const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-          ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-          : null;
-
-        processedUrls.add(compUrl);
-        processedNames.add(competitorName);
-
-        return {
-          brand_profile: {
-            title: competitorName,
-            industry: competitorData.industry || userRequirement.industry || 'Unknown',
-            unique_selling_point: competitorData.usp || 'No clear USP identified',
-            primary_offering: competitorData.primary_offering || userRequirement.primary_offering || 'Unknown',
-            logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-            website_url: competitorData.competitor_website_url || '',
-            meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
+        await prisma.competitor_data.update({
+          where: { competitor_id },
+          data: {
+            page_speed: JSON.parse(JSON.stringify(pageSpeedData)),
+            revenue_loss_percent: pageSpeedData.revenueLossPercent,
           },
-          website_audit: pageSpeedData ? {
+        });
+
+        const { categories, audits, audit_details, revenueLossPercent } = pageSpeedData;
+        const rawHtml = competitorDataMap.get(competitor_id)?.raw_html ?? null;
+        const h1_heading = await extractH1(rawHtml);
+
+        competitorResults.push({
+          competitor_id,
+          brand_profile: {
+            title: name ?? '',
+            website_url: competitor_website_url,
+            revenueLossPercent: revenueLossPercent || null,
+            industry: industry || null,
+            logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
+            primary_offering: primary_offering || null,
+            unique_selling_point: usp || null,
+            ctr_loss_percent: competitorDataMap.get(competitor_id)?.ctr_loss_percent ?? null,
+
+          },
+          website_audit: {
             performance_insights: {
-              performance: pageSpeedData.categories.performance || null,
-              seo: pageSpeedData.categories.seo || null,
-              accessibility: pageSpeedData.categories.accessibility || null,
-              best_practices: pageSpeedData.categories.best_practices || null,
+              performance: categories.performance || null,
+              seo: categories.seo || null,
+              accessibility: categories.accessibility || null,
+              best_practices: categories.best_practices || null,
             },
             website_health_matrix: {
               speed_index: {
-                display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
-                score: pageSpeedData.audits?.speed_index?.score || null,
+                display_value: audits?.speed_index?.display_value || 'N/A',
+                score: audits?.speed_index?.score || null,
               },
               total_blocking_time: {
-                display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-                score: pageSpeedData.audits?.total_blocking_time?.score || null,
+                display_value: audits?.total_blocking_time?.display_value || 'N/A',
+                score: audits?.total_blocking_time?.score || null,
               },
               first_contentful_paint: {
-                display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-                score: pageSpeedData.audits?.first_contentful_paint?.score || null,
+                display_value: audits?.first_contentful_paint?.display_value || 'N/A',
+                score: audits?.first_contentful_paint?.score || null,
               },
               largest_contentful_paint: {
-                display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-                score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
+                display_value: audits?.largest_contentful_paint?.display_value || 'N/A',
+                score: audits?.largest_contentful_paint?.score || null,
               },
               cumulative_layout_shift: {
-                display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-                score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
+                display_value: audits?.cumulative_layout_shift?.display_value || 'N/A',
+                score: audits?.cumulative_layout_shift?.score || null,
               },
             },
-          } : null,
-          seo_audit: {
-            h1_heading: h1_Text,
-            meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
-            meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-            alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-            schema_markup_status: getSchemaMarkupStatus(scraped),
-            AI_Discoverability: 'true',
-            brandAuditseo: pageSpeedData && pageSpeedData.audit_details?.seoAudits
-              ? processSeoAudits(pageSpeedData.audit_details.seoAudits)
-              : { passedAudits: [], failedAudits: [] },
-            isCrawlablebyllmbot:(typeof scraped === 'object' && scraped !== null && 'isCrawlable' in scraped) ? scraped.isCrawlable : null,
-            headingAnalysis:(typeof scraped === 'object' && scraped !== null && 'headingAnalysis' in scraped) ? scraped.headingAnalysis : null,
           },
-        };
+          seo_audit: {
+            brandAuditseo: Array.isArray(audit_details?.seoAudits)
+              ? processSeoAudits(audit_details.seoAudits)
+              : null,
+            meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
+            page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
+            schema_markup_status: safeParse(competitorDataMap.get(competitor_id)?.schema_analysis) ?? null,
+            isCrawlable: competitorDataMap.get(competitor_id)?.isCrawlable ?? null,
+            headingAnalysis: competitorDataMap.get(competitor_id)?.headingAnalysis ?? null,
+            alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
+            h1_heading: h1_heading || null,
+            AI_Discoverability: 'True', // Assuming AI discoverability is always true for competitors
+          },
+        });
       } catch (err) {
-        console.error(`Failed processing competitor ${compUrl}: ${err instanceof Error ? err.message : err}`);
-        return null;
-      }
-    });
+        const rawHtml = competitorDataMap.get(competitor_id)?.raw_html ?? null;
+        const h1_heading = await extractH1(rawHtml);
+        const errorMsg = err instanceof Error ? err.message : String(err);
 
-    const results = await Promise.allSettled(competitorPromises);
-    for (const res of results) {
-      if (res.status === 'fulfilled' && res.value) {
-        competitorResults.push(res.value);
-      }
-    }
-
-    // Ensure at least 3 unique, valid competitors
-    const MIN_COMPETITORS = 3;
-    const MAX_RETRIES = 4;
-    let retryCount = 0;
-
-    while (competitorResults.length < MIN_COMPETITORS && retryCount < MAX_RETRIES) {
-      try {
-        const competitorsToGenerate = 6;
-        console.log(`Fetching ${competitorsToGenerate} additional competitors (Retry ${retryCount + 1})`);
-
-        const aiResponse = await fetchCompetitorsFromLLM(
-          scrapedMain,
-          userRequirement,
-          competitorsToGenerate,
-          Array.from(processedUrls),
-          Array.from(processedNames)
-        );
-
-        await prisma.website_scraped_data.update({
-          where: { website_id },
-          data: { ai_response: aiResponse },
+        competitorResults.push({
+          competitor_id,
+          brand_profile: {
+            title: name ?? '',
+            website_url: competitor_website_url,
+            revenueLossPercent: null,
+            logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
+            primary_offering: primary_offering || null,
+            unique_selling_point: usp || null,
+            
+          },
+          website_audit: {
+            performance_insights: {
+              performance: null,
+              seo: null,
+              accessibility: null,
+              best_practices: null,
+            },
+            website_health_matrix: {
+              speed_index: { display_value: 'n/a', score: null },
+              total_blocking_time: { display_value: 'n/a', score: null },
+              first_contentful_paint: { display_value: 'n/a', score: null },
+              largest_contentful_paint: { display_value: 'n/a', score: null },
+              cumulative_layout_shift: { display_value: 'n/a', score: null },
+            },
+          },
+          seo_audit: {
+            brandAuditseo: null,
+            meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
+            page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
+            meta_keywords: competitorDataMap.get(competitor_id)?.meta_keywords ?? null,
+            schema_markup_status: safeParse(competitorDataMap.get(competitor_id)?.schema_analysis) ?? null,
+            isCrawlable: competitorDataMap.get(competitor_id)?.isCrawlable ?? null,
+            headingAnalysis: competitorDataMap.get(competitor_id)?.headingAnalysis ?? null,
+            alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
+            h1_heading,
+            AI_Discoverability: 'True',
+          },
         });
 
-        const parsedCompetitors = parseCompetitorData(aiResponse);
-
-        interface ParsedCompetitor {
-          competitor_website_url: string;
-          website_url: string;
-          name: string;
-          industry?: string;
-          region?: string;
-          target_audience?: string;
-          primary_offering?: string;
-          usp?: string;
-        }
-        for (const comp of parsedCompetitors.slice(0, MIN_COMPETITORS - competitorResults.length) as ParsedCompetitor[]) {
-          const url: string = (comp as ParsedCompetitor).website_url;
-          const name: string = (comp as ParsedCompetitor).name;
-
-          if (processedUrls.has(url) || processedNames.has(name) || competitorUrls.includes(url) || competitorResults.some(r => r.brand_profile.title === name)) {
-            console.log(`Skipping duplicate competitor: ${name} (${url})`);
-            continue;
-          }
-
-          try {
-            const competitor_id = uuidv4();
-            const savedCompetitor = await prisma.competitor_details.create({
-              data: {
-                competitor_id,
-                website_id,
-                name,
-                competitor_website_url: url,
-                industry: comp.industry,
-                region: comp.region,
-                target_audience: comp.target_audience,
-                primary_offering: comp.primary_offering,
-                usp: comp.usp,
-              },
-            });
-
-            const scraped = await scrapeWebsitecompetitos(url);
-            if (scraped) {
-              await prisma.competitor_data.upsert({
-                where: { competitor_id },
-                update: {
-                  ...(typeof scraped === 'object' && scraped !== null
-                    ? {
-                        ...scraped,
-                        schema_analysis:
-                          scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-                            ? JSON.stringify(scraped.schema_analysis)
-                            : scraped.schema_analysis,
-                      }
-                    : {}),
-                  updated_at: new Date(),
-                },
-                create: {
-                  competitor_id,
-                  website_id,
-                  ...(typeof scraped === 'object' && scraped !== null
-                    ? {
-                        ...scraped,
-                        schema_analysis:
-                          scraped.schema_analysis && typeof scraped.schema_analysis === 'object'
-                            ? JSON.stringify(scraped.schema_analysis)
-                            : scraped.schema_analysis,
-                      }
-                    : {}),
-                  website_url: (typeof scraped === 'object' && scraped !== null && 'website_url' in scraped) ? scraped.website_url : url,
-                },
-              });
-
-              const pageSpeedData = await getPageSpeedData(url);
-              if (pageSpeedData) {
-                await prisma.competitor_data.update({
-                  where: { competitor_id },
-                  data: { page_speed: pageSpeedData },
-                });
-              }
-
-              const h1_Text = (typeof scraped === 'object' && scraped !== null && 'raw_html' in scraped && scraped.raw_html)
-                ? cheerio.load(scraped.raw_html)('h1').first().text().trim() || null
-                : null;
-
-              competitorResults.push({
-                brand_profile: {
-                  title: name,
-                  industry: comp.industry || userRequirement.industry || 'Unknown',
-                  unique_selling_point: comp.usp || 'No clear USP identified',
-                  primary_offering: comp.primary_offering || userRequirement.primary_offering || 'Unknown',
-                  logo_url: (typeof scraped === 'object' && scraped !== null && 'logo_url' in scraped) ? scraped.logo_url : null,
-                  website_url: comp.website_url || '',
-                  meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-                },
-                website_audit: pageSpeedData ? {
-                  performance_insights: {
-                    performance: pageSpeedData.categories.performance || null,
-                    seo: pageSpeedData.categories.seo || null,
-                    accessibility: pageSpeedData.categories.accessibility || null,
-                    best_practices: pageSpeedData.categories.best_practices || null,
-                  },
-                  website_health_matrix: {
-                    speed_index: {
-                      display_value: pageSpeedData.audits?.speed_index?.display_value || 'N/A',
-                      score: pageSpeedData.audits?.speed_index?.score || null,
-                    },
-                    total_blocking_time: {
-                      display_value: pageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
-                      score: pageSpeedData.audits?.total_blocking_time?.score || null,
-                    },
-                    first_contentful_paint: {
-                      display_value: pageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
-                      score: pageSpeedData.audits?.first_contentful_paint?.score || null,
-                    },
-                    largest_contentful_paint: {
-                      display_value: pageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
-                      score: pageSpeedData.audits?.largest_contentful_paint?.score || null,
-                    },
-                    cumulative_layout_shift: {
-                      display_value: pageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
-                      score: pageSpeedData.audits?.cumulative_layout_shift?.score || null,
-                    },
-                  },
-                } : null,
-                seo_audit: {
-                  h1_heading: h1_Text,
-                  meta_title: (typeof scraped === 'object' && scraped !== null && 'page_title' in scraped) ? scraped.page_title : null,
-                  meta_description: (typeof scraped === 'object' && scraped !== null && 'meta_description' in scraped) ? scraped.meta_description : null,
-                  alt_text_coverage: (typeof scraped === 'object' && scraped !== null && 'homepage_alt_text_coverage' in scraped) ? scraped.homepage_alt_text_coverage : null,
-                  schema_markup_status: getSchemaMarkupStatus(scraped),
-                  AI_Discoverability: 'true',
-                  brandAuditseo: pageSpeedData && pageSpeedData.audit_details?.seoAudits
-                    ? processSeoAudits(pageSpeedData.audit_details.seoAudits)
-                    : { passedAudits: [], failedAudits: [] },
-                  isCrawlablebyllmbot:(typeof scraped === 'object' && scraped !== null && 'isCrawlable' in scraped) ? scraped.isCrawlable : null,
-                  headingAnalysis:(typeof scraped === 'object' && scraped !== null && 'headingAnalysis' in scraped) ? scraped.headingAnalysis : null,
-
-  
-                },
-              });
-
-              processedUrls.add(url);
-              processedNames.add(name);
-            }
-          } catch (err) {
-            console.error(`AI fallback competitor error for ${url}: ${err instanceof Error ? err.message : err}`);
-          }
-        }
-
-        retryCount++;
-        if (competitorResults.length < MIN_COMPETITORS && retryCount >= MAX_RETRIES) {
-          console.warn(`Could not find ${MIN_COMPETITORS} unique, valid competitors after ${MAX_RETRIES} retries. Returning ${competitorResults.length} competitors.`);
-        }
-      } catch (err) {
-        console.error(`Error during AI fallback competitor fetch (Retry ${retryCount + 1}): ${err instanceof Error ? err.message : err}`);
-        retryCount++;
+        console.warn(`⚠️ Fallback for ${competitor_website_url}: ${errorMsg}`);
       }
+    })
+  );
+
+  await Promise.all(competitorTasks);
+  // 1. Extract preferred competitor URLs from user_requirements
+let preferredUrls: string[] = [];
+
+try {
+  const rawUrls = userRequirements?.competitor_urls;
+
+  if (Array.isArray(rawUrls)) {
+    preferredUrls = rawUrls.map((url) => String(url).trim().toLowerCase());
+  } else if (typeof rawUrls === 'string') {
+    // If it's stored as a JSON string (unlikely with Prisma, but just in case)
+    const parsed = JSON.parse(rawUrls);
+    if (Array.isArray(parsed)) {
+      preferredUrls = parsed.map((url) => String(url).trim().toLowerCase());
     }
+  }
+} catch (e) {
+  console.warn('[website_audit] Failed to parse competitor_urls:', e);
+}
 
-    const labeledResults: Record<string, any> = {};
-    competitorResults.forEach((result, idx) => {
-      labeledResults[`competitor${idx + 1}`] = result;
-    });
 
-    const brandWebsiteAnalysis = await prisma.brand_website_analysis.findFirst({
-      where: { website_id },
-      orderBy: { created_at: 'desc' },
-    });
+// 2. Sort competitorResults so preferred URLs come first, in their original input order
+const sortedCompetitorResults = competitorResults.sort((a, b) => {
+  const aIndex = preferredUrls.indexOf(a.brand_profile.website_url?.toLowerCase() ?? '');
+  const bIndex = preferredUrls.indexOf(b.brand_profile.website_url?.toLowerCase() ?? '');
 
-    let schema_markup_status = null;
-    if (scrapedMain?.schema_analysis) {
-      schema_markup_status = typeof scrapedMain.schema_analysis === 'string'
-        ? JSON.parse(scrapedMain.schema_analysis)
-        : scrapedMain.schema_analysis;
-    }
+  if (aIndex === -1 && bIndex === -1) return 0; // Neither is preferred
+  if (aIndex === -1) return 1; // a is not preferred, b is
+  if (bIndex === -1) return -1; // b is not preferred, a is
+  return aIndex - bIndex; // Both are preferred, maintain order
+});
 
-    let performance_insight = {
-      performance: brandWebsiteAnalysis?.performance_score ?? 0,
-      seo: brandWebsiteAnalysis?.seo_score ?? 0,
-      accessibility: brandWebsiteAnalysis?.accessibility_score ?? 0,
-      best_practices: brandWebsiteAnalysis?.best_practices_score ?? 0,
-    };
-
-    let auditDetails: any = brandWebsiteAnalysis?.audit_details ?? {};
-    if (typeof auditDetails === 'string') {
-      try {
-        auditDetails = JSON.parse(auditDetails);
-      } catch {
-        auditDetails = {};
-      }
-    }
-
-    // Helper function to get audit by ID from allAudits
-    function getAuditById(id: string) {
-      return auditDetails?.allAudits?.find((a: any) => a.id === id) ?? {};
-    }
-
-    let website_health_matrix = {
-      speed_index: {
-        display_value: getAuditById('speed-index').display_value ?? 'N/A',
-        score: getAuditById('speed-index').score ?? null,
-      },
-      total_blocking_time: {
-        display_value: getAuditById('total-blocking-time').display_value ?? 'N/A',
-        score: getAuditById('total-blocking-time').score ?? null,
-      },
-      first_contentful_paint: {
-        display_value: getAuditById('first-contentful-paint').display_value ?? 'N/A',
-        score: getAuditById('first-contentful-paint').score ?? null,
-      },
-      largest_contentful_paint: {
-        display_value: getAuditById('largest-contentful-paint').display_value ?? 'N/A',
-        score: getAuditById('largest-contentful-paint').score ?? null,
-      },
-      cumulative_layout_shift: {
-        display_value: getAuditById('cumulative-layout-shift').display_value ?? 'N/A',
-        score: getAuditById('cumulative-layout-shift').score ?? null,
-      },
-    };
-
-    const { raw_html, other_links, ctr_loss_percent, sitemap_pages, ai_response, ...scrapedMainWithoutRawHtml } = scrapedMain ?? {};
-
-    labeledResults['mainWebsite'] = {
+  const mainH1Heading = await extractH1(websiteScraped?.raw_html ?? null);
+  const labeledResults: Record<string, any> = {
+    mainWebsite: mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData) ? {
       brand_profile: {
-        title: 'page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title
-          ? scrapedMainWithoutRawHtml.page_title
-          : 'Unknown',
-        industry: userRequirement.industry || 'Unknown',
-        unique_selling_point: userRequirement.USP || 'Unknown',
-        primary_offering: userRequirement.primary_offering || 'Unknown',
-        logo_url: scrapedMain?.logo_url || null,
-        meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
+        title: websiteScraped?.page_title || 'Unknown',
         website_url: website_url,
+        revenueLossPercent: mainPageSpeedData.revenueLossPercent || null,
+        industry: userRequirements?.industry || null,
+        unique_selling_point: userRequirements?.USP || null,
+        primary_offering: userRequirements?.primary_offering || null,
+        logo_url: websiteScraped?.logo_url || null,
+        ctr_loss_percent: websiteScraped?.ctr_loss_percent || null,
       },
       website_audit: {
-        performance_insight,
-        website_health_matrix,
-      },
-      seo_audit: {
-        h1_heading: h1Text,
-        meta_title: ('page_title' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.page_title) ? scrapedMainWithoutRawHtml.page_title : null,
-        meta_description: 'meta_description' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.meta_description : null,
-        alt_text_coverage: 'homepage_alt_text_coverage' in scrapedMainWithoutRawHtml ? scrapedMainWithoutRawHtml.homepage_alt_text_coverage : null,
-        schema_markup_status: schema_markup_status,
-        AI_Discoverability: result,
-        brandAuditseo: (() => {
-          if (brandWebsiteAnalysis && brandWebsiteAnalysis.audit_details) {
-            let auditDetailsObj: any = brandWebsiteAnalysis.audit_details;
-            if (typeof auditDetailsObj === 'string') {
-              try {
-                auditDetailsObj = JSON.parse(auditDetailsObj);
-              } catch {
-                return { passedAudits: [], failedAudits: [] };
-              }
-            }
-            return auditDetailsObj && auditDetailsObj.seoAudits
-              ? processSeoAudits(auditDetailsObj.seoAudits)
-              : { passedAudits: [], failedAudits: [] };
-          }
-          return { passedAudits: [], failedAudits: [] };
-        })(),
-        isCrawlablebyllmbot: ('isCrawlable' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.isCrawlable) ? scrapedMainWithoutRawHtml.isCrawlable : null,
-        headingAnalysis:('headingAnalysis' in scrapedMainWithoutRawHtml && scrapedMainWithoutRawHtml.headingAnalysis) ? scrapedMainWithoutRawHtml.headingAnalysis : null,
-
-      },
-    };
-
-    await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        dashboard3_competi_camparison: JSON.stringify(labeledResults),
-      },
-      create: {
-        website_id,
-        dashboard3_competi_camparison: JSON.stringify(labeledResults),
-      },
-    });
-
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
+        performance_insights: {
+          performance: mainPageSpeedData.categories.performance || null,
+          seo: mainPageSpeedData.categories.seo || null,
+          accessibility: mainPageSpeedData.categories.accessibility || null,
+          best_practices: mainPageSpeedData.categories.best_practices || null,
+        },
+        website_health_matrix: {
+          speed_index: {
+            display_value: mainPageSpeedData.audits?.speed_index?.display_value || 'N/A',
+            score: mainPageSpeedData.audits?.speed_index?.score || null,
+          },
+          total_blocking_time: {
+            display_value: mainPageSpeedData.audits?.total_blocking_time?.display_value || 'N/A',
+            score: mainPageSpeedData.audits?.total_blocking_time?.score || null,
+          },
+          first_contentful_paint: {
+            display_value: mainPageSpeedData.audits?.first_contentful_paint?.display_value || 'N/A',
+            score: mainPageSpeedData.audits?.first_contentful_paint?.score || null,
+          },
+          largest_contentful_paint: {
+            display_value: mainPageSpeedData.audits?.largest_contentful_paint?.display_value || 'N/A',
+            score: mainPageSpeedData.audits?.largest_contentful_paint?.score || null,
+          },
+          cumulative_layout_shift: {
+            display_value: mainPageSpeedData.audits?.cumulative_layout_shift?.display_value || 'N/A',
+            score: mainPageSpeedData.audits?.cumulative_layout_shift?.score || null,
+          },
         },
       },
-      update: {
-        geo_llm: result,
+      seo_audit: {
+        brandAuditseo: Array.isArray(mainPageSpeedData.audit_details?.seoAudits)
+          ? processSeoAudits(mainPageSpeedData.audit_details.seoAudits)
+          : null,
+        meta_description: websiteScraped?.meta_description || null,
+        page_title: websiteScraped?.page_title || null,
+        schema_markup_status: safeParse(websiteScraped?.schema_analysis) || null,
+        isCrawlable: websiteScraped?.isCrawlable || null,
+        headingAnalysis: websiteScraped?.headingAnalysis || null,
+        alt_text_coverage: websiteScraped?.homepage_alt_text_coverage || null,
+        h1_heading: mainH1Heading || null,
+        AI_Discoverability: geo_llm?.geo_llm || 'False',
       },
-      create: {
+    } : null,
+    competitors: [], 
+  };
+
+
+    // labeledResults.competitors = competitorResults
+    labeledResults.competitors = sortedCompetitorResults;
+
+
+  await prisma.analysis_status.upsert({
+    where: {
+      user_id_website_id: {
         user_id,
         website_id,
-        geo_llm: result,
       },
-    });
+    },
+    update: {
+      competitor_details: JSON.stringify(labeledResults),
+    },
+    create: {
+      user_id,
+      website_id,
+      competitor_details: JSON.stringify(labeledResults),
+    },
+  });
 
-    return labeledResults;
-  }
-
+  return labeledResults;
+}
 
   static async getComparisonRecommendations(website_id: string) {
     if (!website_id) {
       throw new Error('website_id is required');
-    } else (console.log("website id get ", website_id));
+    }
 
+    console.log(`Fetching comparison recommendations for website_id: ${website_id}`);
     const mainWebsite = await prisma.user_websites.findUnique({
-
       where: { website_id },
       include: {
         website_scraped_data: true,
-        brand_website_analysis: {
-          orderBy: { created_at: 'desc' },
-          take: 1,
-        }
+        brand_website_analysis: { orderBy: { created_at: 'desc' }, take: 1 },
       },
     });
 
@@ -1468,107 +1096,17 @@ export class CompetitorService {
       throw new Error('Website not found');
     }
 
-    // Fetch user requirements for use in the prompt
     const userRequirementRaw = await prisma.user_requirements.findFirst({
       where: { website_id },
     });
 
-    const competitors = await prisma.competitor_details.findMany({
-      where: { website_id },
-      include: {
-        competitor_data: true,
-      },
-    });
+   
 
-    const main = {
-      website_url: mainWebsite.website_url,
-      meta: {
-        title: mainWebsite.website_scraped_data?.page_title || 'N/A',
-        meta_keywords: mainWebsite.website_scraped_data?.meta_keywords || 'N/A',
-        meta_description: mainWebsite.website_scraped_data?.meta_description || 'N/A',
-        og_description: mainWebsite.website_scraped_data?.og_description || 'N/A',
-        facebook_handle: mainWebsite.website_scraped_data?.facebook_handle || 'N/A',
-        twitter_handle: mainWebsite.website_scraped_data?.twitter_handle || 'N/A',
-        youtube_handle: mainWebsite.website_scraped_data?.youtube_handle || 'N/A',
-        instagram_handle: mainWebsite.website_scraped_data?.instagram_handle || 'N/A',
-        linkedin_handle: mainWebsite.website_scraped_data?.linkedin_handle || 'N/A',
-        tiktok_handle: mainWebsite.website_scraped_data?.tiktok_handle || 'N/A',
-        og_title: mainWebsite.website_scraped_data?.og_title || 'N/A',
-        og_image: mainWebsite.website_scraped_data?.og_image || 'N/A',
-        homepage_alt_text_coverage: mainWebsite.website_scraped_data?.homepage_alt_text_coverage || 'N/A',
-        logo_url: mainWebsite.website_scraped_data?.logo_url || 'N/A',
-        schema_analysis: mainWebsite.website_scraped_data?.schema_analysis || 'N/A',
-
-        
-
-      },
-      page_speed: {
-        performance_score: mainWebsite.brand_website_analysis?.[0]?.performance_score ?? 'N/A',
-        seo_score: mainWebsite.brand_website_analysis?.[0]?.seo_score ?? 'N/A',
-        accessibility_score: mainWebsite.brand_website_analysis?.[0]?.accessibility_score ?? 'N/A',
-        best_practices_score: mainWebsite.brand_website_analysis?.[0]?.best_practices_score ?? 'N/A',
-        time_to_interactive: mainWebsite.brand_website_analysis?.[0]?.time_to_interactive ?? 'N/A',
-        speed_index: mainWebsite.brand_website_analysis?.[0]?.speed_index ?? 'N/A',
-        largest_contentful_paint: mainWebsite.brand_website_analysis?.[0]?.largest_contentful_paint ?? 'N/A',
-        total_blocking_time: mainWebsite.brand_website_analysis?.[0]?.total_blocking_time ?? 'N/A',
-        cumulative_layout_shift: mainWebsite.brand_website_analysis?.[0]?.cumulative_layout_shift ?? 'N/A',
-
-            },
-    };
-
-    // console.log("main website data", main);
-    const comps = competitors.map(comp => {
-      const scraped = comp.competitor_data;
-      let ps: any = scraped?.page_speed ?? {};
-      if (typeof ps === 'string') {
-        try {
-          ps = JSON.parse(ps);
-        } catch {
-          ps = {};
-        }
-      }
-      const audits = ps.audits ?? {};
-      const categories = ps.categories ?? {};
-
-      return {
-        name: comp.name,
-        website_url: comp.competitor_website_url,
-        meta: {
-          title: scraped?.page_title || 'N/A',
-          meta_keywords: scraped?.meta_keywords || 'N/A',
-          meta_description: scraped?.meta_description || 'N/A',
-          og_description: scraped?.og_description || 'N/A',
-          facbook_handler: scraped?.facebook_handle || 'N/A',
-          instagram_handler: scraped?.instagram_handle || 'N/A',
-          twitter_hanlder: scraped?.twitter_handle || 'N/A',
-          youtube_handle: scraped?.youtube_handle || 'N/A',
-          instagram_handle: scraped?.instagram_handle || 'N/A',
-          linkedin_handle: scraped?.linkedin_handle || 'N/A',
-          tiktok_handle: scraped?.tiktok_handle || 'N/A',
-          og_title: scraped?.og_title || 'N/A',
-          og_image: scraped?.og_image || 'N/A',
-
-
-        },
-        page_speed: {
-          performance_score: categories.performance ?? 'N/A',
-          seo_score: categories.seo ?? 'N/A',
-          accessibility_score: categories.accessibility ?? 'N/A',
-          best_practices_score: categories.best_practices ?? 'N/A',
-          time_to_interactive: audits.interactive?.display_value ?? 'N/A',
-          speed_index: audits.speed_index?.display_value ?? 'N/A',
-          largest_contentful_paint: audits.largest_contentful_paint?.display_value ?? 'N/A',
-          total_blocking_time: audits.total_blocking_time?.display_value ?? 'N/A',
-          cumulative_layout_shift: audits.cumulative_layout_shift?.display_value ?? 'N/A',
-        },
-      };
-    });
-    // console.log("competitors data", comps);
     const prompt = await createComparisonPrompt(website_id);
-    // console.log('Generated prompt for LLM:', prompt);
     if (!prompt) {
       throw new Error('Failed to generate prompt for LLM');
-    } 
+    }
+
     const response = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: model,
@@ -1576,44 +1114,42 @@ export class CompetitorService {
       max_tokens: 3000,
     });
 
-   const raw = response.choices?.[0]?.message?.content || '{}';
+    const raw = response.choices?.[0]?.message?.content || '{}';
+    let parsed;
+    try {
+      parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      await prisma.llm_responses.upsert({
+        where: { website_id },
+        update: { recommendation_by_mo_dashboard3: JSON.stringify(response) },
+        create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(response) },
+      });
+      await prisma.analysis_status.upsert({
+        where: { user_id_website_id: { user_id: userRequirementRaw?.user_id ?? '', website_id } },
+        update: { recommendation_by_mo3: JSON.stringify(parsed) },
+        create: { website_id, user_id: userRequirementRaw?.user_id ?? '', recommendation_by_mo3: JSON.stringify(parsed) },
+      });
+      console.log('LLM response saved successfully for website_id:', website_id);
+    } catch (err) {
+      console.error('Error parsing JSON response:', err);
+      parsed = { recommendations: [] };
+    }
 
-let parsed;
-try {
-  parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  // console.log("parsed",parsed)
-  await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        recommendation_by_mo_dashboard3: JSON.stringify(parsed),
-      },
-      create: {
-        website_id,
-        recommendation_by_mo_dashboard3: JSON.stringify(parsed),
-      },
-    });
-   await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id: userRequirementRaw?.user_id ?? '',
-          website_id: website_id,
-        },
-      },
-      update: {
-        recommendation_by_mo3: "true",
-      },
-      create: {
-        website_id: website_id,
-        user_id: userRequirementRaw?.user_id ?? '', // Provide the correct user_id here
-        recommendation_by_mo3: "true",
-      },
-    });
-    console.log("LLM response saved successfully for website_id:", website_id);
-} catch (err) {
-  console.error("Error parsing JSON response:", err);
-  parsed = { recommendations: [] }; // fail-safe fallback
-}
-
-return parsed;
+    return parsed;
   }
 }
+
+function isValidPageSpeedData(data: any): data is PageSpeedData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'categories' in data &&
+    typeof data.categories === 'object' &&
+    'audits' in data &&
+    typeof data.audits === 'object' &&
+    'audit_details' in data &&
+    typeof data.audit_details === 'object'
+  );
+}
+
+
+

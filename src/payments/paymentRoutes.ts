@@ -1,12 +1,27 @@
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
-import { PayAsYouGo, Subscription, WebHook } from './paymentController';
+// -------------------------------------------------
+// FILE: paymentRoutes.ts (Updated)
+// -------------------------------------------------
+import { Router } from "express";
+import { authenticateToken } from "../middleware/auth";
+// CHANGED: Import the new getPaymentMethods function
+import { payAsYouGo, savePaymentMethod, getPaymentHistory, webhookHandler, getPaymentMethods } from "./paymentController";
+import express from "express";
 
-const PaymentRouter = Router();
+const paymentRouter = Router();
 
-PaymentRouter.post('/subscribe', authenticateToken, Subscription);
-PaymentRouter.post('/analyze', authenticateToken, PayAsYouGo)
-PaymentRouter.post('/webhook', WebHook)
+// Route for pay-as-you-go analysis
+paymentRouter.post("/analyze", authenticateToken, payAsYouGo);
 
+// NEW: Route to GET saved payment methods
+paymentRouter.get("/methods", authenticateToken, getPaymentMethods);
 
-export default PaymentRouter;
+// Route to POST (save) a new payment method
+paymentRouter.post("/methods", authenticateToken, savePaymentMethod);
+
+// Route to get payment history
+paymentRouter.get("/history", authenticateToken, getPaymentHistory);
+
+// Webhook route for Checkout.com
+paymentRouter.post("/webhook", express.raw({ type: "application/json" }), webhookHandler);
+
+export default paymentRouter;

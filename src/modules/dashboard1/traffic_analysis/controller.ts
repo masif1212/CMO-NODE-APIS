@@ -32,44 +32,6 @@ export const startGoogleAuth = (req: Request, res: Response) => {
   res.redirect(authUrl);
 };
 
-// export const handleGoogleCallback = async (req: Request, res: Response) => {
-//   const code = req.query.code as string;
-
-//   if (!code) return res.status(400).send("Missing authorization code");
-
-//   try {
-//     const { tokens } = await oAuth2Client.getToken(code);
-//     oAuth2Client.setCredentials(tokens);
-
-//     const idToken = tokens.id_token;
-//     const decodedToken = jwt.decode(idToken as string);
-//     const userId = (decodedToken as any).sub;
-
-//     req.session.user = {
-//       userId,
-//       accessToken: tokens.access_token!,
-//       refreshToken: tokens.refresh_token,
-//       profile: decodedToken,
-//     };
-
-//     // Send HTML response that will close the popup and notify the parent window
-//     res.send(`
-//       <script>
-//         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
-//         window.close();
-//       </script>
-//     `);
-//   } catch (err) {
-//     console.error("OAuth2 callback error:", err);
-//     res.send(`
-//       <script>
-//         window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
-//         window.close();
-//       </script>
-//     `);
-//   }
-// };
-
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
   // console.log("Received Authorization Code:", code);
@@ -296,30 +258,8 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
         updated_at: new Date(),
       },
     });
-    let recommendation = null;
-    console.log("in ana");
-    recommendation = await prisma.llm_responses.findUnique({
-      where: { website_id: website_id }, // Updated to use website_id
-      select: {
-        id: true,
-        website_id: true,
-        recommendation_by_mo_dashboard1: true,
-        // recommendation_by_mo_dashboard2:true,
-        // recommendation_by_mo_dashboard3:true,
-        // geo_llm:true,
-        // recommendation_by_cmo: true,
-      },
-    });
-    function safeParse(jsonStr: any) {
-      try {
-        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-      } catch (e) {
-        console.error("JSON parse failed:", e);
-        return jsonStr; // fallback to raw string
-      }
-    }
-    const recommendation_by_mo_dashboard1 = safeParse(recommendation?.recommendation_by_mo_dashboard1);
-    return res.status(200).json({ recommendation_by_mo_dashboard1 });
+
+    return res.status(200).json(llm_res);
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

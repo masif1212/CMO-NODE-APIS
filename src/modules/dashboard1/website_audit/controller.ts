@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPageSpeedSummary, savePageSpeedAnalysis } from "./service";
+import { getPageSpeedData, savePageSpeedAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
 import * as cheerio from "cheerio";
 
@@ -16,71 +16,55 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   }
 
   try {
-    // Step 1: Get PageSpeed summary
-    console.log("website audit started")
-    const summary = await getPageSpeedSummary(user_id, website_id);
-    // const seoAudits = summary.seoAudits
-    if (!summary || typeof summary !== "object" || Object.keys(summary).length === 0) {
+    console.log("Website audit started");
+    
+    const mainPageSpeedData = await getPageSpeedData(user_id, website_id);
+
+    if (!mainPageSpeedData || typeof mainPageSpeedData !== "object" || Object.keys(mainPageSpeedData).length === 0) {
       return res.status(502).json({
         success: false,
         error: "Invalid or empty response from PageSpeed Insights API.",
-        detail: summary,
+        detail: mainPageSpeedData,
       });
-    } else (console.log("website audit processing complete"))
+    }
 
-    // Step 2: Save PageSpeed analysis
-    console.log("Saving website audit analysis to database...");
-    const saved = await savePageSpeedAnalysis(user_id, website_id, summary);
+    console.log("Website audit processing complete");
+
+    const saved = await savePageSpeedAnalysis(user_id, website_id, mainPageSpeedData);
     if (!saved) {
       return res.status(500).json({
         success: false,
         error: "Failed to save website audit analysis.",
       });
-    } else (console.log("website audit analysis saved successfully"))
-
-    const auditKeysToInclude = [
-      "first-contentful-paint",
-      "largest-contentful-paint",
-      "total-blocking-time",
-      "speed-index",
-      "cumulative-layout-shift",
-      "interactive",
-    ];
-
-    // Read audit_details from saved analysis
-    const auditDetails = summary.audits || [];
-    const optimization_opportunities = summary.bestPracticeGroups || {};
-
-    const auditMap: Record<string, any> = {};
-    for (const audit of auditDetails) {
-      if (auditKeysToInclude.includes(audit.id)) {
-        const normalizedKey = audit.id.replace(/-/g, "_");
-        auditMap[normalizedKey] = {
-          display_value: audit.display_value,
-          score: typeof audit.score === "number" ? audit.score : null,
-        };
-      }
     }
 
-    // Category Scores
-    const categories = summary.categories || {};
+    console.log("Website audit analysis saved successfully");
+
+    // Extract directly from mainPageSpeedData
+    const auditMap = Object.fromEntries(
+      Object.entries(mainPageSpeedData.audits).map(([key, val]) => [
+        key,
+        {
+          display_value: val.display_value,
+          score: typeof val.score === "number" ? val.score : null,
+        },
+      ])
+    );
+
     const categoryScores = {
-      performance_insight: categories.performance?.score != null ? categories.performance.score * 100 : null,
-      seo: categories.seo?.score != null ? categories.seo.score * 100 : null,
-      accessibility: categories.accessibility?.score != null ? categories.accessibility.score * 100 : null,
-      best_practices: categories["best-practices"]?.score != null ? categories["best-practices"].score * 100 : null,
+      performance_insight: mainPageSpeedData.categories.performance,
+      seo: mainPageSpeedData.categories.seo,
+      accessibility: mainPageSpeedData.categories.accessibility,
+      best_practices: mainPageSpeedData.categories["best_practices"],
     };
 
-
     const website = await prisma.user_websites.findUnique({
-      where: { website_id: website_id },
+      where: { website_id },
     });
+
     if (!website || !website.website_url) {
       throw new Error("Website URL not found for the given website_id");
     }
-
-
-
 
     const scrapedMeta = await prisma.website_scraped_data.findUnique({
       where: { website_id },
@@ -98,16 +82,16 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         status_code: true,
         ip_address: true,
         response_time_ms: true,
-
       },
     });
 
     const {
-      raw_html, // omit this
+      raw_html, // Exclude this
       ...metaDataWithoutRawHtml
     } = scrapedMeta || {};
 
-    const seo_revenue_loss_percentage = (metaDataWithoutRawHtml as { ctr_loss_percent?: { CTR_Loss_Percent?: number } })?.ctr_loss_percent?.CTR_Loss_Percent ?? null;
+    const seo_revenue_loss_percentage =
+      (metaDataWithoutRawHtml as { ctr_loss_percent?: { CTR_Loss_Percent?: number } })?.ctr_loss_percent?.CTR_Loss_Percent ?? null;
 
     const availability_tracker = {
       status_message: scrapedMeta?.status_message ?? null,
@@ -115,16 +99,17 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       ip_address: scrapedMeta?.ip_address ?? null,
       response_time_ms: scrapedMeta?.response_time_ms ?? null,
     };
+
     const website_health = {
-  website_id,
-  revenueLossPercent: saved.revenue_loss_percent,
-  seo_revenue_loss_percentage,
-  categories: categoryScores,
-  speed_health: auditMap,
-  availability_tracker,
-  optimization_opportunities,
-  // seo: seoAudits // include this if needed
-};
+      website_id,
+      revenueLossPercent: saved.revenue_loss_percent,
+      seo_revenue_loss_percentage,
+      categories: categoryScores,
+      speed_health: auditMap,
+      availability_tracker,
+      optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
+      // seo: mainPageSpeedData.audit_details.seoAudits, // Optional
+    };
 
     await prisma.analysis_status.upsert({
       where: {
@@ -143,20 +128,15 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       },
     });
 
-     
     return res.status(201).json({
-      message: "website audit",
+      message: "Website audit completed",
       website_id,
       revenueLossPercent: saved.revenue_loss_percent,
       seo_revenue_loss_percentage,
       categories: categoryScores,
       speed_health: auditMap,
       availability_tracker,
-      optimization_opportunities: optimization_opportunities,
-      // seo: seoAudits
-      // h1Text,
-      // metaData: metaDataWithoutRawHtml,
-
+      optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
     });
 
   } catch (err: any) {
@@ -168,4 +148,3 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     });
   }
 };
-

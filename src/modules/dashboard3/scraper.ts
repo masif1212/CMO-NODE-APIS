@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
+import { parseStringPromise } from "xml2js";
+
 import { parse } from 'tldts'; // For root domain extraction
 dotenv.config();
 
@@ -18,11 +20,66 @@ const getDomainRoot = (url: string): string => {
 
 const prisma = new PrismaClient();
 
+async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
+  try {
+    // console.log("getRobotsTxtAndSitemaps")
+    const robotsUrl = new URL("/robots.txt", baseUrl).href;
+    const { data } = await axios.get(robotsUrl);
+    const sitemapUrls: string[] = [];
+
+    for (const line of data.split("\n")) {
+      if (line.toLowerCase().startsWith("sitemap:")) {
+        const parts = line.split(":");
+        const sitemapUrl = parts.slice(1).join(":").trim();
+        if (sitemapUrl) sitemapUrls.push(sitemapUrl);
+      }
+    }
+
+    if (sitemapUrls.length === 0) {
+      const guesses = ["/sitemap.xml", "/sitemap_index.xml"];
+      for (const guess of guesses) {
+        sitemapUrls.push(new URL(guess, baseUrl).href);
+      }
+    }
+
+    return sitemapUrls;
+  } catch {
+    return [];
+  }
+}
+
+async function parseSitemap(sitemapUrl: string): Promise<string[]> {
+  try {
+    // console.log("parseSitemap")
+    const { data } = await axios.get(sitemapUrl);
+    const parsed = await parseStringPromise(data);
+    const urls: string[] = [];
+
+    if (parsed.sitemapindex?.sitemap) {
+      for (const entry of parsed.sitemapindex.sitemap) {
+        if (entry.loc?.[0]) {
+          const nestedUrls = await parseSitemap(entry.loc[0]);
+          urls.push(...nestedUrls);
+        }
+      }
+    }
+
+    if (parsed.urlset?.url) {
+      for (const entry of parsed.urlset.url) {
+        if (entry.loc?.[0]) urls.push(entry.loc[0]);
+      }
+    }
+
+    return urls;
+  } catch {
+    return [];
+  }
+}
 
 async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
-      timeout: 5000,
+      timeout: 10000,
       validateStatus: () => true // Don't throw on 404/500
     });
     return response.status === 200;
@@ -147,7 +204,7 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 }
 
 
-export async function scrapeWebsitecompetitos(url: string) {
+export async function scrapeWebsiteCompetitors(url: string) {
   try {
     const res = await axios.get(url, { timeout: 10000 });
     const html = res.data;
@@ -205,15 +262,98 @@ if (!finalLogoUrl) {
 
       if (await isLogoUrlValid(src)) {
         finalLogoUrl = src;
+        console.log("finalLogoUrlscrape",finalLogoUrl)
         break;
       }
     }
   }
 }
+  const sitemapUrls = await getRobotsTxtAndSitemaps(url);
+  const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
+  // const uniqueUrls = [...new Set<string>([url, ...sitemapLinks.map((u) => u.trim())])];
+  const allSitemapUrls = [...new Set<string>([url, ...sitemapLinks.map((u) => u.trim())])];
 
+  let selectedKeyPages: string[];
+  if (allSitemapUrls.length > 7) {
+    const homepage = url;
+    const importantKeywords = [
+      "about", "services", "service", "contact", "pricing", "plans",
+      "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"
+    ];
 
+    const keywordMatched = allSitemapUrls.filter((link) => {
+      try {
+        const path = new URL(link).pathname.toLowerCase();
+        return importantKeywords.some((kw) => path.includes(kw));
+      } catch {
+        return false;
+      }
+    });
 
+    const shallowPages = allSitemapUrls.filter((link) => {
+      try {
+        const path = new URL(link).pathname;
+        const segments = path.split("/").filter(Boolean);
+        return segments.length === 1;
+      } catch {
+        return false;
+      }
+    });
 
+    const merged = [homepage, ...keywordMatched, ...shallowPages]
+      .filter((v, i, self) => self.indexOf(v) === i)
+      .slice(0, 7);
+
+    selectedKeyPages = merged;
+  } else {
+    selectedKeyPages = allSitemapUrls;
+  }
+  let affectedPagesCount = 0;
+  const keyPages = await Promise.all(
+    selectedKeyPages.map(async (pageUrl) => {
+      try {
+        const res = await axios.get(pageUrl);
+        if (res.status >= 200 && res.status < 400) {
+          const $$ = cheerio.load(res.data);
+          const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
+          const title =
+            titles.length > 1
+              ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+              : titles[0] || "not found";
+          const meta_description = $$('meta[name="description"]').attr("content") || "not found";
+          const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
+          const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
+
+          const missingAny = !(title && meta_description && og_title && meta_keywords);
+          if (missingAny) affectedPagesCount++;
+
+          return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+        }
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const filteredPages = keyPages
+    .filter((p): p is NonNullable<typeof p> => !!p)
+    .map((p) => ({
+      url: p.url,
+      title: p.title ?? "not found",
+      meta_description: p.meta_description ?? "not found",
+      og_title: p.og_title ?? null,
+      meta_keywords: p.meta_keywords ?? "not found",
+    }));
+  const totalKeyPages = filteredPages.length;
+  const CTR_Loss_Percent = {
+    total_key_pages: totalKeyPages,
+    total_affected_pages: affectedPagesCount,
+    CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+    extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
+  };
+
+  // console.log("CTR_Loss_Percent",CTR_Loss_Percent)
+    console.log("homepage_alt_text_coverage",homepage_alt_text_coverage)
     return {
       website_url: url,
       page_title: $('title').text() || null,
@@ -235,6 +375,7 @@ if (!finalLogoUrl) {
       other_links: otherLinks,
       schema_analysis:schemaAnalysisData || null,
       raw_html: html,
+      ctr_loss_percent:CTR_Loss_Percent
     };
   } catch (err) {
     console.error(`Error scraping ${url}:`, err);
@@ -259,7 +400,7 @@ export const fetchBrands = async (
   if (!websiteEntry) {
     throw new Error(`Website entry not found for this user and website.`);
   }
-  console.log('Website Entry in geo', websiteEntry);
+  // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
   let userReq = await prisma.user_requirements.findFirst({

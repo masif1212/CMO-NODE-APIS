@@ -50,3 +50,32 @@ export const getUserById = async (userId: string) => {
     },
   });
 };
+
+
+
+
+export async function add_userwebsite(user_id: string, website_url: string): Promise<{ website_id: string;}> {
+  const start = Date.now();
+
+ 
+ 
+
+  const responseTimeMs = Date.now() - start;
+  const newWebsite = await prisma.user_websites.create({
+    data: {
+      website_url: website_url,
+      users: { connect: { user_id } },
+    },
+    select: { website_id: true },
+  });
+
+ 
+  
+  
+
+  const website_id = newWebsite.website_id;
+  return {
+    website_id: website_id,
+    // responseTimeMs,
+  }
+}

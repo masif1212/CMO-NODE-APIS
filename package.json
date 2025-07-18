@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/faatimamir/CMO-NODE-APIS#readme",
   "dependencies": {
+    "@google/genai": "^1.8.0",
     "@google-cloud/connect-firestore": "^3.0.0",
     "@prisma/client": "^6.6.0",
     "@types/express-mysql-session": "^3.0.6",
@@ -45,6 +46,7 @@
     "mysql2": "^3.14.0",
     "node": "^24.0.1",
     "openai": "^4.98.0",
+    "p-limit": "^6.2.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "puppeteer": "^24.7.1",

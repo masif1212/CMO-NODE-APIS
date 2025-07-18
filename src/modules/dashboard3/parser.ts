@@ -1,23 +1,3 @@
-// export function parseCompetitorData(aiResponse: string) {
-//     try {
-//         const parsed = JSON.parse(aiResponse);
-//         if (!Array.isArray(parsed)) throw new Error("Expected array");
-//         return parsed.map(comp => ({
-//             name: comp.name?.trim(),
-//             website_url: comp.website_url?.trim(),
-//             industry: comp.industry?.trim(),
-//             region: comp.region?.trim(),
-//             target_audience: comp.target_audience?.trim(),
-//             primary_offering: comp.primary_offering?.trim(),
-//             usp: comp.usp?.trim()
-//         }));
-//     } catch (err) {
-//         console.error("Failed to parse LLM JSON response:", err);
-//         return [];
-//     }
-// }
-
-
 export function parseCompetitorData(aiResponse: string): {
     name: string;
     website_url: string;

@@ -1,7 +1,3 @@
-
-
-
-
 import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import * as microdata from 'microdata-node';
@@ -144,7 +140,33 @@ export async function validateComprehensiveSchema(url: string, website_id: strin
 
     // RDFa
     const store = $rdf.graph();
-    $rdf.parse(html, store, url, 'text/html');
+    // $rdf.parse(html, store, url, 'text/html');
+    // $rdf.parse(html, store, url, 'text/html', {
+    //     errorHandler: {
+    //       warning: () => {},
+    //       error: () => {},
+    //       fatalError: () => {}
+    //     }
+    //   } as any);
+
+    const originalWarn = console.warn;
+
+// Override temporarily
+console.warn = (msg?: any, ...args: any[]) => {
+  if (typeof msg === 'string' && msg.includes('[xmldom warning]')) {
+    return; // suppress all xmldom warnings
+  }
+  originalWarn(msg, ...args); // allow others through
+};
+
+try {
+  $rdf.parse(html, store, url, 'text/html');
+} catch (err) {
+  console.error('');
+} finally {
+  console.warn = originalWarn; // Restore after parsing
+}
+
     const types = store.each(null, $rdf.sym('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'));
     types.forEach((typeQuad: any) => {
       const typeValue = typeQuad.object.value.split('/').pop();

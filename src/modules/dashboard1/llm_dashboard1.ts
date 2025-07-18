@@ -62,22 +62,8 @@ Example Output:
         "tag": "CTR Loss",
         "explanation_reason": "The click-through rate (CTR) loss is 0%, indicating that all key pages are performing optimally in attracting clicks from search results. This strong performance suggests that metadata, snippets, and search presentation are clear and compelling, resulting in no measurable drop in organic traffic due to CTR issues.",
         "rating": 10
-      },
-      {
-        "tag": "LCP",
-        "explanation_reason": "Largest Contentful Paint (LCP) is 1.6 seconds, which is well below the 2.5-second threshold. This excellent loading speed ensures users see the main content quickly, improving user experience and positively impacting SEO rankings.",
-        "rating": 10
-      },
-      {
-        "tag": "CLS",
-        "explanation_reason": "Cumulative Layout Shift (CLS) is 0.004, far below the 0.1 threshold. This outstanding stability means users experience almost no unexpected layout shifts, resulting in a seamless and frustration-free browsing experience.",
-        "rating": 10
-      },
-      {
-        "tag": "FCP",
-        "explanation_reason": "First Contentful Paint (FCP) is 1.1 seconds, which is significantly faster than the 1.8-second benchmark. This strong performance ensures that users see visual feedback quickly, reducing perceived load times and supporting user retention.",
-        "rating": 10
       }
+      
     ]
   },
   "what_needs_fixing": {
@@ -86,17 +72,8 @@ Example Output:
         "tag": "TBT",
         "explanation_reason": "Total Blocking Time (TBT) is 600ms, exceeding the 200ms threshold. This delays interactivity, causing user frustration and potentially increasing bounce rates by 15-20%.",
         "rating": 1
-      },
-      {
-        "tag": "TTI",
-        "explanation_reason": "Time to Interactive (TTI) is 8.5 seconds, far above the 3.8-second threshold. This slow interactivity leads to poor user experience, increasing the likelihood of users abandoning the site before it becomes fully interactive.",
-        "rating": 1
-      },
-      {
-        "tag": "Performance Score",
-        "explanation_reason": "The overall performance score is 45, well below the 90 threshold for optimal performance. This indicates multiple bottlenecks in loading and interactivity, negatively affecting SEO and user retention.",
-        "rating": 1
       }
+     
     ]
   },
   "recommendations": {
@@ -104,15 +81,8 @@ Example Output:
       {
         "tag": "TBT",
         "recommendation": "Lower Total Blocking Time by identifying and optimizing heavy JavaScript tasks. Split large scripts into smaller, asynchronous chunks, and defer non-essential JS until after the main content loads. Limit the use of synchronous third-party scripts and remove unnecessary polyfills. Use your browser's Performance panel to manually inspect long tasks and verify that main-thread blocking is minimized."
-      },
-      {
-        "tag": "TTI",
-        "recommendation": "Improve Time to Interactive by streamlining critical rendering paths and reducing JavaScript execution during page load. Prioritize loading essential resources, and delay non-interactive scripts until after the page becomes interactive. Regularly audit your code for unnecessary dependencies and optimize event handling to ensure a faster interactive state. Manually test page responsiveness by interacting with elements immediately after load to confirm improvements."
-      },
-      {
-        "tag": "Performance Score",
-        "recommendation": "Increase the overall performance score by addressing the most impactful bottlenecks, especially TBT and TTI. Audit your resource loading order, minimize render-blocking assets, and leverage efficient caching strategies. Regularly review your HTML, CSS, and JavaScript for redundant or inefficient code, and optimize image delivery. Validate improvements by monitoring load and interactivity times directly in the browser's network and performance panels."
       }
+     
     ]
   }
 }
@@ -125,6 +95,8 @@ You are a senior technical SEO expert with extensive experience in metadata, acc
 Handle all elements in the provided JSON input(title,meta data(keywords , descriptions),lcp).
 
 Each element you describe will be rated numerically from 1 to 10 based on its performance:
+**Every element in the input must be evaluated and categorized into either "whats_working" or "what_needs_fixing". No element should be omitted or left unclassified.**
+
 - For **whats_working**: Assign ratings from 7 to 10:
   - 10 = Excellent (e.g., perfect implementation, optimal performance)
   - 9 = Strong (e.g., very good with minor room for improvement)
@@ -211,21 +183,6 @@ Example Output:
         "tag": "CTR Loss",
         "explanation_reason": "The click-through rate (CTR) loss is 0%, indicating that all key pages are performing optimally in attracting clicks from search results. This strong performance suggests that metadata, snippets, and search presentation are clear and compelling, resulting in no measurable drop in organic traffic due to CTR issues.",
         "rating": 10
-      },
-      {
-        "tag": "LCP",
-        "explanation_reason": "Largest Contentful Paint (LCP) is 1.6 seconds, which is well below the 2.5-second threshold. This excellent loading speed ensures users see the main content quickly, improving user experience and positively impacting SEO rankings.",
-        "rating": 10
-      },
-      {
-        "tag": "CLS",
-        "explanation_reason": "Cumulative Layout Shift (CLS) is 0.004, far below the 0.1 threshold. This outstanding stability means users experience almost no unexpected layout shifts, resulting in a seamless and frustration-free browsing experience.",
-        "rating": 10
-      },
-      {
-        "tag": "FCP",
-        "explanation_reason": "First Contentful Paint (FCP) is 1.1 seconds, which is significantly faster than the 1.8-second benchmark. This strong performance ensures that users see visual feedback quickly, reducing perceived load times and supporting user retention.",
-        "rating": 10
       }
     ]
   },
@@ -235,17 +192,8 @@ Example Output:
         "tag": "TBT",
         "explanation_reason": "Total Blocking Time (TBT) is 600ms, exceeding the 200ms threshold. This delays interactivity, causing user frustration and potentially increasing bounce rates by 15-20%.",
         "rating": 1
-      },
-      {
-        "tag": "TTI",
-        "explanation_reason": "Time to Interactive (TTI) is 8.5 seconds, far above the 3.8-second threshold. This slow interactivity leads to poor user experience, increasing the likelihood of users abandoning the site before it becomes fully interactive.",
-        "rating": 1
-      },
-      {
-        "tag": "Performance Score",
-        "explanation_reason": "The overall performance score is 45, well below the 90 threshold for optimal performance. This indicates multiple bottlenecks in loading and interactivity, negatively affecting SEO and user retention.",
-        "rating": 1
       }
+      
     ]
   },
   "recommendations": {
@@ -253,21 +201,14 @@ Example Output:
       {
         "tag": "TBT",
         "recommendation": "Lower Total Blocking Time by identifying and optimizing heavy JavaScript tasks. Split large scripts into smaller, asynchronous chunks, and defer non-essential JS until after the main content loads. Limit the use of synchronous third-party scripts and remove unnecessary polyfills. Use your browser's Performance panel to manually inspect long tasks and verify that main-thread blocking is minimized."
-      },
-      {
-        "tag": "TTI",
-        "recommendation": "Improve Time to Interactive by streamlining critical rendering paths and reducing JavaScript execution during page load. Prioritize loading essential resources, and delay non-interactive scripts until after the page becomes interactive. Regularly audit your code for unnecessary dependencies and optimize event handling to ensure a faster interactive state. Manually test page responsiveness by interacting with elements immediately after load to confirm improvements."
-      },
-      {
-        "tag": "Performance Score",
-        "recommendation": "Increase the overall performance score by addressing the most impactful bottlenecks, especially TBT and TTI. Audit your resource loading order, minimize render-blocking assets, and leverage efficient caching strategies. Regularly review your HTML, CSS, and JavaScript for redundant or inefficient code, and optimize image delivery. Validate improvements by monitoring load and interactivity times directly in the browser's network and performance panels."
       }
+     
     ]
   }
 }
 
 
-Output only valid JSON.
+Output only valid JSON .
 `;
 
 
@@ -379,6 +320,7 @@ const validateRecommendations = (output: any) => {
   return result;
 };
 
+
 export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
   if (!website_id || !user_id) {
     return Response.json({ error: "Missing website_id or user_id" }, { status: 400 });
@@ -400,8 +342,8 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       },
     });
 
-    const isSeoAuditEnabled = analysisStatus?.seo_audit != null;
-    console.log("isSeoAuditEnabled", isSeoAuditEnabled);
+    // const isSeoAuditEnabled = analysisStatus?.seo_audit != null;
+    // console.log("isSeoAuditEnabled", isSeoAuditEnabled);
 
     // Fetch data
     const [scraped, analysis, traffic, llm_Response] = await Promise.all([
@@ -410,21 +352,19 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         where: { website_id },
         orderBy: { created_at: "desc" },
       }),
-      isSeoAuditEnabled
-        ? prisma.brand_traffic_analysis.findFirst({
+         prisma.brand_traffic_analysis.findFirst({
             where: { website_id },
             orderBy: { created_at: "desc" },
-          })
-        : null,
-      isSeoAuditEnabled
-        ? prisma.llm_responses.findFirst({
+          }),
+        
+         prisma.llm_responses.findFirst({
             where: { website_id },
             orderBy: { created_at: "desc" },
             select: {
               geo_llm: true,
             },
           })
-        : null,
+      
     ]);
 
     // Extract H1
@@ -436,7 +376,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
 
     // Extract optimization opportunities
     let optimization_opportunities: any = "None";
-    if (isSeoAuditEnabled && analysis?.audit_details) {
+    if (analysis?.audit_details) {
       try {
         const auditDetails =
           typeof analysis.audit_details === "string"
@@ -450,19 +390,19 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     }
 
     // Extract user access readiness
-    let user_access_readiness: any = "None";
-    if (isSeoAuditEnabled && analysis?.audit_details) {
-      try {
-        const auditDetails =
-          typeof analysis.audit_details === "string"
-            ? JSON.parse(analysis.audit_details)
-            : analysis.audit_details;
-        user_access_readiness = auditDetails?.user_access_readiness || "None";
-      } catch (error) {
-        console.error("Error parsing audit_details:", error);
-        user_access_readiness = "None";
-      }
-    }
+    // let user_access_readiness: any = "None";
+    // if (analysis?.audit_details) {
+    //   try {
+    //     const auditDetails =
+    //       typeof analysis.audit_details === "string"
+    //         ? JSON.parse(analysis.audit_details)
+    //         : analysis.audit_details;
+    //     user_access_readiness = auditDetails?.user_access_readiness || "None";
+    //   } catch (error) {
+    //     console.error("Error parsing audit_details:", error);
+    //     user_access_readiness = "None";
+    //   }
+    // }
 
     // Construct allData
     const allData: any = {
@@ -502,23 +442,17 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         tti: analysis?.time_to_interactive ?? "N/A",
         tbt: analysis?.total_blocking_time ?? "N/A",
         performance_score: analysis?.performance_score ?? "N/A",
-        // optimization_opportunities: optimization_opportunities,
       },
     };
 
-    if (isSeoAuditEnabled && traffic) {
+    if (traffic) {
       allData.traffic = {
         avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
         engagement_rate: traffic?.engagement_rate ?? "N/A",
         engaged_sessions: traffic?.engaged_sessions ?? "N/A",
         total_visitors: traffic?.total_visitors ?? "N/A",
         unique_visitors: traffic?.unassigned ?? "N/A",
-        // sources: {
-        //   organic: traffic?.organic_search ?? "N/A",
-        //   direct: traffic?.direct ?? "N/A",
-        //   referral: traffic?.referral ?? "N/A",
-        //   // social: traffic?.organic_social ?? "N/A",
-        // },
+        
         new_vs_returning: traffic?.new_vs_returning ?? "N/A",
         top_countries: traffic?.top_countries ?? "N/A",
         top_devices: traffic?.top_devices ?? "N/A",
@@ -553,10 +487,10 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
 
     // Define prompts
     const seoEnabledPrompt = prompt_web_and_seo; // Use updated prompt for both cases; update prompt_web_and_seo if needed
-    const seoDisabledPrompt = prompt_web_only;
+    // const seoDisabledPrompt = prompt_web_only;
 
     // Generate LLM response with ratings
-    console.log("Generating LLM response...");
+    console.log("Generating LLM response (recommendation by mo1)...");
     const llmResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
@@ -564,7 +498,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       messages: [
         {
           role: "system",
-          content: isSeoAuditEnabled ? seoEnabledPrompt : seoDisabledPrompt,
+          content: seoEnabledPrompt ,
         },
         { role: "user", content: JSON.stringify(allData) },
       ],
@@ -588,15 +522,14 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     await prisma.llm_responses.upsert({
       where: { website_id },
       update: {
-        recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
+        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
       },
       create: {
         website_id,
-        recommendation_by_mo_dashboard1: JSON.stringify(combinedOutput),
+        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
       },
     });
-    
-    // Update analysis status
+   
     await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
@@ -605,12 +538,12 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         },
       },
       update: {
-        recommendation_by_mo1: "true",
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
       create: {
         user_id,
         website_id,
-        recommendation_by_mo1: "true",
+        recommendation_by_mo1: JSON.stringify(combinedOutput),
       },
     });
     console.log("LLM response saved successfully for website_id:", website_id);
@@ -621,3 +554,4 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
 };
+

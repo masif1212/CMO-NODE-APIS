@@ -25,7 +25,7 @@ export const fetchBrands = async (
   if (!websiteEntry) {
     throw new Error(`Website entry not found for this user and website.`);
   }
-  console.log('Website Entry in geo', websiteEntry);
+  // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
   let userReq = await prisma.user_requirements.findFirst({

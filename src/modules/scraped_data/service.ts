@@ -19,62 +19,6 @@ export interface ScrapeResult {
   raw_html?: string; // optional, useful for debugging blockers
 }
 
-async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
-  try {
-    console.log("getRobotsTxtAndSitemaps");
-    const robotsUrl = new URL("/robots.txt", baseUrl).href;
-    const { data } = await axios.get(robotsUrl);
-    const sitemapUrls: string[] = [];
-
-    for (const line of data.split("\n")) {
-      if (line.toLowerCase().startsWith("sitemap:")) {
-        const parts = line.split(":");
-        const sitemapUrl = parts.slice(1).join(":").trim();
-        if (sitemapUrl) sitemapUrls.push(sitemapUrl);
-      }
-    }
-
-    if (sitemapUrls.length === 0) {
-      const guesses = ["/sitemap.xml", "/sitemap_index.xml"];
-      for (const guess of guesses) {
-        sitemapUrls.push(new URL(guess, baseUrl).href);
-      }
-    }
-
-    return sitemapUrls;
-  } catch {
-    return [];
-  }
-}
-
-async function parseSitemap(sitemapUrl: string): Promise<string[]> {
-  try {
-    console.log("parseSitemap");
-    const { data } = await axios.get(sitemapUrl);
-    const parsed = await parseStringPromise(data);
-    const urls: string[] = [];
-
-    if (parsed.sitemapindex?.sitemap) {
-      for (const entry of parsed.sitemapindex.sitemap) {
-        if (entry.loc?.[0]) {
-          const nestedUrls = await parseSitemap(entry.loc[0]);
-          urls.push(...nestedUrls);
-        }
-      }
-    }
-
-    if (parsed.urlset?.url) {
-      for (const entry of parsed.urlset.url) {
-        if (entry.loc?.[0]) urls.push(entry.loc[0]);
-      }
-    }
-
-    return urls;
-  } catch {
-    return [];
-  }
-}
-
 function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   // hasH1: boolean;
   totalHeadings: number;
@@ -156,7 +100,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
 async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
-      timeout: 5000,
+      timeout: 20000,
       validateStatus: () => true, // Don't throw on 404/500
     });
     return response.status === 200;
@@ -199,17 +143,97 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   }
 }
 
-export async function scrapeWebsite(user_id: string, url: string): Promise<ScrapeResult> {
-  const start = Date.now();
-  const domain = new URL(url).hostname;
+async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
+  try {
+    // console.log("getRobotsTxtAndSitemaps")
+    const robotsUrl = new URL("/robots.txt", baseUrl).href;
+    const { data } = await axios.get(robotsUrl);
+    const sitemapUrls: string[] = [];
 
+    for (const line of data.split("\n")) {
+      if (line.toLowerCase().startsWith("sitemap:")) {
+        const parts = line.split(":");
+        const sitemapUrl = parts.slice(1).join(":").trim();
+        if (sitemapUrl) sitemapUrls.push(sitemapUrl);
+      }
+    }
+
+    if (sitemapUrls.length === 0) {
+      const guesses = ["/sitemap.xml", "/sitemap_index.xml"];
+      for (const guess of guesses) {
+        sitemapUrls.push(new URL(guess, baseUrl).href);
+      }
+    }
+
+    return sitemapUrls;
+  } catch {
+    return [];
+  }
+}
+
+async function parseSitemap(sitemapUrl: string): Promise<string[]> {
+  try {
+    // console.log("parseSitemap")
+    const { data } = await axios.get(sitemapUrl);
+    const parsed = await parseStringPromise(data);
+    const urls: string[] = [];
+
+    if (parsed.sitemapindex?.sitemap) {
+      for (const entry of parsed.sitemapindex.sitemap) {
+        if (entry.loc?.[0]) {
+          const nestedUrls = await parseSitemap(entry.loc[0]);
+          urls.push(...nestedUrls);
+        }
+      }
+    }
+
+    if (parsed.urlset?.url) {
+      for (const entry of parsed.urlset.url) {
+        if (entry.loc?.[0]) urls.push(entry.loc[0]);
+      }
+    }
+
+    return urls;
+  } catch {
+    return [];
+  }
+}
+
+async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+  // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
+  const website = await prisma.user_websites.findUnique({
+    where: {
+      user_id_website_id: {
+        user_id,
+        website_id,
+      },
+    },
+    select: {
+      website_url: true,
+    },
+  });
+
+  if (!website?.website_url) {
+    throw new Error(`No URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  }
+
+  return website.website_url;
+}
+
+export async function scrapeWebsite(user_id: string, website_id: string): Promise<ScrapeResult> {
+  const start = Date.now();
+  const website_url = await getWebsiteUrlById(user_id, website_id);
+  const domain = new URL(website_url).hostname;
+  console.log("domain ", domain);
   let statusCode = 0;
   let ipAddress = "N/A";
   let message = "Unknown error";
   let html = "";
 
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(website_url);
+    console.log("Response received from website:", response.status);
+
     html = response.data;
     statusCode = response.status;
     const dnsResult = await dns.lookup(domain);
@@ -241,22 +265,11 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     return {
       success: false,
       status_code: code,
-
       error: message,
     };
   }
 
   const responseTimeMs = Date.now() - start;
-
-  const newWebsite = await prisma.user_websites.create({
-    data: {
-      website_url: url,
-      users: { connect: { user_id } },
-    },
-    select: { website_id: true },
-  });
-
-  const websiteId = newWebsite.website_id;
   const $ = cheerio.load(html);
   const headingAnalysis = evaluateHeadingHierarchy($);
 
@@ -278,7 +291,7 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     og_description: $('meta[property="og:description"]').attr("content") || "not found",
     og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
-
+  console.log("Meta tags extracted:", meta);
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
   const otherLinks: string[] = [];
 
@@ -299,33 +312,44 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
   const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
-  // const logoSelectors = [
-  //   'link[rel="icon"]',
-  //   'link[rel="shortcut icon"]',
-  //   'link[rel="apple-touch-icon"]',
-  //   'img[alt*="logo"]',
-  //   'img[src*="logo"]',
-  // ];
-
-  // let logoUrl = "not found";
-  // for (const selector of logoSelectors) {
-  //   const el = $(selector).first();
-  //   let src = el.attr("href") || el.attr("src");
-  //   if (src) {
-  //     if (src.startsWith("//")) src = "https:" + src;
-  //     else if (src.startsWith("/")) src = new URL(src, url).href;
-  //     logoUrl = src;
-  //     break;
-  //   }
-  // }
-
-  const sitemapUrls = await getRobotsTxtAndSitemaps(url);
+  const sitemapUrls = await getRobotsTxtAndSitemaps(website_url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
-  const uniqueUrls = [...new Set<string>([url, ...sitemapLinks.map((u) => u.trim())])];
+  const allSitemapUrls = [...new Set<string>([website_url, ...sitemapLinks.map((u) => u.trim())])];
+
+  let selectedKeyPages: string[];
+  if (allSitemapUrls.length > 10) {
+    const homepage = website_url;
+    const importantKeywords = ["about", "services", "service", "contact", "pricing", "plans", "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"];
+
+    const keywordMatched = allSitemapUrls.filter((link) => {
+      try {
+        const path = new URL(link).pathname.toLowerCase();
+        return importantKeywords.some((kw) => path.includes(kw));
+      } catch {
+        return false;
+      }
+    });
+
+    const shallowPages = allSitemapUrls.filter((link) => {
+      try {
+        const path = new URL(link).pathname;
+        const segments = path.split("/").filter(Boolean);
+        return segments.length === 1;
+      } catch {
+        return false;
+      }
+    });
+
+    const merged = [homepage, ...keywordMatched, ...shallowPages].filter((v, i, self) => self.indexOf(v) === i).slice(0, 10);
+
+    selectedKeyPages = merged;
+  } else {
+    selectedKeyPages = allSitemapUrls;
+  }
 
   let affectedPagesCount = 0;
   const keyPages = await Promise.all(
-    uniqueUrls.map(async (pageUrl) => {
+    selectedKeyPages.map(async (pageUrl) => {
       try {
         const res = await axios.get(pageUrl);
         if (res.status >= 200 && res.status < 400) {
@@ -369,29 +393,23 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
   };
 
   try {
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url, websiteId);
-    const isCrawlable: boolean = await isCrawlableByLLMBots(url);
+    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, website_id);
+    const isCrawlable = await isCrawlableByLLMBots(website_url);
 
-    // Fallback logo detection if needed
-    // Step 1: Try to use logo from schema
     let finalLogoUrl = schemaAnalysisData.logo ?? null;
-    console.log("finalLogoUrlfromschema", finalLogoUrl);
     if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
-      console.log("Schema logo URL is invalid, falling back...");
-      finalLogoUrl = null; // Clear it so fallback logic runs
+      finalLogoUrl = null;
     }
 
-    // Step 2: If no valid schema logo, try scraping from HTML
     if (!finalLogoUrl) {
       const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
 
-      const $ = cheerio.load(html);
       for (const selector of logoSelectors) {
         const el = $(selector).first();
         let src = el.attr("href") || el.attr("src");
         if (src) {
           if (src.startsWith("//")) src = "https:" + src;
-          else if (src.startsWith("/")) src = new URL(src, url).href;
+          else if (src.startsWith("/")) src = new URL(src, website_url).href;
 
           if (await isLogoUrlValid(src)) {
             finalLogoUrl = src;
@@ -402,8 +420,8 @@ export async function scrapeWebsite(user_id: string, url: string): Promise<Scrap
     }
     const record = await prisma.website_scraped_data.create({
       data: {
-        website_id: websiteId,
-        website_url: url,
+        website_id: website_id,
+        website_url: website_url,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
         meta_description: meta.meta_description,
