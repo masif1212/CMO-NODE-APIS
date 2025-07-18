@@ -34,56 +34,46 @@ export const startGoogleAuth = (req: Request, res: Response) => {
 
 export const handleGoogleCallback = async (req: Request, res: Response) => {
   const code = req.query.code as string;
-
+  // console.log("Received Authorization Code:", code);
+  // console.log("Configured Redirect URI:", oAuth2Client.redirectUri); // Cannot access private property
   try {
     const { tokens } = await oAuth2Client.getToken(code);
+    // console.log("Tokens Received:", tokens.access_token, tokens.refresh_token);
     oAuth2Client.setCredentials(tokens);
-
     const idToken = tokens.id_token;
     const decodedToken = jwt.decode(idToken as string);
     const userId = (decodedToken as any).sub;
-
-    // The session is created correctly, which is the main goal here.
     req.session.user = {
       userId,
       accessToken: tokens.access_token!,
       refreshToken: tokens.refresh_token,
       profile: decodedToken,
     };
-
-    // *** FIX: Send a simple, hardcoded success message ***
-    // This is much more reliable than sending a complex JSON object.
+    // console.log("Session Updated:", req.session.user);
     res.send(`
-            <script>
-                if (window.opener) {
-                    window.opener.postMessage('google-auth-success', '*');
-                    window.close();
-                } else {
-                    // Provide a fallback message if the window was opened in a way that lost the opener reference
-                    document.body.innerHTML = "<h1>Authentication successful. Please return to the main application.</h1>";
-                }
-            </script>
-        `);
+      <script>
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
+        window.close();
+      </script>
+    `);
   } catch (err) {
-    let errorMessage = "Authentication failed";
     if (err instanceof Error) {
       console.error("Token Exchange Error:", err.message, err.stack);
-      errorMessage = `Authentication failed: ${err.message.replace(/"|'/g, "")}`; // Sanitize message
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed: ${err.message}' }, '*');
+          window.close();
+        </script>
+      `);
     } else {
-      console.error("Unknown Token Exchange Error:", err);
+      console.error("Token Exchange Error:", err);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: 'Authentication failed' }, '*');
+          window.close();
+        </script>
+      `);
     }
-
-    // Also send a simple error message back to the opener
-    res.send(`
-            <script>
-                if (window.opener) {
-                    window.opener.postMessage({ type: 'GOOGLE_AUTH_ERROR', error: '${errorMessage}' }, '*');
-                    window.close();
-                } else {
-                    document.body.innerHTML = "<h1>Authentication Failed. Please try again.</h1>";
-                }
-            </script>
-        `);
   }
 };
 
