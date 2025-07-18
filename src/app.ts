@@ -1,11 +1,9 @@
 import dotenv from "dotenv";
 dotenv.config();
-
 import express from "express";
 import cors from "cors";
 import session from "express-session";
 import usersRouter from "./modules/users/router";
-import paymentRouter from "./payments/paymentRoutes";
 import pageSpeedRouter from "./modules/dashboard1/website_audit/router";
 import authRouter, { dashboardRouter1 } from "./modules/dashboard1/traffic_analysis/router";
 import { errorHandler } from "./middleware/errorHandler";
@@ -16,62 +14,71 @@ import geo_llm from "./modules/dashboard1/geo/router";
 import userRequirementsRouter from "./modules/form_data/router";
 import mainDashboard from "./modules/dashboard/dashboard.router";
 import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
+// import dashboard4Router from "./modules/dashboard4/router";
 import cmoRecommendationRouter from "./modules/dashboard4/router";
+import paymentRouter from "./payments/paymentRoutes";
+
+// Register new route
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ✅ ADD THIS MIDDLEWARE TO FIX THE POPUP (COOP) ERROR
-// This header tells the browser it's safe for your site to interact with the popups it opens.
-app.use((req, res, next) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  next();
-});
-
-// ✅ Trust the first proxy hop (essential for Cloud Run)
-app.set("trust proxy", 1);
-
-// === ✅ CORS CONFIGURATION ===
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_BASE_URL || "https://cmo-nextjs-app-199341392650.us-central1.run.app",
-    credentials: true,
+    origin: process.env.NEXT_PUBLIC_BASE_URL, // Frontend URL
+    credentials: true, // Allow cookies for cross-origin requests
   })
 );
 
-// === ✅ SESSION CONFIGURATION ===
+// Session setup for Google auth
 app.use(
   session({
-    name: "connect.sid",
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     cookie: {
+      secure: process.env.NODE_ENV === "production", // Secure cookies in production
       httpOnly: true,
-      secure: true, // This now works correctly because of 'trust proxy'
-      sameSite: "none", // Required for cross-domain cookies
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     },
   })
 );
 
-// Routers
+// Main dashboard route
 app.use("/api/main_dashboard", mainDashboard);
-app.use("/api/user-requirements", userRequirementsRouter);
-app.use("/api/scrape", routes);
-app.use("/api/pagespeed", pageSpeedRouter);
-app.use("/api/users", usersRouter);
-app.use("/api/auth", authRouter);
 app.use("/api/payment", paymentRouter);
-app.use("/ga", authRouter);
+
+//form data route
+app.use("/api/user-requirements", userRequirementsRouter);
+
+//route for scrapping data
+app.use("/api/scrape", routes);
+
+//dashboard1 routes
+
+app.use("/api/pagespeed", pageSpeedRouter); //website health audit
+app.use("/api/users", usersRouter); // googe auth api
+
+app.use("/api/auth", authRouter);
+app.use("/ga", authRouter); // Note: Using authRouter for /ga; confirm if this is intentional
+
 app.use("/api/technical_seo", technicalSeoRouter);
+
 app.use("/api/geo", geo_llm);
-app.use("/api/dashboardRouter1", dashboardRouter1);
+
+app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for dashboard 1
+
+//dashboard2 routes
 app.use("/api/social_media/youtube", youtubeRouter);
+
+//dashboard3 routes
+
 app.use("/api/competitors", competitorRouter);
+
+//dashboard4 routes
+// app.use("/api/recommendationbycmo", dashboard4Router);
 app.use("/api/cmo-recommendation", cmoRecommendationRouter);
 
 // Global error handler
