@@ -18,8 +18,6 @@ import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
 import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
 
-// Register new route
-
 const app = express();
 
 // Middleware
@@ -32,16 +30,22 @@ app.use(
   })
 );
 
+// ✅ *** FIX ADDED HERE ***
+// Trust the reverse proxy (e.g., Google Cloud Run's load balancer)
+// This must be set for secure cookies to work in production.
+app.set("trust proxy", 1);
+
 // Session setup for Google auth
 app.use(
   session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: false, // This is correct, do not change to true
     cookie: {
       secure: process.env.NODE_ENV === "production", // Secure cookies in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 1 day
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Required for cross-site cookies
     },
   })
 );
@@ -57,7 +61,6 @@ app.use("/api/user-requirements", userRequirementsRouter);
 app.use("/api/scrape", routes);
 
 //dashboard1 routes
-
 app.use("/api/pagespeed", pageSpeedRouter); //website health audit
 app.use("/api/users", usersRouter); // googe auth api
 
@@ -74,7 +77,6 @@ app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for 
 app.use("/api/social_media/youtube", youtubeRouter);
 
 //dashboard3 routes
-
 app.use("/api/competitors", competitorRouter);
 
 //dashboard4 routes
