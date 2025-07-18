@@ -24,6 +24,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ✅ ADD THIS MIDDLEWARE TO FIX THE POPUP (COOP) ERROR
+// This header tells the browser it's safe for your site to interact with the popups it opens.
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
+
 // ✅ Trust the first proxy hop (essential for Cloud Run)
 app.set("trust proxy", 1);
 
@@ -50,6 +57,7 @@ app.use(
     },
   })
 );
+
 // Routers
 app.use("/api/main_dashboard", mainDashboard);
 app.use("/api/user-requirements", userRequirementsRouter);
