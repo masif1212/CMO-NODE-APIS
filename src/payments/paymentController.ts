@@ -37,26 +37,45 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-// --- HELPER FUNCTIONS ---
+// Define a custom error for easy identification
+class CustomerConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CustomerConflictError';
+  }
+}
+
 const getOrCreateCustomer = async (user_id: string, email: string): Promise<string> => {
+  // 1. Check your local database first. This part is correct.
   const user = await prisma.users.findUnique({ where: { user_id } });
 
   if (user?.checkout_customer_id) {
     return user.checkout_customer_id;
   }
 
-  const customer = (await cko.customers.create({
-    email: email,
-    name: `${user?.first_name || ""} ${user?.last_name || ""}`.trim(),
-    metadata: { internal_id: user_id },
-  })) as CkoCustomerResponse;
+  // 2. Try to create the customer
+  try {
+    const customer = (await cko.customers.create({
+      email: email,
+      name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
+      metadata: { internal_id: user_id },
+    })) as CkoCustomerResponse;
 
-  await prisma.users.update({
-    where: { user_id },
-    data: { checkout_customer_id: customer.id },
-  });
+    // 3. Save the new ID to your database
+    await prisma.users.update({
+      where: { user_id },
+      data: { checkout_customer_id: customer.id },
+    });
 
-  return customer.id;
+    return customer.id;
+  } catch (error: any) {
+    // 4. Catch the specific error and re-throw it as our custom error
+    if (error.body?.error_codes?.includes('customer_email_already_exists')) {
+      throw new CustomerConflictError('A customer with this email already exists on the payment platform but is not linked to this account.');
+    }
+    // Re-throw any other unexpected errors
+    throw error;
+  }
 };
 
 // --- API CONTROLLERS ---
@@ -132,11 +151,14 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
     res.status(400).json({ error: "A payment method (new or saved) is required." });
     return;
   }
+  console.log(analysis_types);
 
   try {
     const analysisServices = await prisma.analysisServices.findMany({
       where: { type: { in: analysis_types } },
     });
+    console.log(analysisServices);
+
 
     if (analysisServices.length !== analysis_types.length) {
       res.status(400).json({ error: "One or more selected analysis types are invalid." });
