@@ -4,7 +4,7 @@ import app from "./app"; // Import the app from app.ts
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3001; // Use the PORT from environment variables or default to 8080
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001; // Ensure PORT is a number
 
 // Optional: Keep the /users route if needed
 app.get("/users", async (req, res) => {
@@ -14,6 +14,9 @@ app.get("/users", async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const HOST = "0.0.0.0"; // This is the crucial line
+
+app.listen(PORT, HOST, () => {
+  // Updated log for clarity. 'localhost' is misleading in a container environment.
+  console.log(`Server listening on port ${PORT}`);
 });
