@@ -1,27 +1,26 @@
-import { PrismaClient } from '@prisma/client';
-import OpenAI from 'openai';
-import 'dotenv/config';
+import { PrismaClient } from "@prisma/client";
+import OpenAI from "openai";
+import "dotenv/config";
 import * as cheerio from "cheerio";
-import { promisify } from 'util';
-import dns from 'dns'; // Node.js built-in DNS module
+import { promisify } from "util";
+import dns from "dns"; // Node.js built-in DNS module
 const resolve4 = promisify(dns.resolve4);
-import puppeteer, { Browser } from 'puppeteer';
-import fetch from 'node-fetch'; 
+import puppeteer, { Browser } from "puppeteer";
+import fetch from "node-fetch";
 export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
-
 
 type ValidationResult = {
   isValid: boolean;
   preferredUrl?: string;
   reason?: string;
 };
-import pLimit from 'p-limit';
+// import pLimit from "p-limit";
 
 const prisma = new PrismaClient();
 
-export  function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
+export function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
   const passedAudits: { title: string; description: string }[] = [];
   const failedAudits: { title: string; description: string }[] = [];
 
@@ -31,7 +30,7 @@ export  function processSeoAudits(auditData: any[]): { passedAudits: { title: st
 
   for (const audit of auditData) {
     // Skip the structured-data audit
-    if (audit?.id === 'structured-data') {
+    if (audit?.id === "structured-data") {
       continue;
     }
 
@@ -41,60 +40,60 @@ export  function processSeoAudits(auditData: any[]): { passedAudits: { title: st
     let failedDescription: string;
 
     switch (audit?.id) {
-      case 'is-crawlable':
-        userFriendlyTitle = 'Search Engines Can Find This Page';
-        passedDescription = 'Page allows search engines to find and index it, making it visible in search results.';
-        failedDescription = 'Page is blocked from search engines, which may prevent it from appearing in search results. Check for noindex tags or robots.txt restrictions.';
+      case "is-crawlable":
+        userFriendlyTitle = "Search Engines Can Find This Page";
+        passedDescription = "Page allows search engines to find and index it, making it visible in search results.";
+        failedDescription = "Page is blocked from search engines, which may prevent it from appearing in search results. Check for noindex tags or robots.txt restrictions.";
         break;
-      case 'document-title':
-        userFriendlyTitle = 'Page Has a Clear and Useful Title';
-        passedDescription = 'Page has a title that helps users and search engines understand its content.';
-        failedDescription = 'Page is missing a title or has an unclear one, which can confuse users and search engines. Add a descriptive title tag.';
+      case "document-title":
+        userFriendlyTitle = "Page Has a Clear and Useful Title";
+        passedDescription = "Page has a title that helps users and search engines understand its content.";
+        failedDescription = "Page is missing a title or has an unclear one, which can confuse users and search engines. Add a descriptive title tag.";
         break;
-      case 'meta-description':
-        userFriendlyTitle = 'Page Has a Helpful Description';
-        passedDescription = 'Page includes a short summary that appears in search results, helping users know what it’s about.';
-        failedDescription = 'Page lacks a meta description, which may reduce click-through rates. Add a concise summary of the Page’s content.';
+      case "meta-description":
+        userFriendlyTitle = "Page Has a Helpful Description";
+        passedDescription = "Page includes a short summary that appears in search results, helping users know what it’s about.";
+        failedDescription = "Page lacks a meta description, which may reduce click-through rates. Add a concise summary of the Page’s content.";
         break;
-      case 'http-status-code':
-        userFriendlyTitle = 'Page Loads Without Errors';
-        passedDescription = 'Page returns a successful status code, ensuring search engines can access it properly.';
-        failedDescription = 'Page returns an error status code, preventing search engines from accessing it. Fix server or redirect issues.';
+      case "http-status-code":
+        userFriendlyTitle = "Page Loads Without Errors";
+        passedDescription = "Page returns a successful status code, ensuring search engines can access it properly.";
+        failedDescription = "Page returns an error status code, preventing search engines from accessing it. Fix server or redirect issues.";
         break;
-      case 'link-text':
-        userFriendlyTitle = 'Links Use Clear and Descriptive Text';
-        passedDescription = 'links use descriptive text, making it easier for users and search engines to understand them.';
-        failedDescription = 'Some links lack descriptive text , which can confuse users and search engines. Use meaningful link text.';
+      case "link-text":
+        userFriendlyTitle = "Links Use Clear and Descriptive Text";
+        passedDescription = "links use descriptive text, making it easier for users and search engines to understand them.";
+        failedDescription = "Some links lack descriptive text , which can confuse users and search engines. Use meaningful link text.";
         break;
-      case 'crawlable-anchors':
-        userFriendlyTitle = 'Links Can Be Followed by Search Engines';
-        passedDescription = 'Links are set up correctly, allowing search engines to explore  website effectively.';
-        failedDescription = 'Some links are not crawlable due to improper setup (e.g., JavaScript-based links). Ensure links use proper HTML anchor tags.';
+      case "crawlable-anchors":
+        userFriendlyTitle = "Links Can Be Followed by Search Engines";
+        passedDescription = "Links are set up correctly, allowing search engines to explore  website effectively.";
+        failedDescription = "Some links are not crawlable due to improper setup (e.g., JavaScript-based links). Ensure links use proper HTML anchor tags.";
         break;
-      case 'robots-txt':
-        userFriendlyTitle = 'Robots.txt File Is Set Up Correctly';
-        passedDescription = 'Robots.txt file is properly configured, guiding search engines on how to crawl  site.';
-        failedDescription = 'Robots.txt file is missing or incorrectly configured, which may block search engines. Create or fix the robots.txt file.';
+      case "robots-txt":
+        userFriendlyTitle = "Robots.txt File Is Set Up Correctly";
+        passedDescription = "Robots.txt file is properly configured, guiding search engines on how to crawl  site.";
+        failedDescription = "Robots.txt file is missing or incorrectly configured, which may block search engines. Create or fix the robots.txt file.";
         break;
-      case 'image-alt':
-        userFriendlyTitle = 'Images Have Descriptive Alt Text';
-        passedDescription = 'Images include alt text, helping search engines and screen readers understand them.';
-        failedDescription = 'Some images lack alt text, making them less accessible and harder for search engines to understand. Add descriptive alt text to all images.';
+      case "image-alt":
+        userFriendlyTitle = "Images Have Descriptive Alt Text";
+        passedDescription = "Images include alt text, helping search engines and screen readers understand them.";
+        failedDescription = "Some images lack alt text, making them less accessible and harder for search engines to understand. Add descriptive alt text to all images.";
         break;
-      case 'hreflang':
-        userFriendlyTitle = 'Page Shows the Right Language to the Right Users';
-        passedDescription = 'Page correctly specifies its language, helping search engines show it to the right audience.';
-        failedDescription = 'Page has missing or incorrect language settings, which may show it to the wrong audience. Add correct hreflang tags.';
+      case "hreflang":
+        userFriendlyTitle = "Page Shows the Right Language to the Right Users";
+        passedDescription = "Page correctly specifies its language, helping search engines show it to the right audience.";
+        failedDescription = "Page has missing or incorrect language settings, which may show it to the wrong audience. Add correct hreflang tags.";
         break;
-      case 'canonical':
-        userFriendlyTitle = 'Page Shows Its Preferred URL';
-        passedDescription = 'Page uses a canonical link to tell search engines the preferred version, avoiding duplicate content issues.';
-        failedDescription = 'Page lacks a canonical link, which may cause duplicate content issues. Add a canonical tag to specify the preferred URL.';
+      case "canonical":
+        userFriendlyTitle = "Page Shows Its Preferred URL";
+        passedDescription = "Page uses a canonical link to tell search engines the preferred version, avoiding duplicate content issues.";
+        failedDescription = "Page lacks a canonical link, which may cause duplicate content issues. Add a canonical tag to specify the preferred URL.";
         break;
       default:
-        userFriendlyTitle = audit?.title || 'Unknown Audit';
-        passedDescription = audit?.description || 'No description available';
-        failedDescription = audit?.description || 'This audit failed, but no specific guidance is available. Review the page configuration.';
+        userFriendlyTitle = audit?.title || "Unknown Audit";
+        passedDescription = audit?.description || "No description available";
+        failedDescription = audit?.description || "This audit failed, but no specific guidance is available. Review the page configuration.";
     }
 
     // Create audit entry
@@ -133,11 +132,10 @@ export async function resolveDnsCached(hostname: string): Promise<string[]> {
   }
 }
 
-
 async function extractMetaRedirect(html: string): Promise<string | null> {
   const $ = cheerio.load(html);
   const meta = $('meta[http-equiv="refresh" i]');
-  const content = meta.attr('content');
+  const content = meta.attr("content");
   if (content) {
     const match = content.match(/url=(.+)/i);
     if (match?.[1]) return match[1].trim();
@@ -146,27 +144,29 @@ async function extractMetaRedirect(html: string): Promise<string | null> {
 }
 
 function isHomepagePath(path: string): boolean {
-  const normalized = path.replace(/\/+$/, '').toLowerCase() || '/';
+  const normalized = path.replace(/\/+$/, "").toLowerCase() || "/";
 
   const acceptedHomepagePaths = new Set([
-    '/', '/home', '/index', '/welcome',
-    '/en', '/us', '/uk', // common locale codes
+    "/",
+    "/home",
+    "/index",
+    "/welcome",
+    "/en",
+    "/us",
+    "/uk", // common locale codes
   ]);
 
-  return (
-    acceptedHomepagePaths.has(normalized) ||
-    /^\/(country\/[a-z]{2}|[a-z]{2})$/i.test(normalized)
-  );
+  return acceptedHomepagePaths.has(normalized) || /^\/(country\/[a-z]{2}|[a-z]{2})$/i.test(normalized);
 }
 
 async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
   let page;
   try {
     page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0');
+    await page.setUserAgent("Mozilla/5.0");
 
     // Fail fast (lower timeout), and don't wait for all resources
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 110000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 110000 });
 
     let finalUrl = page.url();
     const html = await page.content();
@@ -174,7 +174,7 @@ async function checkLandingHomepage(url: string, browser: Browser): Promise<{ va
     const metaRedirect = await extractMetaRedirect(html);
     if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
 
-    const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, '') || '/';
+    const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, "") || "/";
     return { valid: isHomepagePath(finalPath), finalUrl };
   } catch (err) {
     console.error(`Check failed for ${url}: ${err}`);
@@ -192,7 +192,7 @@ async function checkLandingHomepage(url: string, browser: Browser): Promise<{ va
 
 async function isHttpStatus200(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+    const res = await fetch(url, { method: "HEAD", redirect: "follow" });
     return res.status === 200;
   } catch (err) {
     console.warn(`Quick status check failed for ${url}:`, err);
@@ -200,32 +200,25 @@ async function isHttpStatus200(url: string): Promise<boolean> {
   }
 }
 
-export async function isValidCompetitorUrl(
-  url: string,
-  competitorName?: string,
-  sharedBrowser?: Browser
-): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
+export async function isValidCompetitorUrl(url: string, competitorName?: string, sharedBrowser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
   let browser: Browser | null = sharedBrowser || null;
   let browserLaunchedHere = false;
 
   try {
     if (!/^https?:\/\//.test(url)) {
-      return { isValid: false, reason: 'URL does not use HTTP or HTTPS' };
+      return { isValid: false, reason: "URL does not use HTTP or HTTPS" };
     }
 
     const parsed = new URL(url);
     const hostname = parsed.hostname;
 
-    const blocklist = [
-      'facebook.com', 'twitter.com', 'google.com', 'youtube.com',
-      'instagram.com', 'linkedin.com', 'tiktok.com', 'example.com', 'nonexistent.com',
-    ];
-    if (blocklist.some(b => hostname.includes(b))) {
+    const blocklist = ["facebook.com", "twitter.com", "google.com", "youtube.com", "instagram.com", "linkedin.com", "tiktok.com", "example.com", "nonexistent.com"];
+    if (blocklist.some((b) => hostname.includes(b))) {
       return { isValid: false, reason: `Hostname "${hostname}" is in the blocklist` };
     }
 
     if (competitorName) {
-      const normalizedName = competitorName.toLowerCase().replace(/\s+/g, '');
+      const normalizedName = competitorName.toLowerCase().replace(/\s+/g, "");
       if (!hostname.toLowerCase().includes(normalizedName)) {
         return { isValid: false, reason: `Hostname does not include normalized competitor name "${normalizedName}"` };
       }
@@ -234,7 +227,7 @@ export async function isValidCompetitorUrl(
     // ⚡ Fast HTTP check before launching Puppeteer
     const isLive = await isHttpStatus200(url);
     if (!isLive) {
-      return { isValid: false, reason: 'Fast HTTP check failed (non-200 or unreachable)' };
+      return { isValid: false, reason: "Fast HTTP check failed (non-200 or unreachable)" };
     }
 
     const originalDns = await resolveDnsCached(hostname);
@@ -255,8 +248,8 @@ export async function isValidCompetitorUrl(
     }
 
     // Try alternate www/non-www version
-    const hasWWW = hostname.startsWith('www.');
-    const altHostname = hasWWW ? hostname.replace(/^www\./, '') : `www.${hostname}`;
+    const hasWWW = hostname.startsWith("www.");
+    const altHostname = hasWWW ? hostname.replace(/^www\./, "") : `www.${hostname}`;
     const altUrl = url.replace(hostname, altHostname);
 
     const altDns = await resolveDnsCached(altHostname);
@@ -271,7 +264,7 @@ export async function isValidCompetitorUrl(
       return { isValid: true, preferredUrl: secondCheck.finalUrl };
     }
 
-    return { isValid: false, reason: 'Neither original nor alternate URL led to a valid homepage' };
+    return { isValid: false, reason: "Neither original nor alternate URL led to a valid homepage" };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error(`Validation failed for ${url}:`, err);
@@ -289,10 +282,8 @@ export async function isValidCompetitorUrl(
 
 const MAX_CONCURRENT_VALIDATIONS = 2;
 
-export async function validateCompetitorUrlsInParallel(
-  urls: string[],
-  competitorNames?: (string | undefined)[]
-): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
+export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
+  const pLimit = (await import("p-limit")).default;
   const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
   let browser: Browser | null = null;
 
@@ -318,7 +309,7 @@ export async function validateCompetitorUrlsInParallel(
     return results;
   } catch (err) {
     console.error("Failed to validate competitor URLs:", err);
-    return urls.map(url => ({ url, result: { isValid: false } }));
+    return urls.map((url) => ({ url, result: { isValid: false } }));
   } finally {
     if (browser) {
       try {
