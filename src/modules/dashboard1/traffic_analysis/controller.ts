@@ -248,25 +248,7 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
     if (!llm_res) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      update: {
-        dashboard1: "true",
-        updated_at: new Date(),
-      },
-      create: {
-        user_id,
-        website_id,
-        dashboard1: "true",
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+   
 
     return res.status(200).json(llm_res);
   } catch (error: any) {

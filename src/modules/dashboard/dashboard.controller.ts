@@ -478,7 +478,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       responsePayload.recommendation_by_mo_dashboard3 = safeParse(analysisStatus.recommendation_by_mo3);
     }
     if (analysisStatus?.recommendation_by_cmo != null) {
-      responsePayload.cmo_recommendation = {cmo_recommendation:analysisStatus.recommendation_by_cmo};
+      responsePayload.cmo_recommendation = safeParse(analysisStatus.recommendation_by_cmo);
     }
 
     // Add traffic-related data only if traffic_anaylsis is non-empty

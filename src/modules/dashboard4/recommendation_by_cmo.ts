@@ -13,7 +13,7 @@ interface CMORecommendationInput {
 
 
 interface CMORecommendationOutput {
-  recommendation_by_cmo: string;
+  cmo_recommendation: string;
   response?: any; // Adjust type as needed
 }
 
@@ -63,6 +63,7 @@ export class CMORecommendationService {
           competitor_details: true,
           website_audit: true,
           seo_audit: true,
+          dashboard1: true,
 
         },
       }),
@@ -77,9 +78,9 @@ export class CMORecommendationService {
       dashboard2: llmResponse?.recommendation_by_mo_dashboard2 || null,
       dashboard3: llmResponse?.recommendation_by_mo_dashboard3 || null,
       website,
+      website_data: analysis_status?.dashboard1|| null,
       requirement,
       competitor_details: analysis_status?.competitor_details || null, 
-      website_audit: analysis_status?.website_audit || null,
 
     };
   }
@@ -93,180 +94,13 @@ export class CMORecommendationService {
         website,
         requirement,
         competitor_details,
-        website_audit
+        website_data
       } = await this.fetchRecommendations(input.user_id, input.website_id);
 
     
 
       // };
       const currentDate = new Date().toISOString().split('T')[0]; 
-//       const executiveCMOPrompt = `
-// Act as the Chief Marketing Officer for the following brand, and generate a full strategic brand report intended for executive leadership and board members.
-
-// ### Brand Profile
-// - Website: ${website?.website_url || 'N/A'}
-// - Industry: ${requirement?.industry || 'N/A'}
-// - Region of Operation: ${requirement?.region_of_operation || 'N/A'}
-// - Target Location: ${requirement?.target_location || 'N/A'}
-// - Target Audience: ${requirement?.target_audience || 'N/A'}
-// - Primary Offering: ${requirement?.primary_offering || 'N/A'}
-// - Unique Selling Proposition (USP): ${requirement?.USP || 'N/A'}
-
-// ### Data Inputs
-// ${website_analytics ? '- Website Analytics: available' : ''}
-// ${social_media ? '- Social Media Performance: available' : ''}
-// ${competitor_analysis ? ' - Competitor Analysis: available' : ''}
-// ${competitor_details ? '- Competitor Details (raw): available' : ''}
-
-// ---
-
-// Based on the data and brand information, provide a comprehensive and structured report with the following sections:
-
-// 1. **Executive Summary** 
-//    - Brand introdunction in 3-4 sentences . 
-//    - High-level overview of brand health, performance, and market stance  
-//    - Include 2–3 high-impact, data-driven strategic recommendations
-
-// 2. **Brand Health Overview**  
-//    - Insights on awareness, brand perception, loyalty, and share of voice  
-//    - Include metrics such as NPS, aided/unaided awareness, or sentiment (if data is available)
-
-// 3. **Market & Audience Insights**  
-//    - Define key customer personas  
-//    - Interpret audience behavior patterns and emerging consumer trends relevant to the brand’s segment and region
-
-// 4. **Competitive Landscape**  
-//    - Analyze competitors  
-//    - Include a positioning map (descriptive) and a brief SWOT analysis
-
-// 5. **Brand Performance Metrics**  
-//    - Report on marketing KPIs like engagement rate, campaign ROI, click-through rate, or conversion rate  
-//    - Highlight top-performing campaigns across digital and/or traditional channels
-
-// 6. **Brand Strategy & Positioning**  
-//    - Evaluate current positioning, messaging, and alignment with mission and values  
-//    - Include any recent pivots or upcoming shifts in market or customer strategy
-
-// 7. **Creative & Content Review**  
-//    - Review tone of voice, messaging consistency, and visual branding  
-//    - Evaluate recent campaigns and assets for brand equity contribution
-
-// 8. **Reputation & Risk Management**  
-//    - Comment on PR exposure, reputation threats, or areas of potential backlash  
-//    - Include commentary on sentiment shifts if available
-
-// 9. **Roadmap & Recommendations**  
-//    - Provide near- and long-term brand priorities  
-//    - Recommend innovations, cross-functional actions, and performance levers that align with the brand’s USP and growth ambitions
-
-// ---
-// Use a professional, strategic tone suitable for C-level review. Where data is unavailable, use inferred logic or industry best practices. Do not reference external tools, services, or vendors.
-// At the very end of the report, always include the following:
-
-// Use the following strict formatting rules for the report:
-// -Before starting section 1, begin the report with the brand name and website URL in bold.
-// - Use markdown-style **bold section headings**, numbered 1 through 9, as listed above  
-// - Each section should be clearly separated and labeled exactly as described  
-// - Use bullet points, subheadings, and short paragraphs to enhance readability  
-// - Maintain a professional, strategic tone suitable for executive leadership  
-// - If data is missing, use inferred logic or industry best practices — do not leave sections blank
-
-// Very Important:  
-// At the very end of the report (after all 9 sections), always include the following final block, as shown below — no exceptions:
-
-// ---
-
-// **Date**: ${currentDate}  
-// **Report generated by**: CMOontheGO
-
-// ---
-
-// Do not place this summary anywhere else. It must appear as the final lines of the report.
-      
-// `.trim();
-
-
-
-
-
-// const executiveCMOPrompt = `
-// Act as the Chief Marketing Officer for the following brand and generate a full strategic brand report intended for executive leadership and board members.
-
-// ### Brand Profile
-// - Website: ${website?.website_url || 'N/A'}
-// - Industry: ${requirement?.industry || 'N/A'}
-// - Region of Operation: ${requirement?.region_of_operation || 'N/A'}
-// - Target Location: ${requirement?.target_location || 'N/A'}
-// - Target Audience: ${requirement?.target_audience || 'N/A'}
-// - Primary Offering: ${requirement?.primary_offering || 'N/A'}
-// - Unique Selling Proposition (USP): ${requirement?.USP || 'N/A'}
-
-// ### Data Inputs
-// ${website_analytics ? '- Website Analytics: available' : ''}
-// ${social_media ? '- Social Media Performance: available' : ''}
-// ${competitor_analysis ? '- Competitor Analysis: available' : ''}
-// ${competitor_details ? '- Competitor Details (raw): available' : ''}
-
-// ---
-
-// Based on the data and brand information, provide a comprehensive and structured report with the following 8 sections:
-
-// 1. **Executive Summary**  
-//    - Brand introduction in 3–4 sentences  
-//    - High-level overview of brand health, performance, and market stance  
-//    - Include 2–3 high-impact, data-driven strategic recommendations
-
-// 2. **Brand Health Overview**  
-//    - Insights on awareness, brand perception, loyalty, and share of voice  
-//    - Include metrics such as Net Promoter Score (NPS), aided/unaided awareness, or sentiment analysis (if data is available)
-
-// 3. **Market & Audience Insights**  
-//    - Define key customer personas  
-//    - Interpret audience behavior patterns and emerging consumer trends relevant to the brand’s segment and region
-
-// 4. **Competitive Landscape**  
-//    - Analyze competitor strengths, weaknesses, and differentiation  
-//    - Include a brief SWOT analysis for the brand
-
-// 5. **Brand Strategy & Positioning**  
-//    - Evaluate current positioning, messaging, and alignment with mission and values  
-//    - Include any recent pivots or upcoming shifts in market or customer strategy
-
-// 6. **Creative & Content Review**  
-//    - Review tone of voice, messaging consistency, and visual branding  
-//    - Evaluate recent campaigns and assets for brand equity contribution
-
-// 7. **Reputation & Risk Management**  
-//    - Comment on PR exposure, reputation threats, or areas of potential backlash  
-//    - Include commentary on sentiment shifts if available
-
-// 8. **Roadmap & Recommendations**  
-//    - Provide near- and long-term brand priorities  
-//    - Recommend innovations, cross-functional actions, and performance levers that align with the brand’s USP and growth ambitions
-
-// ---
-
-// Use a professional, strategic tone suitable for C-level review. Where data is unavailable, use inferred logic or industry best practices. Do not reference external tools, services, or vendors.
-
-// Use the following strict formatting rules for the report:
-// - Before starting section 1, begin the report with the brand name and website URL in bold  
-// - Use markdown-style **bold section headings**, numbered 1 through 8, as listed above  
-// - Each section should be clearly separated and labeled exactly as described  
-// - Use bullet points, subheadings, and short paragraphs to enhance readability  
-// - Maintain a professional, strategic tone suitable for executive leadership  
-// - If data is missing, use inferred logic or industry best practices — do not leave sections blank
-
-// Very Important: At the very end of the report (after all 8 sections), always include the following final block — no exceptions:
-
-// ---
-
-// **Date**: ${currentDate}  
-// **Report generated by**: CMOontheGO
-
-// ---
-
-// Do not place this summary anywhere else. It must appear as the final lines of the report.
-// `.trim();
 
 
 
@@ -330,15 +164,10 @@ export class CMORecommendationService {
         Current value: ${analysis?.revenue_loss_percent ?? "N/A"}%`,
         ctr_loss_percent: scraped?.ctr_loss_percent ?? "N/A",
       },
+     
       website_audit: {
-        lcp: analysis?.largest_contentful_paint ?? "N/A",
-        cls: analysis?.cumulative_layout_shift ?? "N/A",
-        fcp: analysis?.first_contentful_paint ?? "N/A",
-        speed_index: analysis?.speed_index ?? "N/A",
-        tti: analysis?.time_to_interactive ?? "N/A",
-        tbt: analysis?.total_blocking_time ?? "N/A",
-        performance_score: analysis?.performance_score ?? "N/A",
-      },
+        websiite_details: website_data ?? "N/A",
+  } ,
     };
 
     if (traffic) {
@@ -411,7 +240,7 @@ Your task is to generate a **structured JSON report** based on the given input d
 🧠 **Output Format**
 
 Return a **valid JSON object** with the following top-level keys in this exact order:
-
+\`\`\`json
 {
   "brand": {
     "name": "Example Brand",
@@ -474,7 +303,7 @@ Return a **valid JSON object** with the following top-level keys in this exact o
     }
   ]
 }
-
+\`\`\`json
 ---
 
 📌 **Special Instructions for Bottom-of-Funnel Fixes**
@@ -514,20 +343,21 @@ Your output is a strategic intelligence memo. Structure it strictly as valid JSO
         ],
       });
 
-      const responseContent = response.choices[0]?.message?.content || 'No response generated.';
-
+      let rawText = response.choices[0]?.message?.content || 'No response generated.';
+       rawText = rawText.replace(/^```json|```$/g, '').trim();
+      const responseContent = JSON.parse(rawText);
       console.log('Saving response to database...');
 
       await this.prisma.llm_responses.upsert({
         where: { website_id: input.website_id },
         update: {
-          recommendation_by_cmo: JSON.stringify(response),
+          recommendation_by_cmo: JSON.stringify(rawText),
           updated_at: new Date(),
         },
         create: {
           id: uuidv4(),
           website_id: input.website_id,
-          recommendation_by_cmo: JSON.stringify(response),
+          recommendation_by_cmo: JSON.stringify(rawText),
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -541,19 +371,19 @@ Your output is a strategic intelligence memo. Structure it strictly as valid JSO
           },
         },
         update: {
-          recommendation_by_cmo: responseContent,
+          recommendation_by_cmo: JSON.stringify(responseContent),
           updated_at: new Date(),
         },
         create: {
           website_id: input.website_id,
           user_id: input.user_id,
-          recommendation_by_cmo: responseContent,
+          recommendation_by_cmo: JSON.stringify(responseContent),
           created_at: new Date(),
           updated_at: new Date(),
         },
       });
 
-      return { recommendation_by_cmo: responseContent, response: response };
+      return { cmo_recommendation: responseContent};
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);
       throw new Error('Failed to generate CMO recommendation');

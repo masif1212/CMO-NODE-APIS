@@ -52,12 +52,13 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     );
 
     const categoryScores = {
-      performance_insight: mainPageSpeedData.categories.performance,
-      seo: mainPageSpeedData.categories.seo,
-      accessibility: mainPageSpeedData.categories.accessibility,
-      best_practices: mainPageSpeedData.categories["best_practices"],
+      performance_insight: mainPageSpeedData.audit_details.categoryScores.performance,
+      seo: mainPageSpeedData.audit_details.categoryScores.seo,
+      accessibility: mainPageSpeedData.audit_details.categoryScores.accessibility,
+      best_practices: mainPageSpeedData.audit_details.categoryScores["best_practices"],
+      mobileFriendliness: mainPageSpeedData.audit_details.categoryScores.mobileFriendliness,
     };
-
+  //  console.log("Category scores:", categoryScores);
     const website = await prisma.user_websites.findUnique({
       where: { website_id },
     });
@@ -111,6 +112,18 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       // seo: mainPageSpeedData.audit_details.seoAudits, // Optional
     };
 
+
+    const website_data = {
+      // website_id,
+      revenueLossPercent: saved.revenue_loss_percent,
+      seo_revenue_loss_percentage,
+      categories: categoryScores,
+      speed_health: auditMap,
+      // availability_tracker,
+      // optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
+      // seo: mainPageSpeedData.audit_details.seoAudits, // Optional
+    };
+
     await prisma.analysis_status.upsert({
       where: {
         user_id_website_id: {
@@ -127,6 +140,26 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         website_audit: JSON.stringify(website_health),
       },
     });
+    
+    await prisma.analysis_status.upsert({
+      where: {
+        user_id_website_id: {
+          user_id,
+          website_id,
+        },
+      },
+      update: {
+        dashboard1: JSON.stringify(website_data),
+      },
+      create: {
+        user_id,
+        website_id,
+        dashboard1: JSON.stringify(website_data),
+      },
+    });
+    
+
+
 
     return res.status(201).json({
       message: "Website audit completed",

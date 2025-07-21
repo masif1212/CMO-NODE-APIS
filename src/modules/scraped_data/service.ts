@@ -291,7 +291,6 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
     og_description: $('meta[property="og:description"]').attr("content") || "not found",
     og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
-  console.log("Meta tags extracted:", meta);
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
   const otherLinks: string[] = [];
 
@@ -362,6 +361,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
           const meta_description = $$('meta[name="description"]').attr("content") || "not found";
           const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
           const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
+          const h1 = $$("h1").first().text().trim() || "not found";
 
           const missingAny = !(title && meta_description && og_title && meta_keywords);
           if (missingAny) affectedPagesCount++;

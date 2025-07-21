@@ -32,10 +32,10 @@ export class CMORecommendationController {
       });
 
       // Send success response
-      res.status(200).json({
-        success: true,
-        cmo_recommendation: result,
-      });
+      res.status(200).json(
+        
+        result
+      );
     } catch (error) {
       console.error('Error in generateRecommendation:', error);
       res.status(500).json({
