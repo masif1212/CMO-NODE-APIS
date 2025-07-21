@@ -66,55 +66,53 @@ async function extractLinks(pageUrl: string, browser: Browser): Promise<string[]
   return [...new Set(links)];
 }
 
-
 function getErrorMessage(status: number, url: string): { error: string; quickFix: string } {
   switch (status) {
     case 404:
       return {
         error: `🔍 Error: Page not found (404).\nThe link "${url}" points to a page that does not exist.`,
-        quickFix: `Double-check the URL for accuracy. If the page was moved, set up a 301 redirect. If it's no longer relevant, remove or replace the link.`
+        quickFix: `Double-check the URL for accuracy. If the page was moved, set up a 301 redirect. If it's no longer relevant, remove or replace the link.`,
       };
     case 403:
       return {
         error: `🚫 Error: Access forbidden (403).\nThe link "${url}" is blocking access — likely due to permission settings, firewalls, or bot protection.`,
-        quickFix: `Ensure the page is publicly accessible. If it's a protected resource, consider removing the link or replacing it with a public equivalent.`
+        quickFix: `Ensure the page is publicly accessible. If it's a protected resource, consider removing the link or replacing it with a public equivalent.`,
       };
     case 500:
       return {
         error: `💥 Error: Internal server error (500).\nThe server hosting "${url}" encountered an error.`,
-        quickFix: `Recheck this link later. If it's your own site, investigate server logs. If external, consider reporting it or replacing the link.`
+        quickFix: `Recheck this link later. If it's your own site, investigate server logs. If external, consider reporting it or replacing the link.`,
       };
     case 400:
       return {
         error: `🛑 Error: Bad request (400).\nThe URL "${url}" may be malformed or contain invalid parameters.`,
-        quickFix: `Review and correct the URL syntax or remove unnecessary query strings.`
+        quickFix: `Review and correct the URL syntax or remove unnecessary query strings.`,
       };
     case 401:
       return {
         error: `🔐 Error: Unauthorized (401).\nThe page "${url}" requires authentication to access.`,
-        quickFix: `Either remove the link, secure it behind login, or replace with a public version.`
+        quickFix: `Either remove the link, secure it behind login, or replace with a public version.`,
       };
     case 408:
       return {
         error: `⏳ Error: Request timeout (408).\nThe server hosting "${url}" took too long to respond.`,
-        quickFix: `Check the server status or reduce request load. Retry later.`
+        quickFix: `Check the server status or reduce request load. Retry later.`,
       };
     case 0:
       return {
         error: `🌐 Error: No response or connection error.\nThe URL "${url}" could not be reached — possibly due to DNS issues, SSL problems, or the site being offline.`,
-        quickFix: `Verify the domain is active and check your internet or firewall rules.`
+        quickFix: `Verify the domain is active and check your internet or firewall rules.`,
       };
     default:
       return {
         error: `⚠️ Error: HTTP status ${status} returned.\nThe link "${url}" resulted in an unhandled status code.`,
-        quickFix: `Research this status and determine whether to keep, fix, or remove the link.`
+        quickFix: `Research this status and determine whether to keep, fix, or remove the link.`,
       };
   }
 }
 export async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
-
     where: {
       user_id_website_id: {
         user_id,
@@ -133,12 +131,7 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
   return website.website_url;
 }
 
-export async function checkBrokenLinks(
-  user_id: string,
-  website_id: string,
-  website_url: string,
-  maxDepth = 0
-): Promise<BrokenLinkResult[]> {
+export async function checkBrokenLinks(user_id: string, website_id: string, website_url: string, maxDepth = 0): Promise<BrokenLinkResult[]> {
   // Step 1: Verify website ownership before proceeding
   const userWebsite = await prisma.user_websites.findFirst({
     where: { user_id, website_id },
@@ -149,14 +142,17 @@ export async function checkBrokenLinks(
   }
 
   console.log(`Puppeteer is launching...`);
-  const browser = await puppeteer.launch({ headless: "new" as any })
+  const browser = await puppeteer.launch({
+    executablePath: "/usr/bin/google-chrome-stable",
+    headless: "new" as any,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+  });
 
   console.log(`Puppeteer launched successfully.`);
   console.log(`Starting to crawl website: ${website_url} with max depth: ${maxDepth}`);
 
   const brokenLinks: BrokenLinkResult[] = [];
 
-  
   const visited = new Set<string>();
   const checkedLinks = new Set<string>();
 
@@ -193,10 +189,7 @@ export async function checkBrokenLinks(
         });
       }
 
-      if (
-        new URL(normalized).hostname === new URL(website_url).hostname &&
-        !visited.has(normalized)
-      ) {
+      if (new URL(normalized).hostname === new URL(website_url).hostname && !visited.has(normalized)) {
         internalLinks.push(normalized);
       }
     }
@@ -211,4 +204,3 @@ export async function checkBrokenLinks(
   await browser.close();
   return brokenLinks;
 }
-

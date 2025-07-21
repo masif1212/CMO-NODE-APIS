@@ -238,7 +238,11 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     }
 
     if (!browser) {
-      browser = await puppeteer.launch({ headless: true });
+      browser = await puppeteer.launch({
+        executablePath: "/usr/bin/google-chrome-stable",
+        headless: "new" as any,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      });
       browserLaunchedHere = true;
     }
 
@@ -288,7 +292,11 @@ export async function validateCompetitorUrlsInParallel(urls: string[], competito
   let browser: Browser | null = null;
 
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    });
 
     const results = await Promise.all(
       urls.map((url, index) =>
