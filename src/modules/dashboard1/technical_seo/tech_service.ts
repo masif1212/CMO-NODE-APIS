@@ -141,15 +141,16 @@ export async function checkBrokenLinks(user_id: string, website_id: string, webs
     throw new Error("Website does not belong to the user.");
   }
 
-  console.log(`Puppeteer is launching...`);
-  const browser = await puppeteer.launch({
+  // Inside checkBrokenLinks function
+  console.log("Puppeteer is launching...");
+
+  const launchOptions = {
     executablePath: "/usr/bin/google-chrome-stable",
     headless: "new" as any,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-  });
-
-  console.log(`Puppeteer launched successfully.`);
-  console.log(`Starting to crawl website: ${website_url} with max depth: ${maxDepth}`);
+  };
+  console.log("Using launch options:", JSON.stringify(launchOptions));
+  const browser = await puppeteer.launch(launchOptions);
 
   const brokenLinks: BrokenLinkResult[] = [];
 
