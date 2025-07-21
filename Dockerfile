@@ -17,7 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # =========================================================================
-# === MORE RELIABLE BLOCK TO INSTALL CHROME FOR PUPPETEER =================
+# === INSTALL CHROME FOR PUPPETEER ========================================
 # =========================================================================
 RUN apt-get update && apt-get install -y wget ca-certificates --no-install-recommends \
     # Download the official .deb package from Google
@@ -27,8 +27,6 @@ RUN apt-get update && apt-get install -y wget ca-certificates --no-install-recom
     # Clean up
     && rm -f /tmp/chrome.deb \
     && rm -rf /var/lib/apt/lists/*
-# =========================================================================
-# === END OF BLOCK FOR PUPPETEER ==========================================
 # =========================================================================
 
 # Copy built artifacts and dependencies from the builder stage
@@ -40,9 +38,18 @@ COPY --from=builder /app/prisma ./prisma
 # Install specific dependencies needed for runtime commands (like seeding)
 RUN npm install ts-node typescript @prisma/client prisma
 
-# Create a non-root user for security
+# Create a non-root user and its home directory
 RUN adduser --system --group nodejs
-RUN chown -R nodejs:nodejs /app
+
+# =========================================================================
+# === ADD THIS BLOCK TO FIX PERMISSION ERROR ==============================
+# =========================================================================
+# Set the home directory and give the 'nodejs' user ownership
+ENV HOME=/home/nodejs
+RUN chown -R nodejs:nodejs /app /home/nodejs
+# =========================================================================
+
+# Switch to the non-root user
 USER nodejs
 
 # Expose port (Cloud Run will automatically use the PORT env var)
