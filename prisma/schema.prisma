@@ -301,6 +301,7 @@ model brand_website_analysis {
   updated_at               DateTime @default(now()) @updatedAt
 
   user_websites user_websites @relation(fields: [website_id], references: [website_id])
+    @@index([website_id, updated_at])
 }
 
 model brand_traffic_analysis {

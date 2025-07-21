@@ -792,7 +792,7 @@ export class CompetitorService {
     const competitorResults: CompetitorResult[] = [];
     const processedUrls = new Set<string>([website_url]);
 
-    const pLimit = (await import("p-limit")).default;
+    const pLimit = require("p-limit");
     const limit = pLimit(7); // Now this works
 
     const competitorTasks = competitors.map((competitor) =>

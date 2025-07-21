@@ -291,7 +291,7 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
 const MAX_CONCURRENT_VALIDATIONS = 2;
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
-  const pLimit = (await import("p-limit")).default;
+  const pLimit = require("p-limit");
   const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
   let browser: Browser | null = null;
 
