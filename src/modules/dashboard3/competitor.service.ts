@@ -10,12 +10,11 @@ import * as cheerio from "cheerio";
 import { performance } from 'perf_hooks';
 import pLimit from 'p-limit';
 import puppeteer from 'puppeteer';
-const dnsCache = new Map<string, string[]>();
 
 
-import {SchemaMarkupStatus,SeoAudit,SeoAuditResponse,BrandProfile_logo,CTRLossPercent} from './seo_audit_interface'
-import {isValidCompetitorUrl,processSeoAudits,validateCompetitorUrlsInParallel} from './competitors_validation'
-import { UserRequirement,  ProcessedResult,LlmCompetitor } from './brandprofile_interface';
+import {SchemaMarkupStatus,SeoAudit,SeoAuditResponse,BrandProfile_logo} from './seo_audit_interface'
+import {isValidCompetitorUrl,processSeoAudits} from './competitors_validation'
+import { UserRequirement,  ProcessedResult } from './brandprofile_interface';
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -480,8 +479,6 @@ static async brandprofile(user_id: string, website_id: string): Promise<Record<s
 
 
 }
-
-
 
 static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
   const response: SeoAuditResponse = {

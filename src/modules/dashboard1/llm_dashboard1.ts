@@ -90,129 +90,343 @@ Example Output:
 Output only valid JSON.
 `;
 
-const prompt_web_and_seo = `
-You are a senior technical SEO expert with extensive experience in metadata, accessibility, structured data, web vitals, and analytics. You are generating output for a self-contained SEO audit and web audit tool that must provide actionable, technical solutions without relying on external tools or services (e.g., PageSpeed Insights, SEMrush, Lighthouse, or similar).
-Handle all elements in the provided JSON input(title,meta data(keywords , descriptions),lcp).
+// const prompt_web_and_seo = `
+// You are a senior technical SEO expert with extensive experience in metadata, accessibility, structured data, web vitals, and analytics. You are generating output for a self-contained SEO audit and web audit tool that must provide actionable, technical solutions without relying on external tools or services (e.g., PageSpeed Insights, SEMrush, Lighthouse, or similar).
+// Handle all elements in the provided JSON input(title,meta data(keywords , descriptions),lcp).
 
-Each element you describe will be rated numerically from 1 to 10 based on its performance:
-**Every element in the input must be evaluated and categorized into either "whats_working" or "what_needs_fixing". No element should be omitted or left unclassified.**
+// Each element you describe will be rated numerically from 1 to 10 based on its performance:
+// **Every element in the input must be evaluated and categorized into either "whats_working" or "what_needs_fixing". No element should be omitted or left unclassified.**
 
-- For **whats_working**: Assign ratings from 7 to 10:
-  - 10 = Excellent (e.g., perfect implementation, optimal performance)
-  - 9 = Strong (e.g., very good with minor room for improvement)
-  - 8 = Good (e.g., solid but not exceptional)
-  - 7 = Adequate (e.g., functional but could be enhanced)
-- For **what_needs_fixing**: Assign ratings from 1 to 5:
-  - 1 = Missing/Broken (e.g., completely absent or non-functional)
-  - 2 = Poor (e.g., present but severely flawed)
-  - 3 = Fair (e.g., functional but with significant issues)
-  - 4 = Needs Improvement (e.g., minor issues)
-  - 5 = Borderline (e.g., barely acceptable)
+// - For **whats_working**: Assign ratings from 7 to 10:
+//   - 10 = Excellent (e.g., perfect implementation, optimal performance)
+//   - 9 = Strong (e.g., very good with minor room for improvement)
+//   - 8 = Good (e.g., solid but not exceptional)
+//   - 7 = Adequate (e.g., functional but could be enhanced)
+// - For **what_needs_fixing**: Assign ratings from 1 to 5:
+//   - 1 = Missing/Broken (e.g., completely absent or non-functional)
+//   - 2 = Poor (e.g., present but severely flawed)
+//   - 3 = Fair (e.g., functional but with significant issues)
+//   - 4 = Needs Improvement (e.g., minor issues)
+//   - 5 = Borderline (e.g., barely acceptable)
 
-Given the provided JSON input, output a structured JSON response with three keys:
+// Given the provided JSON input, output a structured JSON response with three keys:
 
-1. **whats_working**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects. Each object must include:
-   - \`tag\`: A short descriptive label (e.g., "LCP", "CLS")
-   - \`explanation_reason\`: A detailed explanation (2-3 sentences) of why it works well, including technical context, impact on SEO/performance/user experience, and specific metrics or examples (e.g., "improves click-through rates by 20%"). Use positive terms like "excellent," "strong," "clear," or "robust." Do not mention external tools or services.
-   - \`rating\`: A number from 7 to 10, based on the explanation_reason
+// 1. **whats_working**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects. Each object must include:
+//    - \`tag\`: A short descriptive label (e.g., "LCP", "CLS")
+//    - \`explanation_reason\`: A detailed explanation (2-3 sentences) of why it works well, including technical context, impact on SEO/performance/user experience, and specific metrics or examples (e.g., "improves click-through rates by 20%"). Use positive terms like "excellent," "strong," "clear," or "robust." Do not mention external tools or services.
+//    - \`rating\`: A number from 7 to 10, based on the explanation_reason
 
-2. **what_needs_fixing**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects. Each object must include:
-   - \`tag\`: A clear label (e.g., "TBT", "TTI")
-   - \`explanation_reason\`: A detailed explanation (2-3 sentences) of why it’s underperforming or incorrect, including technical context, impact on SEO/performance/user experience, and specific metrics or examples (e.g., "reduces click-through rates by 30-40%"). Use terms like "missing," "broken," "poor," or "incomplete." Do not mention external tools or services.
-   - \`rating\`: A number from 1 to 5, based on the explanation_reason
+// 2. **what_needs_fixing**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects. Each object must include:
+//    - \`tag\`: A clear label (e.g., "TBT", "TTI")
+//    - \`explanation_reason\`: A detailed explanation (2-3 sentences) of why it’s underperforming or incorrect, including technical context, impact on SEO/performance/user experience, and specific metrics or examples (e.g., "reduces click-through rates by 30-40%"). Use terms like "missing," "broken," "poor," or "incomplete." Do not mention external tools or services.
+//    - \`rating\`: A number from 1 to 5, based on the explanation_reason
 
-3. **recommendations**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects:
-   - \`tag\`: Must exactly match a \`tag\` from what_needs_fixing in the same category. Do not include recommendations for issues not listed in what_needs_fixing.
-   - \`recommendation\`: A detailed, technical, actionable fix (3-4 sentences) that directly addresses the issue in the corresponding what_needs_fixing explanation_reason. Include specific details like configurations or parameters. Provide manual validation steps (e.g., "Check the HTML source for the meta tag") instead of referencing external tools or services.
+// 3. **recommendations**: A dictionary where keys are categories ("Analytics", "website audit") and each value is an array of objects:
+//    - \`tag\`: Must exactly match a \`tag\` from what_needs_fixing in the same category. Do not include recommendations for issues not listed in what_needs_fixing.
+//    - \`recommendation\`: A detailed, technical, actionable fix (3-4 sentences) that directly addresses the issue in the corresponding what_needs_fixing explanation_reason. Include specific details like configurations or parameters. Provide manual validation steps (e.g., "Check the HTML source for the meta tag") instead of referencing external tools or services.
 
-**Evaluation Criteria**:
-- **Analytics**:
-  - CTR Loss: <5% (10); 5–10% (5); >10% (2); missing (3)
-  - Revenue Loss: <10% (10); 10–20% (5); >20% (2); missing (3)
-
-
-- **website audit**:
-  - LCP: <2.5s (10); 2.5–4s (5); >4s (1); missing (3)
-  - CLS: <0.1 (10); 0.1–0.25 (5); >0.25 (1); missing (3)
-  - FCP: <1.8s (10); 1.8–3s (5); >3s (1); missing (3)
-  - TTI: <3.8s (10); 3.8–7.8s (5); >7.8s (1); missing (3)
-  - TBT: <200ms (10); 200–500ms (5); >500ms (1); missing (3)
-  - Performance: >90 (10); 50–89 (5); <50 (1); missing (3)
-
-  
-- **Traffic Anaylsis**:
-- Avg Session Duration: >3 min (10); 1–3 min (7); <1 min (3); missing (3)
-  - Engagement Rate: >50% (10); 30–50% (5); <30% (2); missing (3)
-  - Organic Traffic: >50% of total (10); 20–50% (5); <20% (2); missing (3)
-  - Total Visitors: >10,000 monthly (10); 1,000–10,000 (5–7); <1,000 (3); missing (3)
-  - New vs. Returning: Balanced (40–60%) (10); skewed (>80% new) (5); missing (3)
-  - bounce rate 
-  
+// **Evaluation Criteria**:
+// - **Analytics**:
+//   - CTR Loss: <5% (10); 5–10% (5); >10% (2); missing (3)
+//   - Revenue Loss: <10% (10); 10–20% (5); >20% (2); missing (3)
 
 
-- **OnPage Optimization**  
-  - Title: <60 chars, keyword-rich (8–10); 60–70 chars (5–7); >70 or missing (1–3)
-  - Description: 150–160 chars, compelling (8–10); <120 or >160 (5–7); missing (1–4)
-  - H1: Present, unique, keyword-aligned (7–9); missing (0–4)
-  - Alt Text Coverage: >90% (10); 70–90% (7); <70% (3); missing (3)
-  - og: {
-            title: scraped?.og_title ?? "N/A",
-            description: scraped?.og_description ?? "N/A",
-            image: scraped?.og_image ? "Present" : "Missing",
-          },
-
-
-- **Technical SEO**:
-  - Schema: Valid JSON-LD (10); invalid (3); missing (1)-(refer this as chatbot crawlability
-  
-  - Broken Links: None (10); 1–3 (5); >3 (1); missing (5)
-
-- **GEO**:
-  - Schema: Valid JSON-LD (10); invalid (3); missing (1)
-  - AI_Discoverability (visibility on openai search)
+// - **website audit**:
+//   - LCP: <2.5s (10); 2.5–4s (5); >4s (1); missing (3)
+//   - CLS: <0.1 (10); 0.1–0.25 (5); >0.25 (1); missing (3)
+//   - FCP: <1.8s (10); 1.8–3s (5); >3s (1); missing (3)
+//   - TTI: <3.8s (10); 3.8–7.8s (5); >7.8s (1); missing (3)
+//   - TBT: <200ms (10); 200–500ms (5); >500ms (1); missing (3)
+//   - Performance: >90 (10); 50–89 (5); <50 (1); missing (3)
 
   
+// - **Traffic Anaylsis**:
+// - Avg Session Duration: >3 min (10); 1–3 min (7); <1 min (3); missing (3)
+//   - Engagement Rate: >50% (10); 30–50% (5); <30% (2); missing (3)
+//   - Organic Traffic: >50% of total (10); 20–50% (5); <20% (2); missing (3)
+//   - Total Visitors: >10,000 monthly (10); 1,000–10,000 (5–7); <1,000 (3); missing (3)
+//   - New vs. Returning: Balanced (40–60%) (10); skewed (>80% new) (5); missing (3)
+//   - bounce rate 
+  
 
-Strictly ensure every recommendation has a \`tag\` matching a \`tag\` in what_needs_fixing for the same category. If what_needs_fixing is empty for a category, recommendations for that category must be empty. Avoid ambiguous terms like "present" unless clearly positive or negative. Ensure ratings align with the tone and content of the explanation_reason. Never recommend using external tools or services like PageSpeed Insights, SEMrush, Lighthouse, or similar.
 
-Example Output:
-{
-  "whats_working": {
-    "website audit": [
-      {
-        "tag": "CTR Loss",
-        "explanation_reason": "The click-through rate (CTR) loss is 0%, indicating that all key pages are performing optimally in attracting clicks from search results. This strong performance suggests that metadata, snippets, and search presentation are clear and compelling, resulting in no measurable drop in organic traffic due to CTR issues.",
-        "rating": 10
-      }
-    ]
-  },
-  "what_needs_fixing": {
-    "website audit": [
-      {
-        "tag": "TBT",
-        "explanation_reason": "Total Blocking Time (TBT) is 600ms, exceeding the 200ms threshold. This delays interactivity, causing user frustration and potentially increasing bounce rates by 15-20%.",
-        "rating": 1
-      }
+// - **OnPage Optimization**  
+//   - Title: <60 chars, keyword-rich (8–10); 60–70 chars (5–7); >70 or missing (1–3)
+//   - Description: 150–160 chars, compelling (8–10); <120 or >160 (5–7); missing (1–4)
+//   - H1: Present, unique, keyword-aligned (7–9); missing (0–4)
+//   - Alt Text Coverage: >90% (10); 70–90% (7); <70% (3); missing (3)
+//   - og: {
+//             title: scraped?.og_title ?? "N/A",
+//             description: scraped?.og_description ?? "N/A",
+//             image: scraped?.og_image ? "Present" : "Missing",
+//           },
+
+
+// - **Technical SEO**:
+//   - Schema: Valid JSON-LD (10); invalid (3); missing (1)-(refer this as chatbot crawlability
+  
+//   - Broken Links: None (10); 1–3 (5); >3 (1); missing (5)
+
+// - **GEO**:
+//   - Schema: Valid JSON-LD (10); invalid (3); missing (1)
+//   - AI_Discoverability (visibility on openai search)
+
+  
+
+// Strictly ensure every recommendation has a \`tag\` matching a \`tag\` in what_needs_fixing for the same category. If what_needs_fixing is empty for a category, recommendations for that category must be empty. Avoid ambiguous terms like "present" unless clearly positive or negative. Ensure ratings align with the tone and content of the explanation_reason. Never recommend using external tools or services like PageSpeed Insights, SEMrush, Lighthouse, or similar.
+
+// Example Output:
+// {
+//   "whats_working": {
+//     "website audit": [
+//       {
+//         "tag": "CTR Loss",
+//         "explanation_reason": "The click-through rate (CTR) loss is 0%, indicating that all key pages are performing optimally in attracting clicks from search results. This strong performance suggests that metadata, snippets, and search presentation are clear and compelling, resulting in no measurable drop in organic traffic due to CTR issues.",
+//         "rating": 10
+//       }
+//     ]
+//   },
+//   "what_needs_fixing": {
+//     "website audit": [
+//       {
+//         "tag": "TBT",
+//         "explanation_reason": "Total Blocking Time (TBT) is 600ms, exceeding the 200ms threshold. This delays interactivity, causing user frustration and potentially increasing bounce rates by 15-20%.",
+//         "rating": 1
+//       }
       
-    ]
-  },
-  "recommendations": {
-    "website audit": [
-      {
-        "tag": "TBT",
-        "recommendation": "Lower Total Blocking Time by identifying and optimizing heavy JavaScript tasks. Split large scripts into smaller, asynchronous chunks, and defer non-essential JS until after the main content loads. Limit the use of synchronous third-party scripts and remove unnecessary polyfills. Use your browser's Performance panel to manually inspect long tasks and verify that main-thread blocking is minimized."
-      }
+//     ]
+//   },
+//   "recommendations": {
+//     "website audit": [
+//       {
+//         "tag": "TBT",
+//         "recommendation": "Lower Total Blocking Time by identifying and optimizing heavy JavaScript tasks. Split large scripts into smaller, asynchronous chunks, and defer non-essential JS until after the main content loads. Limit the use of synchronous third-party scripts and remove unnecessary polyfills. Use your browser's Performance panel to manually inspect long tasks and verify that main-thread blocking is minimized."
+//       }
      
-    ]
-  }
-}
+//     ]
+//   }
+// }
 
 
-Output only valid JSON .
-`;
+// Output only valid JSON .
+// `;
+
+
+
 
 
 // Normalize audit output (whats_working, what_needs_fixing, recommendations)
+
+
+const prompt_web_and_seo = `
+You are a senior technical SEO and UX/web performance expert. Your task is to generate a structured, actionable JSON output for a comprehensive website and SEO audit system based on the given input data (JSON). Do not rely on external tools like Lighthouse, PageSpeed Insights, SEMrush, etc.
+
+🧩 You must classify every input element into one of two top-level categories:
+1. "web_audit"
+2. "seo_audit"
+
+Each of these contains specific subcategories as follows:
+
+---
+
+🔹 web_audit Categories:
+- "Site Speed & Core Web Vitals"
+- "Mobile Experience"
+- "Lead Capture Optimization"
+- "UX & CTA Visibility"
+- "Homepage Clarity"
+
+🔹 seo_audit Categories:
+- "Meta Tags & Schema Fixes"
+- "Keyword Gaps & Lost Rankings"
+- "Internal Linking Opportunities"
+- "Competitor SEO Differentiation"
+- "Content Gap Suggestions"
+
+---
+
+📊 For each element in the input data:
+- It must be classified into:
+  - \`whats_working\` if it’s performing well
+  - \`what_needs_fixing\` if it’s underperforming
+- Use **ratings** based on the scale below.
+
+✅ whats_working:
+- 10 = Excellent
+- 9 = Strong
+- 8 = Good
+- 7 = Adequate
+
+🚫 what_needs_fixing:
+- 5 = Borderline
+- 4 = Needs Improvement
+- 3 = Fair
+- 2 = Poor
+- 1 = Broken / Missing
+
+---
+
+🧠 Output Structure:
+Return a **valid JSON** object with the following shape:
+
+{
+  "whats_working": {
+    "web_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label]",
+          "explanation_reason": "Explain why it’s working well — impact, metrics, and implementation quality.",
+          "rating": [8–10]
+        }
+      ]
+    },
+    "seo_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label]",
+          "explanation_reason": "Explain why it’s working well — impact, metrics, and implementation quality.",
+          "rating": [8–10]
+        }
+      ]
+    }
+  },
+  "what_needs_fixing": {
+    "web_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label]",
+          "explanation_reason": "Explain clearly why it underperforms. Include metric thresholds, technical context, and consequences.",
+          "rating": [1–4]
+        }
+      ]
+    },
+    "seo_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label]",
+          "explanation_reason": "Explain clearly why it underperforms. Include metric thresholds, technical context, and consequences.",
+          "rating": [1–4]
+        }
+      ]
+    }
+  },
+  "recommendations": {
+    "web_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label — must match one in what_needs_fixing]",
+          "recommendation": "Actionable, technical, specific fix. Provide steps and config values. Never reference external tools."
+        }
+      ]
+    },
+    "seo_audit": {
+      "[subcategory]": [
+        {
+          "tag": "[label — must match one in what_needs_fixing]",
+          "recommendation": "Actionable, technical, specific fix. Provide steps and config values. Never reference external tools."
+        }
+      ]
+    }
+  }
+}
+
+Only include categories and tags that exist in the input.
+
+---
+
+🎯 Each tag in recommendations must exactly match a tag from what_needs_fixing in the same subcategory under the same audit type. If no issues exist for a subcategory, omit it from recommendations.
+
+Avoid vague language like "may help" or "should consider". Be specific.
+
+---
+
+📌 Evaluation Criteria by Category:
+
+🔸 web_audit
+
+**Site Speed & Core Web Vitals**
+- LCP: <2.5s (10), 2.5–4s (5), >4s (1), missing (3)
+- CLS: <0.1 (10), 0.1–0.25 (5), >0.25 (1), missing (3)
+- FCP: <1.8s (10), 1.8–3s (5), >3s (1), missing (3)
+- TTI: <3.8s (10), 3.8–7.8s (5), >7.8s (1), missing (3)
+- TBT: <200ms (10), 200–500ms (5), >500ms (1), missing (3)
+- Performance score: >90 (10), 50–89 (5), <50 (1), missing (3)
+
+**Mobile Experience**
+- Viewport config present, responsive layout, accessible font sizes, tappable elements
+- Fails for missing meta viewport, overlapping elements, small text, or horizontal scrolling
+
+**Lead Capture Optimization**
+- Provide suggestions based on bounce rate 
+
+**Homepage Clarity**
+- Clear H1, meta description, title, value proposition, and layout hierarchy
+- Broken if H1 is missing, unclear messaging, or visual clutter
+
+🔸 seo_audit
+
+**Meta Tags & Schema Fixes**
+- Title: <60 chars, keyword-rich (8–10); 60–70 (5–7); >70 or missing (1–3)
+- Description: 150–160 chars compelling (8–10); <120 or >160 (5–7); missing (1–4)
+- H1: Present, unique (7–9); missing (1–4)
+- og:image, og:title, og:description: present = 10, missing = 3
+- Schema valid JSON-LD = 10; invalid = 1; missing = 0
+
+**Keyword Gaps **
+- Rank drop = major issue
+- Missing priority keywords = 1–3
+- Keywords within top 3 = 9–10
+
+**Content Gap Suggestions**
+- Evaluate whether:
+  - The meta title covers relevant high-intent keywords
+  - Meta description includes CTA and relevant keywords
+  - H1 avoids redundancy with meta title and reflects user intent
+  - There’s a mismatch between H1 and meta tags
+
+---
+
+📌 Example Output:
+{
+  "whats_working": {
+    "web_audit": {
+      "Site Speed & Core Web Vitals": [
+        {
+          "tag": "LCP",
+          "explanation_reason": "LCP is under 2s, indicating fast paint of key content and good load experience.",
+          "rating": 10
+        }
+      ]
+    }
+  },
+  "what_needs_fixing": {
+    "seo_audit": {
+      "Meta Tags & Schema Fixes": [
+        {
+          "tag": "Description",
+          "explanation_reason": "Meta description exceeds 180 characters and truncates in SERPs, reducing CTR.",
+          "rating": 2
+        }
+      ]
+    }
+  },
+  "recommendations": {
+    "seo_audit": {
+      "Meta Tags & Schema Fixes": [
+        {
+          "tag": "Description",
+          "recommendation": "Limit meta description to 150–160 characters. Include target keyword and strong CTA. Ensure it's readable in page source."
+        }
+      ]
+    }
+  }
+}
+
+Output only valid JSON.
+`;
+
+
+
 const normalizeAuditOutput = (input: any): {
   whats_working: Record<string, { tag: string; explanation_reason: string; rating: number }[]>;
   what_needs_fixing: Record<string, { tag: string; explanation_reason: string; rating: number }[]>;
@@ -329,23 +543,9 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
   }
 
   try {
-    // Check SEO audit status
-    const analysisStatus = await prisma.analysis_status.findUnique({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      select: {
-        seo_audit: true,
-      },
-    });
+   
 
-    // const isSeoAuditEnabled = analysisStatus?.seo_audit != null;
-    // console.log("isSeoAuditEnabled", isSeoAuditEnabled);
-
-    // Fetch data
+   
     const [scraped, analysis, traffic, llm_Response] = await Promise.all([
       prisma.website_scraped_data.findUnique({ where: { website_id } }),
       prisma.brand_website_analysis.findFirst({
@@ -374,37 +574,8 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       h1Text = $("h1").first().text().trim() || "Not Found";
     }
 
-    // Extract optimization opportunities
-    let optimization_opportunities: any = "None";
-    if (analysis?.audit_details) {
-      try {
-        const auditDetails =
-          typeof analysis.audit_details === "string"
-            ? JSON.parse(analysis.audit_details)
-            : analysis.audit_details;
-        optimization_opportunities = auditDetails?.optimization_opportunities || "None";
-      } catch (error) {
-        console.error("Error parsing audit_details:", error);
-        optimization_opportunities = "None";
-      }
-    }
 
-    // Extract user access readiness
-    // let user_access_readiness: any = "None";
-    // if (analysis?.audit_details) {
-    //   try {
-    //     const auditDetails =
-    //       typeof analysis.audit_details === "string"
-    //         ? JSON.parse(analysis.audit_details)
-    //         : analysis.audit_details;
-    //     user_access_readiness = auditDetails?.user_access_readiness || "None";
-    //   } catch (error) {
-    //     console.error("Error parsing audit_details:", error);
-    //     user_access_readiness = "None";
-    //   }
-    // }
 
-    // Construct allData
     const allData: any = {
       Analytics: {
         revenue_loss_definition: `*Formula:*
@@ -485,11 +656,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       };
     }
 
-    // Define prompts
-    const seoEnabledPrompt = prompt_web_and_seo; // Use updated prompt for both cases; update prompt_web_and_seo if needed
-    // const seoDisabledPrompt = prompt_web_only;
-
-    // Generate LLM response with ratings
+  
     console.log("Generating LLM response (recommendation by mo1)...");
     const llmResponse = await openai.chat.completions.create({
       model: model,
@@ -498,7 +665,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       messages: [
         {
           role: "system",
-          content: seoEnabledPrompt ,
+          content: prompt_web_and_seo ,
         },
         { role: "user", content: JSON.stringify(allData) },
       ],

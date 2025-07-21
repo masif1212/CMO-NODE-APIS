@@ -303,8 +303,8 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
 
     // SEO Audit and Traffic Analysis
     if (analysisStatus.seo_audit != null) {
-      const traffic = await prisma.brand_traffic_analysis.findUnique({
-        where: { traffic_analysis_id: analysisStatus.seo_audit },
+      const traffic = await prisma.brand_traffic_analysis.findFirst({
+        where: { website_id },
       });
       if (traffic) {
         traffic_anaylsis = traffic;
