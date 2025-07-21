@@ -314,7 +314,15 @@ export class CompetitorService {
     const processedNames = new Set<string>();
     let orderIndex = 0;
 
-    const browser = await puppeteer.launch({ headless: true });
+    // THIS IS THE CORRECTED CODE
+    const launchOptions = {
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
+
+    console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
+    const browser = await puppeteer.launch(launchOptions);
     console.log(`[brandprofile] Puppeteer browser launched`);
 
     // Process user-provided competitors
