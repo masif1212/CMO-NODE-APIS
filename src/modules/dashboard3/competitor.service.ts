@@ -46,6 +46,42 @@ interface PageSpeedData {
   };
   revenueLossPercent?: number | null;
 }
+
+// Helper function to replace the p-limit package
+function createLimiter(concurrency: number) {
+  const queue: (() => void)[] = [];
+  let activeCount = 0;
+
+  function next() {
+    if (activeCount < concurrency && queue.length > 0) {
+      activeCount++;
+      const task = queue.shift()!;
+      task();
+    }
+  }
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const task = async () => {
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (err) {
+          reject(err);
+        } finally {
+          activeCount--;
+          next();
+        }
+      };
+
+      queue.push(task);
+      if (activeCount < concurrency) {
+        next();
+      }
+    });
+  };
+}
+
 function safeParse(jsonStr: any) {
   try {
     return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
@@ -792,9 +828,9 @@ export class CompetitorService {
     const competitorResults: CompetitorResult[] = [];
     const processedUrls = new Set<string>([website_url]);
 
-    const pLimit = require("p-limit");
-    const limit = pLimit(7); // Now this works
-
+    // const pLimit = require("p-limit");
+    // const limit = pLimit(7); // Now this works
+    const limit = createLimiter(7); // Use our new helper function
     const competitorTasks = competitors.map((competitor) =>
       limit(async () => {
         const { competitor_id, name, competitor_website_url, usp, primary_offering, industry } = competitor;

@@ -20,6 +20,40 @@ type ValidationResult = {
 
 const prisma = new PrismaClient();
 
+// Helper function to replace the p-limit package
+function createLimiter(concurrency: number) {
+  const queue: (() => void)[] = [];
+  let activeCount = 0;
+
+  function next() {
+    if (activeCount < concurrency && queue.length > 0) {
+      activeCount++;
+      const task = queue.shift()!;
+      task();
+    }
+  }
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const task = async () => {
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (err) {
+          reject(err);
+        } finally {
+          activeCount--;
+          next();
+        }
+      };
+
+      queue.push(task);
+      if (activeCount < concurrency) {
+        next();
+      }
+    });
+  };
+}
 export function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
   const passedAudits: { title: string; description: string }[] = [];
   const failedAudits: { title: string; description: string }[] = [];
@@ -291,8 +325,9 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
 const MAX_CONCURRENT_VALIDATIONS = 2;
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
-  const pLimit = require("p-limit");
-  const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
+  // const pLimit = require("p-limit");
+  // const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
+  const limit = createLimiter(7); // Use our new helper function
   let browser: Browser | null = null;
 
   try {
