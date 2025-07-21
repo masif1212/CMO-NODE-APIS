@@ -161,6 +161,7 @@ export class CompetitorService {
     
     // const browser = await puppeteer.launch;
 
+    
 
     // Use the correct launch options for Puppeteer local
     const browser = await puppeteer.launch({ headless: true });
