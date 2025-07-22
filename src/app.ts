@@ -25,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_BASE_URL, // Frontend URL
+    origin: "https://cmo-nextjs-app-199341392650.us-central1.run.app", // Frontend URL
     credentials: true, // Allow cookies for cross-origin requests
   })
 );
