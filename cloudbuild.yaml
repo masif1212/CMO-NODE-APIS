@@ -1,3 +1,5 @@
+# cloudbuild.yaml for Node.js/Express Backend API
+
 steps:
   # Step 1: Build the Docker image
   - name: "gcr.io/cloud-builders/docker"
@@ -24,10 +26,11 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - CHECKOUT_SECRET_KEY
-      - CHECKOUT_WEBHOOK_SECRET
-      - CHECKOUT_WEBHOOK_AUTH_KEY
-      - CKO_PROCESSING_CHANNEL_ID
+      - JWT_SECRET_SECRET # <-- ADDED
+      - CHECKOUT_SECRET_KEY_SECRET # <-- UPDATED for consistency
+      - CHECKOUT_WEBHOOK_SECRET_SECRET # <-- UPDATED for consistency
+      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET # <-- UPDATED for consistency
+      - CKO_PROCESSING_CHANNEL_ID_SECRET # <-- UPDATED for consistency
     args:
       - "-c"
       - |
@@ -46,6 +49,7 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
+          --set-secrets=JWT_SECRET=jwt-secret:latest \
           --set-secrets=CHECKOUT_SECRET_KEY=checkout-secret-key:latest \
           --set-secrets=CHECKOUT_WEBHOOK_SECRET=checkout-webhook-secret:latest \
           --set-secrets=CHECKOUT_WEBHOOK_AUTH_KEY=checkout-webhook-auth-key:latest \
@@ -80,10 +84,11 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - CHECKOUT_SECRET_KEY
-      - CHECKOUT_WEBHOOK_SECRET
-      - CHECKOUT_WEBHOOK_AUTH_KEY
-      - CKO_PROCESSING_CHANNEL_ID
+      - JWT_SECRET_SECRET # <-- ADDED
+      - CHECKOUT_SECRET_KEY_SECRET # <-- UPDATED for consistency
+      - CHECKOUT_WEBHOOK_SECRET_SECRET # <-- UPDATED for consistency
+      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET # <-- UPDATED for consistency
+      - CKO_PROCESSING_CHANNEL_ID_SECRET # <-- UPDATED for consistency
     args:
       - "-c"
       - |
@@ -103,6 +108,7 @@ steps:
           --set-secrets=YOUTUBE_API_KEY=youtube-api-key:latest \
           --set-secrets=OPENAI_API_KEY=openai-api-key:latest \
           --set-secrets=NEXT_PUBLIC_BASE_URL=next-public-base-url:latest \
+          --set-secrets=JWT_SECRET=jwt-secret:latest \
           --set-secrets=CHECKOUT_SECRET_KEY=checkout-secret-key:latest \
           --set-secrets=CHECKOUT_WEBHOOK_SECRET=checkout-webhook-secret:latest \
           --set-secrets=CHECKOUT_WEBHOOK_AUTH_KEY=checkout-webhook-auth-key:latest \
@@ -132,14 +138,18 @@ availableSecrets:
       env: "OPENAI_API_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/next-public-base-url/versions/latest
       env: "NEXT_PUBLIC_BASE_URL_SECRET"
+    # --- ADDED JWT SECRET ---
+    - versionName: projects/$PROJECT_ID/secrets/jwt-secret/versions/latest
+      env: "JWT_SECRET_SECRET"
+    # --- UPDATED CHECKOUT SECRETS FOR CONSISTENCY ---
     - versionName: projects/$PROJECT_ID/secrets/checkout-secret-key/versions/latest
-      env: "CHECKOUT_SECRET_KEY"
+      env: "CHECKOUT_SECRET_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/checkout-webhook-secret/versions/latest
-      env: "CHECKOUT_WEBHOOK_SECRET"
+      env: "CHECKOUT_WEBHOOK_SECRET_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/checkout-webhook-auth-key/versions/latest
-      env: "CHECKOUT_WEBHOOK_AUTH_KEY"
+      env: "CHECKOUT_WEBHOOK_AUTH_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/cko-processing-channel-id/versions/latest
-      env: "CKO_PROCESSING_CHANNEL_ID"
+      env: "CKO_PROCESSING_CHANNEL_ID_SECRET"
 
 options:
   logging: CLOUD_LOGGING_ONLY
