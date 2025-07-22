@@ -157,7 +157,7 @@ export class CompetitorService {
 
     console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
 
-    const browser = await puppeteer.launch;
+    const browser = await puppeteer.launch(launchOptions);
 
     // Use the correct launch options for Puppeteer local
     // const browser = await puppeteer.launch({ headless: true });
