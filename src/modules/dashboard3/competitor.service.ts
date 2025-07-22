@@ -118,8 +118,6 @@ async function extractH1(rawHtml: string | null): Promise<string> {
 }
 
 export class CompetitorService {
-
-
   static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
     const t0 = performance.now();
     console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
@@ -151,21 +149,19 @@ export class CompetitorService {
     let orderIndex = 0;
 
     // THIS IS THE CORRECTED CODE
-    // const launchOptions = {
-    //   executablePath: "/usr/bin/google-chrome-stable",
-    //   headless: "new" as any,
-    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    // };
+    const launchOptions = {
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
 
-    // console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
-    
-    // const browser = await puppeteer.launch;
+    console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
 
-    
+    const browser = await puppeteer.launch;
 
     // Use the correct launch options for Puppeteer local
-    const browser = await puppeteer.launch({ headless: true });
-    console.log(`[brandprofile] Puppeteer browser launched`);
+    // const browser = await puppeteer.launch({ headless: true });
+    // console.log(`[brandprofile] Puppeteer browser launched`);
 
     // Process user-provided competitors
     for (const originalUrl of userRequirement.competitor_urls) {
@@ -306,8 +302,6 @@ export class CompetitorService {
       },
       competitors: competitorResults.slice(0, MAX_COMPETITORS),
     };
-
-    
   }
 
   static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
