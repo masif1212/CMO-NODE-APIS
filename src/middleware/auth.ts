@@ -22,6 +22,7 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 
     jwt.verify(token, process.env.JWT_SECRET || "", (err, user) => {
       if (err) {
+        console.log("JWT verification error:", err);
         res.status(403).json({ error: "Invalid or expired token" });
         return resolve();
       }
