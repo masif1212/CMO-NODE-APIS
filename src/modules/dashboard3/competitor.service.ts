@@ -7,14 +7,14 @@ import { getPageSpeedData } from "./pagespeed";
 import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
-import { performance } from 'perf_hooks';
-import pLimit from 'p-limit';
-import puppeteer from 'puppeteer';
+import { performance } from "perf_hooks";
+// import pLimit from 'p-limit';
+import puppeteer from "puppeteer";
+const dnsCache = new Map<string, string[]>();
 
-
-import {SchemaMarkupStatus,SeoAudit,SeoAuditResponse,BrandProfile_logo} from './seo_audit_interface'
-import {isValidCompetitorUrl,processSeoAudits} from './competitors_validation'
-import { UserRequirement,  ProcessedResult } from './brandprofile_interface';
+import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo, CTRLossPercent } from "./seo_audit_interface";
+import { isValidCompetitorUrl, processSeoAudits, validateCompetitorUrlsInParallel } from "./competitors_validation";
+import { UserRequirement, ProcessedResult, LlmCompetitor } from "./brandprofile_interface";
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -46,6 +46,42 @@ interface PageSpeedData {
   };
   revenueLossPercent?: number | null;
 }
+
+// Helper function to replace the p-limit package
+function createLimiter(concurrency: number) {
+  const queue: (() => void)[] = [];
+  let activeCount = 0;
+
+  function next() {
+    if (activeCount < concurrency && queue.length > 0) {
+      activeCount++;
+      const task = queue.shift()!;
+      task();
+    }
+  }
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const task = async () => {
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (err) {
+          reject(err);
+        } finally {
+          activeCount--;
+          next();
+        }
+      };
+
+      queue.push(task);
+      if (activeCount < concurrency) {
+        next();
+      }
+    });
+  };
+}
+
 function safeParse(jsonStr: any) {
   try {
     return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
@@ -82,208 +118,6 @@ async function extractH1(rawHtml: string | null): Promise<string> {
 }
 
 export class CompetitorService {
-  // static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
-  //   const t0 = performance.now();
-  //   console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
-
-  //   if (!user_id || !website_id) throw new Error('user_id and website_id are required');
-
-  //   const website_url = await getWebsiteUrlById(user_id, website_id);
-  //   if (!website_url) throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
-  //   console.log(`[brandprofile] Found main website URL: ${website_url}`);
-
-  //   const [scrapedMain, userRequirementRaw] = await Promise.all([
-  //     prisma.website_scraped_data.findUnique({ where: { website_id } }),
-  //     prisma.user_requirements.findFirst({ where: { website_id } }),
-  //   ]);
-
-  //   if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for website_id=${website_id}`);
-  //   console.log(`[brandprofile] Loaded scraped main website data`);
-
-  //   const userRequirement: UserRequirement = {
-  //     industry: userRequirementRaw?.industry ?? 'Unknown',
-  //     primary_offering: userRequirementRaw?.primary_offering ?? 'Unknown',
-  //     USP: userRequirementRaw?.USP ?? 'Unknown',
-  //     competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
-  //       ? userRequirementRaw.competitor_urls.filter((url): url is string => typeof url === 'string')
-  //       : [],
-  //   };
-
-  //   console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
-
-  //   const MIN_COMPETITORS = 3;
-  //   const competitorResults: ProcessedResult[] = [];
-  //   const processedUrls = new Set<string>([website_url]);
-  //   const processedNames = new Set<string>();
-  //   const limit = pLimit(4);
-  //   let orderIndex = 0;
-
-  //   const browser = await puppeteer.launch({ headless: true });
-  //   console.log(`[brandprofile] Puppeteer browser launched`);
-
-  //   // Process user-provided competitors
-  //   const competitorValidationResults = await Promise.all(
-  //     userRequirement.competitor_urls.map(url =>
-  //       limit(async () => {
-  //         const result = await isValidCompetitorUrl(url, undefined, browser);
-  //         console.log(`[brandprofile] Validation for ${url}: isValid=${result.isValid}`);
-  //         return { ...result, originalUrl: url };
-  //       })
-  //     )
-  //   );
-
-  //   const processingPromises = competitorValidationResults
-  //     .filter(({ isValid }) => isValid)
-  //     .map(({ preferredUrl, originalUrl }) =>
-  //       limit(async () => {
-  //         if (!preferredUrl || processedUrls.has(preferredUrl)) {
-  //           console.log(`[brandprofile] Skipping duplicate or invalid URL: ${preferredUrl || originalUrl}`);
-  //           return;
-  //         }
-
-  //         try {
-  //           console.log(`[brandprofile] Scraping and extracting user-provided competitor: ${preferredUrl}`);
-  //           const scraped = await scrapeWebsiteCompetitors(preferredUrl);
-  //           const competitorData = await extractCompetitorDataFromLLM(scraped);
-  //           if (!competitorData) throw new Error('No competitor data extracted');
-
-  //           const competitorName = competitorData.name || (typeof scraped === 'object' && scraped !== null ? scraped.page_title : null) || preferredUrl;
-
-  //           if (processedNames.has(competitorName)) {
-  //             console.log(`[brandprofile] Duplicate name detected, skipping: ${competitorName}`);
-  //             return;
-  //           }
-
-  //           const competitor_id = uuidv4();
-  //           await prisma.competitor_details.create({
-  //             data: {
-  //               competitor_id,
-  //               website_id,
-  //               name: competitorName,
-  //               competitor_website_url: preferredUrl,
-  //               industry: competitorData.industry || userRequirement.industry,
-  //               primary_offering: competitorData.primary_offering || userRequirement.primary_offering,
-  //               usp: competitorData.usp || 'No clear USP identified',
-  //               order_index: orderIndex++,
-  //             },
-  //           });
-
-  //           competitorResults.push({
-  //             competitor_id,
-  //             brand_profile: {
-  //               title: competitorName,
-  //               industry: competitorData.industry || userRequirement.industry,
-  //               unique_selling_point: competitorData.usp || 'No clear USP identified',
-  //               primary_offering: competitorData.primary_offering || userRequirement.primary_offering,
-  //               logo_url: competitorData.logo_url || (typeof scraped === 'object' && scraped !== null ? scraped.logo_url : null) || null,
-  //               website_url: preferredUrl,
-  //             },
-  //           });
-
-  //           console.log(`[brandprofile] User-provided competitor saved: ${competitorName} (${preferredUrl})`);
-
-  //           processedUrls.add(preferredUrl);
-  //           processedNames.add(competitorName);
-  //         } catch (err) {
-  //           console.error(`[brandprofile] Error processing user competitor ${preferredUrl}: ${err}`);
-  //         }
-  //       })
-  //     );
-
-  //   await Promise.all(processingPromises);
-  //   console.log(`[brandprofile] Finished processing user-provided competitors. Total valid: ${competitorResults.length}`);
-
-  //   // LLM fallback (no extractCompetitorDataFromLLM here)
-  //   if (competitorResults.length < MIN_COMPETITORS) {
-  //     console.log(`[brandprofile] Less than ${MIN_COMPETITORS} competitors found. Fetching from LLM...`);
-
-  //     const aiResponse = await fetchCompetitorsFromLLM(
-  //       user_id,
-  //       website_id,
-  //       scrapedMain,
-  //       userRequirement,
-  //       Array.from(processedUrls),
-  //       Array.from(processedNames)
-  //     );
-
-  //     const parsed = parseCompetitorData(aiResponse);
-
-  //     for (const comp of parsed) {
-  //       const name = comp.name || `Competitor ${competitorResults.length + 1}`;
-  //       const url = comp.website_url;
-
-  //       if (!url || processedUrls.has(url) || processedNames.has(name)) {
-  //         console.log(`[brandprofile] Skipping duplicate or invalid AI-suggested: ${url}`);
-  //         continue;
-  //       }
-
-  //       const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
-  //       console.log(`[brandprofile] AI competitor validation: ${url}, isValid=${isValid}`);
-
-  //       if (!isValid || !preferredUrl) {
-  //         console.log(`[brandprofile] Skipping invalid AI-suggested URL: ${url}`);
-  //         continue;
-  //       }
-
-  //       try {
-  //         const competitor_id = uuidv4();
-  //         await prisma.competitor_details.create({
-  //           data: {
-  //             competitor_id,
-  //             website_id,
-  //             name,
-  //             competitor_website_url: preferredUrl,
-  //             industry: comp.industry || userRequirement.industry,
-  //             primary_offering: comp.primary_offering || userRequirement.primary_offering,
-  //             usp: comp.usp || 'No clear USP identified',
-  //             order_index: orderIndex++,
-  //           },
-  //         });
-
-  //         competitorResults.push({
-  //           competitor_id,
-  //           brand_profile: {
-  //             title: name,
-  //             industry: comp.industry || userRequirement.industry,
-  //             unique_selling_point: comp.usp || 'No clear USP identified',
-  //             primary_offering: comp.primary_offering || userRequirement.primary_offering,
-  //             website_url: preferredUrl,
-  //             logo_url: null,
-  //           },
-  //         });
-
-  //         processedUrls.add(preferredUrl);
-  //         processedNames.add(name);
-
-  //         console.log(`[brandprofile] AI competitor saved: ${name} (${preferredUrl})`);
-  //       } catch (err) {
-  //         console.error(`[brandprofile] Error saving AI competitor ${preferredUrl}: ${err}`);
-  //       }
-  //     }
-  //   }
-
-  //   await browser.close();
-  //   console.log(`[brandprofile] Browser closed`);
-
-  //   const t1 = performance.now();
-  //   console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
-  //   console.log("competitorResults:", competitorResults);
-  //   return {
-  //     mainWebsite: {
-  //       brand_profile: {
-  //         title: scrapedMain.page_title ?? 'Unknown',
-  //         industry: userRequirement.industry,
-  //         unique_selling_point: userRequirement.USP,
-  //         primary_offering: userRequirement.primary_offering,
-  //         logo_url: scrapedMain.logo_url || null,
-  //         website_url,
-  //         is_valid: true,
-  //       },
-  //     },
-  //     competitors: competitorResults,
-  //   };
-  // }
-
   static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
     const t0 = performance.now();
     console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
@@ -314,10 +148,62 @@ export class CompetitorService {
     const processedNames = new Set<string>();
     let orderIndex = 0;
 
-    const browser = await puppeteer.launch({ headless: true });
-    console.log(`[brandprofile] Puppeteer browser launched`);
+    // THIS IS THE CORRECTED CODE
+    // const launchOptions = {
+    //   executablePath: "/usr/bin/google-chrome-stable",
+    //   headless: "new" as any,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // };
 
-    // Process user-provided competitors
+    // console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
+
+    // // const browser = await puppeteer.launch(launchOptions);
+
+    // // Use the correct launch options for Puppeteer local
+    // // const browser = await puppeteer.launch({ headless: true });
+    // // console.log(`[brandprofile] Puppeteer browser launched`);
+
+    // // Process user-provided competitors 
+
+
+    const mode = process.env.MODE;
+
+console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
+
+let browser;
+
+    if (mode === 'cloud') {
+      const launchOptions = {
+        executablePath: "/usr/bin/google-chrome-stable",
+        headless: false, // Running full browser in cloud
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu"
+        ],
+      };
+
+      console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
+      browser = await puppeteer.launch(launchOptions);
+
+    } else if (mode === 'local') {
+      const localLaunchOptions = {
+        headless: "new" as any,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      };
+
+      console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
+      browser = await puppeteer.launch(localLaunchOptions);
+
+    } else {
+      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'cloud' or 'local'.`);
+      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+    }
+
+    console.log("[brandprofile] Puppeteer browser launched successfully.");
+
+    
     for (const originalUrl of userRequirement.competitor_urls) {
       if (competitorResults.length >= MAX_COMPETITORS) break;
 
@@ -456,9 +342,7 @@ export class CompetitorService {
       },
       competitors: competitorResults.slice(0, MAX_COMPETITORS),
     };
-
-  
-}
+  }
 
   static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
     const response: SeoAuditResponse = {
@@ -782,9 +666,9 @@ export class CompetitorService {
     const competitorResults: CompetitorResult[] = [];
     const processedUrls = new Set<string>([website_url]);
 
-    const pLimit = (await import("p-limit")).default;
-    const limit = pLimit(7); // Now this works
-
+    // const pLimit = require("p-limit");
+    // const limit = pLimit(7); // Now this works
+    const limit = createLimiter(7); // Use our new helper function
     const competitorTasks = competitors.map((competitor) =>
       limit(async () => {
         const { competitor_id, name, competitor_website_url, usp, primary_offering, industry } = competitor;

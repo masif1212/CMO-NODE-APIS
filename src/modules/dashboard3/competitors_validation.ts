@@ -20,6 +20,40 @@ type ValidationResult = {
 
 const prisma = new PrismaClient();
 
+// Helper function to replace the p-limit package
+function createLimiter(concurrency: number) {
+  const queue: (() => void)[] = [];
+  let activeCount = 0;
+
+  function next() {
+    if (activeCount < concurrency && queue.length > 0) {
+      activeCount++;
+      const task = queue.shift()!;
+      task();
+    }
+  }
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const task = async () => {
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (err) {
+          reject(err);
+        } finally {
+          activeCount--;
+          next();
+        }
+      };
+
+      queue.push(task);
+      if (activeCount < concurrency) {
+        next();
+      }
+    });
+  };
+}
 export function processSeoAudits(auditData: any[]): { passedAudits: { title: string; description: string }[]; failedAudits: { title: string; description: string }[] } {
   const passedAudits: { title: string; description: string }[] = [];
   const failedAudits: { title: string; description: string }[] = [];
@@ -236,11 +270,62 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       console.warn(reason);
       return { isValid: false, reason };
     }
+   
+    // // Example from isValidCompetitorUrl
+    // const launchOptions = {
+    //   executablePath: "/usr/bin/google-chrome-stable",
+    //   headless: "new" as any,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // };
+
+    // if (!browser) {
+    //   console.log("Launching new browser instance with options:", JSON.stringify(launchOptions));
+    //     // browser = await puppeteer.launch(launchOptions);
+
+    //   const mode = process.env.MODE;
+
+
+    //   if (mode === 'cloud') {
+    //     const launchOptions = {
+    //       headless: false,
+    //       args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    //     };
+    //     browser = await puppeteer.launch(launchOptions);
+    //   } else if (mode === 'local') {
+    //     browser = await puppeteer.launch({ headless: true });
+    //   } else {
+    //     throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+    //   }
+
+    //         browserLaunchedHere = true;
+    //       }
+
 
     if (!browser) {
-      browser = await puppeteer.launch({ headless: true });
-      browserLaunchedHere = true;
-    }
+  const mode = process.env.MODE;
+
+  console.log(`[Browser Init] MODE is set to: ${mode}`);
+
+  if (mode === 'cloud') {
+    const launchOptions = {
+      headless: false,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    };
+    console.log('[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:', JSON.stringify(launchOptions));
+    browser = await puppeteer.launch(launchOptions);
+  } else if (mode === 'local') {
+    const localOptions = { headless: true };
+    console.log('[Browser Init] Launching headless browser for LOCAL environment with options:', JSON.stringify(localOptions));
+    browser = await puppeteer.launch(localOptions);
+  } else {
+    console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'cloud' or 'local'.`);
+    throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+  }
+
+  browserLaunchedHere = true;
+  console.log('[Browser Init] Browser instance successfully launched.');
+}
+
 
     const firstCheck = await checkLandingHomepage(url, browser);
     if (firstCheck.valid) {
@@ -283,12 +368,17 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
 const MAX_CONCURRENT_VALIDATIONS = 2;
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
-  const pLimit = (await import("p-limit")).default;
-  const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
+  // const pLimit = require("p-limit");
+  // const limit = pLimit(MAX_CONCURRENT_VALIDATIONS);
+  const limit = createLimiter(7); // Use our new helper function
   let browser: Browser | null = null;
 
   try {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    });
 
     const results = await Promise.all(
       urls.map((url, index) =>
