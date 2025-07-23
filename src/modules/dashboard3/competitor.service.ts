@@ -170,7 +170,7 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
 
 let browser;
 
-    if (mode === 'cloud') {
+    if (mode === 'production') {
       const launchOptions = {
         executablePath: "/usr/bin/google-chrome-stable",
         headless: false, // Running full browser in cloud
@@ -185,7 +185,7 @@ let browser;
       console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
       browser = await puppeteer.launch(launchOptions);
 
-    } else if (mode === 'local') {
+    } else if (mode === 'development') {
       const localLaunchOptions = {
         headless: "new" as any,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -195,8 +195,8 @@ let browser;
       browser = await puppeteer.launch(localLaunchOptions);
 
     } else {
-      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'cloud' or 'local'.`);
-      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
+      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
     }
 
     console.log("[brandprofile] Puppeteer browser launched successfully.");

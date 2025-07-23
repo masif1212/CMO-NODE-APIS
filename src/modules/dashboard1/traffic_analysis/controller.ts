@@ -243,14 +243,14 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_res = await generateLLMTrafficReport(website_id, user_id);
-
-    if (!llm_res) {
+    const llm_response = await generateLLMTrafficReport(website_id, user_id);
+    console.log("llm_res",llm_response)
+    if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
    
 
-    return res.status(200).json(llm_res);
+    return res.status(200).json(llm_response);
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

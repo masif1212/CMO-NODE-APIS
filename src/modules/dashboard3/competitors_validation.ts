@@ -298,20 +298,20 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
 
   console.log(`[Browser Init] MODE is set to: ${mode}`);
 
-  if (mode === 'cloud') {
+  if (mode === 'production') {
     const launchOptions = {
       headless: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     };
     console.log('[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:', JSON.stringify(launchOptions));
     browser = await puppeteer.launch(launchOptions);
-  } else if (mode === 'local') {
+  } else if (mode === 'development') {
     const localOptions = { headless: true };
-    console.log('[Browser Init] Launching headless browser for LOCAL environment with options:', JSON.stringify(localOptions));
+    console.log('[Browser Init] Launching headless browser for development environment with options:', JSON.stringify(localOptions));
     browser = await puppeteer.launch(localOptions);
   } else {
-    console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'cloud' or 'local'.`);
-    throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+    console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'production' or 'development'.`);
+    throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
   }
 
   browserLaunchedHere = true;
