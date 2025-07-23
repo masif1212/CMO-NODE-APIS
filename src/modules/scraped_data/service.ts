@@ -713,6 +713,9 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
       meta_keywords: p.meta_keywords ?? "not found",
     }));
 
+
+
+    
   const totalKeyPages = filteredPages.length;
   const CTR_Loss_Percent = {
     total_key_pages: totalKeyPages,
