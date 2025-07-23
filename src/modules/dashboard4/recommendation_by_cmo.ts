@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
 import * as cheerio from "cheerio";
+import { all } from 'axios';
+import { Target } from 'puppeteer';
 
 const client = new OpenAI();
 
@@ -104,7 +106,7 @@ export class CMORecommendationService {
 
 
 
- const [scraped, analysis, traffic, llm_Response] = await Promise.all([
+ const [scraped, analysis, traffic, llm_Response,userRequirement] = await Promise.all([
       this.prisma.website_scraped_data.findUnique({ where: { website_id:input.website_id } }),
       this.prisma.brand_website_analysis.findFirst({
         where: { website_id: input.website_id },
@@ -120,6 +122,16 @@ export class CMORecommendationService {
             orderBy: { created_at: "desc" },
             select: {
               geo_llm: true,
+            },
+          }),
+
+          
+         this.prisma.user_requirements.findFirst({
+            where: { website_id:input.website_id },
+            orderBy: { created_at: "desc" },
+            select: {
+              industry: true,
+              target_audience: true 
             },
           })
       
@@ -180,7 +192,7 @@ export class CMORecommendationService {
         
         new_vs_returning: traffic?.new_vs_returning ?? "N/A",
         top_countries: traffic?.top_countries ?? "N/A",
-        top_devices: traffic?.top_devices ?? "N/A",
+        // top_devices: traffic?.top_devices ?? "N/A",
       };
 
       allData.onpage_opptimization = {
@@ -207,7 +219,10 @@ export class CMORecommendationService {
         AI_discovilibilty: llm_Response?.geo_llm ?? "None",
         number_of_sources_from_being: traffic?.top_sources ?? "N/A",
       };
-        
+      allData.user_industry_and_target_location={
+       industry: userRequirement?.industry,
+       Target_location:userRequirement?.industry
+      }
       
        allData.competitor_details = {competitor_details}
          allData.competitor_comparison = {competitor_analysis};
@@ -246,39 +261,40 @@ Return a **valid JSON object** with the following top-level keys in this exact o
     "name": "Example Brand",
     "website": "https://example.com"
   },
-  "executive_summary": "3–4 sentence strategic summary of brand health, digital position, and key recommendations.",
-  "brand_health_overview": "Insightful paragraph(s) covering awareness, perception, loyalty, and brand sentiment trends.",
+  "executive_summary": {"High-level overview of current brand performance
+                        Key challenges & growth opportunities in plain English
+                        A one-liner verdict: “Here’s what you need to fix now to grow faster"},
+  
+                        
+                       
+  "brand_health_overview": {"
+  camparison of website anaylsis data like lcp /fcp etc"},
+
   "swot_analysis": {
     "strengths": ["..."],
     "weaknesses": ["..."],
     "opportunities": ["..."],
     "threats": ["..."]
   },
-  "growth_quadrant_vs_competitors": {
-    "quadrant_type": "High Awareness / Low Conversion",
-    "competitor_positions": [
-      {
-        "name": "Competitor A",
-        "position": "High Awareness / High Conversion",
-        "reasoning": "Brief explanation for placement."
-      },
-      {
-        "name": "Competitor B",
-        "position": "Low Awareness / High Conversion",
-        "reasoning": "Brief explanation for placement."
-      }
-    ]
-  },
-  "priority_fixes_bottom_funnel": [
+  
+    
+
+  "priority_fixes_bottom_funnel": 
     {
-      "issue": "Clearly describe the issue causing SEO or website-driven revenue loss",
-      "source": "seo" | "website" | "both",
-      "impact": "Quantify or qualify revenue loss, drop-off, or conversion friction if possible",
-      "recommended_fix": "Actionable solution — technical, UX, or content-based — to restore or grow revenue at BoFu"
-    }
-  ],
-  "brand_positioning_messaging_review": "Assessment of current positioning, clarity of messaging, meta/H1/value prop alignment.",
-  "channel_budget_suggestions": [
+      "use the website revenue loss and seo revenue loss check which one needs to be prioritize first .
+      what can we do do enhance these matrix "
+    },
+  
+
+  "brand_positioning_messaging_review": 
+  {
+  "Is your messaging consistent across touchpoints?
+   Do your USPs stand out?
+   Does your website and social reflect your actual value prop?
+   Brand voice alignment: Are you sounding premium, helpful, or confused?
+"
+}
+  "channel_budget_suggestions": 
     {
       "channel": "Paid Search",
       "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS"
@@ -286,27 +302,28 @@ Return a **valid JSON object** with the following top-level keys in this exact o
     {
       "channel": "SEO",
       "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords"
-    }
-  ],
-  "campaign_planning_ideas": [
-    {
-      "campaign_name": "Back-to-School Performance Launch",
-      "goal": "Drive mid-funnel engagement with Gen Z students",
-      "messaging_theme": "Speed, personal growth, student ambition",
-      "channels": ["Instagram", "YouTube", "Email"]
     },
-    {
-      "campaign_name": "Trust & Testimonials Retargeting",
-      "goal": "Boost conversion rate with social proof",
-      "messaging_theme": "Real stories, verified ratings, peer success",
-      "channels": ["Retargeting Ads", "Landing Pages", "TikTok"]
-    }
+  
+  
+
+    "market_suggestions": {
+    "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
+    "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
+  },
+ 
+  "retention_strategy": {
+    
+    "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
+    "industry_benchmark": "Provide benchmark values for the industry (e.g., SaaS = 40% returning users).",
+    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
+  },
+    
   ]
 }
 \`\`\`json
 ---
 
-📌 **Special Instructions for Bottom-of-Funnel Fixes**
+ **Special Instructions for Bottom-of-Funnel Fixes**
 - The 'priority_fixes_bottom_funnel' section must only focus on issues that **directly cause revenue loss or leakage**
 - These must come from either:
   - **SEO drop-offs** (e.g., keyword cannibalization, poor SERP CTR, missing schema, etc.)
@@ -317,7 +334,7 @@ Return a **valid JSON object** with the following top-level keys in this exact o
 
 ---
 
-📌 **General Formatting & Style**
+ **General Formatting & Style**
 - Use **markdown-style bold headings** only inside the JSON values where helpful
 - Start with **brand name and website URL** in the 'brand' object
 - Use bullet lists or arrays where specified

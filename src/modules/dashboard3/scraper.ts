@@ -308,32 +308,79 @@ if (!finalLogoUrl) {
   } else {
     selectedKeyPages = allSitemapUrls;
   }
+  // let affectedPagesCount = 0;
+  // const keyPages = await Promise.all(
+  //   selectedKeyPages.map(async (pageUrl) => {
+  //     try {
+  //       const res = await axios.get(pageUrl);
+  //       if (res.status >= 200 && res.status < 400) {
+  //         const $$ = cheerio.load(res.data);
+  //         const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
+  //         const title =
+  //           titles.length > 1
+  //             ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+  //             : titles[0] || "not found";
+  //         const meta_description = $$('meta[name="description"]').attr("content") || "not found";
+  //         const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
+  //         const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
+
+  //         const missingAny = !(title && meta_description && og_title && meta_keywords);
+  //         if (missingAny) affectedPagesCount++;
+
+  //         return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+  //       }
+  //     } catch {
+  //       return null;
+  //     }
+  //   })
+  // );
+
+
   let affectedPagesCount = 0;
-  const keyPages = await Promise.all(
-    selectedKeyPages.map(async (pageUrl) => {
-      try {
-        const res = await axios.get(pageUrl);
-        if (res.status >= 200 && res.status < 400) {
-          const $$ = cheerio.load(res.data);
-          const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
-          const title =
-            titles.length > 1
-              ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-              : titles[0] || "not found";
-          const meta_description = $$('meta[name="description"]').attr("content") || "not found";
-          const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
-          const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
+const keyPages = await Promise.all(
+  selectedKeyPages.map(async (pageUrl) => {
+    try {
+      const res = await axios.get(pageUrl);
+      if (res.status >= 200 && res.status < 400) {
+        const $$ = cheerio.load(res.data);
+        const titles = $$("title")
+          .map((_, el) => $$(el).text().trim())
+          .get()
+          .filter(Boolean);
 
-          const missingAny = !(title && meta_description && og_title && meta_keywords);
-          if (missingAny) affectedPagesCount++;
+        const title =
+          titles.length > 1
+            ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+            : titles[0] || "not found";
 
-          return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+        const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
+        const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
+        const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
+
+        const isMultipleTitle = title.includes("needs attention");
+        const isMissing = [title, meta_description, og_title, meta_keywords].some(
+          (v) => !v || v.trim().toLowerCase() === "not found"
+        ) || isMultipleTitle;
+
+        if (isMissing) {
+          affectedPagesCount++;
+          console.log("Missing metadata on:", pageUrl, {
+            title,
+            meta_description,
+            og_title,
+            meta_keywords,
+          });
         }
-      } catch {
-        return null;
+
+        return { url: pageUrl, title, meta_description, og_title, meta_keywords };
       }
-    })
-  );
+    } catch (err : any) {
+      console.warn("Error fetching key page:", pageUrl, err.message);
+      return null;
+    }
+  })
+);
+
 
   const filteredPages = keyPages
     .filter((p): p is NonNullable<typeof p> => !!p)

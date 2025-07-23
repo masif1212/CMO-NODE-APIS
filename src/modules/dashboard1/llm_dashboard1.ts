@@ -23,7 +23,6 @@ Based on the structured input JSON (audit metrics and metadata), return a valid 
    - \`whats_working\`: rating 7–10
    - \`what_needs_fixing\`: rating 1–6
 
-4. Generation of \`recommendations\` **only** for items in \`what_needs_fixing\`, using the same \`tag\` and subcategory.
 
 ---
 
@@ -37,6 +36,7 @@ Based on the structured input JSON (audit metrics and metadata), return a valid 
 
  \`seo_audit\`:
 - "Meta Tags & Schema Fixes"
+- "Keyword Gaps & Lost Rankings"
 - "Content Gap Suggestions"
 - "Traffic & Audience Analysis"
 
@@ -91,21 +91,8 @@ Avoid 5–6 unless a clear, actionable fix is provided.
     "seo_audit": {
       ...
     }
-  },
-  "recommendations": {
-    "web_audit": {
-      "Lead Capture Optimization": [
-        {
-          "tag": "bounce_rate",
-          "recommendation": "Reduce bounce rate by improving above-the-fold messaging, clarifying CTAs, and adding mobile-friendly lead forms. This will increase user retention, lead capture efficiency, and reduce traffic loss, positively impacting SEO."
-        }
-      ],
-      ...
-    },
-    "seo_audit": {
-      ...
-    }
   }
+  
 }
 \`\`\`
 
@@ -126,7 +113,6 @@ and include suggestions for H1, meta tags, or keyword relevance where mismatches
 - Scores (performance, SEO, accessibility, best-practices): >90 = 10, 50–89 = 5, <50 = 1, missing = 3  
 
 ### Mobile Experience
--Tag should be "mobile-friendly" or similar
 - Is the site mobile-friendly?
 Why it matters: Mobile-first indexing is Google’s default.
 A poor mobile experience drives drop-off in ad traffic and weakens engagement from most organic users. It also leads to inflated bounce rates and poor session depth
@@ -139,17 +125,14 @@ A poor mobile experience drives drop-off in ad traffic and weakens engagement fr
 - High bounce reduces conversions, wastes paid ad spend, harms engagement  
 - Low bounce increases session depth, trust, and search engine confidence
 
-Why it matters: Lead capture issues hurt conversion rates, especially on mobile. Fixing CTAs, landing speed, and message clarity can significantly increase session duration, reduce CAC, and boost revenue.
-
 ### Homepage Clarity
-
-- Meta tags (title, desc) are present and optimized  
-- Heading hierarchy is logical 
-- Alt text for major homepage images
+- meta tags/ present  
+- heading hierarchy clear
+- homepage alt text coverage
 - Good structure increases user trust, reduces bounce rate, and improves SEO
 - Link Integrity Issues: Broken or outdated links on the homepage damage user trust, disrupt navigation,
  and signal poor maintenance to search engines. This can reduce crawl efficiency and contribute to SEO ranking losses.  
-Why it matters: Homepage is the trust anchor. If structure is poor, SEO suffers and trust drops. Broken links can reduce crawl budget and block goal conversions. Fixing this improves engagement and lowers bounce.
+
 
 ### Meta Tags & Schema Fixes
 - Title: <60 chars & keyword-rich = 10, 60–70 = 7, >70 = 3, missing = 1  
@@ -160,12 +143,11 @@ Why it matters: Homepage is the trust anchor. If structure is poor, SEO suffers 
 
 
 ### Content Gap Suggestions
-- Is title tag aligned with search intent and high-value keywords?
-- Description includes focus keyword + CTA?  
-- Is H1 distinct from title but still relevant? 
+- Title covers high-intent keyword?  
+- Description includes keyword + CTA?  
+- H1 distinct from title, matches user search intent?  
 - Meta tags consistent with page content? 
-
-Why it matters: Many sites miss mid- and bottom-funnel opportunities by using vague or overly broad tags. Fixing gaps can boost long-tail keyword coverage, reduce bounce, and improve time-on-page.
+- 
 
 ### Traffic & Audience Analysis
 - Total visitors, unique visitors, engagement rate  
@@ -173,8 +155,6 @@ Why it matters: Many sites miss mid- and bottom-funnel opportunities by using va
 - High engagement = strong content/audience fit  
 - Low traffic = content misalignment, technical issue, weak outreach  
 
-
-Why it matters: Low traffic = possible technical SEO failures, misaligned content, or weak distribution. High engagement means your content or offer is working. Use this data to prioritize what type of content or CTA to scale
 ---
 
 🛑 Avoid:
@@ -259,7 +239,7 @@ const normalizeAuditOutput = (raw: any): NormalizedAuditOutput => {
 
     return result;
   };
-
+  
   const normalizeRecommendations = (input: any): Record<AuditType, Record<string, RecommendationEntry[]>> => {
     const result = { web_audit: {}, seo_audit: {} } as Record<AuditType, Record<string, RecommendationEntry[]>>;
 
@@ -291,33 +271,87 @@ const normalizeAuditOutput = (raw: any): NormalizedAuditOutput => {
 };
 
 
+const funnelRecommendationPrompt = `
+You are a senior growth strategist and website optimization expert.
 
-const validateRecommendations = (output: NormalizedAuditOutput): NormalizedAuditOutput => {
-  const clone = JSON.parse(JSON.stringify(output)) as NormalizedAuditOutput;
+Your job is to evaluate a website's traffic, speed, content clarity, and user engagement. Based on your analysis, return a **friendly, insightful, and strategic set of recommendations**—structured as a JSON object—organized by each stage of the marketing funnel.
 
-  for (const type of ["web_audit", "seo_audit"] as AuditType[]) {
-    const fixes = output.what_needs_fixing[type] || {};
-    const recs = output.recommendations[type] || {};
+The JSON must include **three funnel stages**:
+1. 'top_of_funnel' – "Are you discoverable?" (Focus: Visibility + Speed)
+2. 'mid_funnel' – "Are you clear and convincing?" (Focus: On-site Experience + Message Clarity)
+3. 'bottom_of_funnel' – "Are you converting and retaining?" (Focus: Engagement + Funnel Diagnostics)
 
-    for (const [subcategory, recItems] of Object.entries(recs)) {
-      const validTags = new Set((fixes[subcategory] || []).map(item => item.tag));
-      if (validTags.size === 0) {
-        delete clone.recommendations[type][subcategory];
-        continue;
-      }
+Each funnel stage should include:
+- 'focus': A short sentence describing what this funnel stage is trying to improve
+- 'categories': Key topics for that stage (e.g., SEO, CRO, mobile UX)
+- 'recommendations': For each category, give 2–5 friendly and helpful tips or ideas to improve performance
+- 'sample_insight': (Optional) A short, human-friendly insight based on real or assumed performance issues (like slow mobile speed, low engagement, or poor messaging)
 
-      clone.recommendations[type][subcategory] = recItems.filter((r) =>
-        validTags.has(r.tag)
-      );
+Speak like you're advising a founder or marketing team. Be direct but supportive—focus on what’s working, what’s missing, and how to improve.
 
-      if (clone.recommendations[type][subcategory].length === 0) {
-        delete clone.recommendations[type][subcategory];
-      }
-    }
+Output the result as a valid JSON object. Here's the structure:
+
+\`\`\`json
+{
+  "top_of_funnel": {
+    "focus": "Help users find and access your website faster",
+    "categories": {
+      "Search Discoverability": [
+        "Add or improve meta titles and descriptions so pages show up better in search results",
+        "Make sure every page has a unique H1 that matches what it's about",
+        "Add schema markup to help AI tools and search engines better understand your content"
+      ],
+      "Site Speed & Accessibility": [
+        "Compress large images and limit unnecessary JavaScript to improve load times (LCP, FID, CLS)",
+        "Check mobile layout for touch-friendliness and fast interactivity",
+        "Include a proper viewport tag for responsive behavior"
+      ],
+      "Link Sharing (OG Tags)": [
+        "Update OpenGraph text and images for better link previews on social media"
+      ]
+    },
+    "sample_insight": "Your homepage takes 6.4 seconds to load on mobile — that’s likely driving users away. Speeding it up can increase both traffic and search visibility."
+  },
+  "mid_funnel": {
+    "focus": "Help visitors quickly understand what you do and why it matters",
+    "categories": {
+      "Messaging & Content Clarity": [
+        "Add a short, punchy one-liner that clearly says what your product does",
+        "Structure your H1/H2s for better readability and quick scanning",
+        "Balance text and visuals to keep the page from feeling too dense or too empty"
+      ],
+      "Conversion Optimization": [
+        "Place a CTA (like 'Start Free Trial') above the fold to capture intent early",
+        "Use whitespace and contrast to guide attention toward your offer",
+        "Add trust indicators like testimonials, security badges, or usage stats"
+      ]
+    },
+    "sample_insight": "Your homepage doesn’t mention what you do until after the third scroll. Adding a clear headline and CTA at the top can reduce bounce and boost conversions."
+  },
+  "bottom_of_funnel": {
+    "focus": "Diagnose why users drop off and how to retain them better",
+    "categories": {
+      "Behavior & Funnel Analysis": [
+        "Look at bounce rate and exit pages to find friction points",
+        "Compare new vs returning visitors to see if you're building loyalty",
+        "Check session length and scroll depth to assess engagement quality",
+        "Break down mobile vs desktop usage to spot performance gaps"
+      ],
+      "Retention & Re-engagement": [
+        "Use sticky CTAs or persistent navigation to keep users on the path",
+        "Test exit-intent popups or reminder nudges for hesitant visitors",
+        "Consider retargeting or personalized content to bring back drop-offs"
+      ]
+    },
+    "sample_insight": "Only 15% of your users scroll past the first section. You may need stronger visual direction and persistent CTAs to guide them down the page."
   }
+}
+\`\`\`
 
-  return clone;
-};
+Return only the JSON, no explanations.
+`
+
+
 
 
 export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
@@ -438,7 +472,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       };
 
       allData.Content_Gap_Suggestions = {
-        keyword: scraped?.meta_keywords ?? "N/A",
+        primary_keyword: scraped?.meta_keywords ?? "N/A",
         schema: scraped?.schema_analysis ?? "None",
         title: scraped?.page_title ?? "N/A",
         h1: h1Text,
@@ -451,7 +485,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
 
     
   
-    console.log("Generating LLM response (recommendation by mo1)...");
+    console.log("Generating LLM response (what working , what needs to be fixed)...");
     const llmResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
@@ -468,27 +502,54 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       ? JSON.parse(llmResponse.choices[0].message.content)
       : { whats_working: {}, what_needs_fixing: {}, recommendations: {} };
 
-    // Validate recommendations
-    const validatedContent = validateRecommendations(llmContent);
 
+
+    console.log("Generating LLM response (funnel recommendation)…");
+const funnelLLMResponse = await openai.chat.completions.create({
+  model: model,
+  temperature: 0.5,
+  response_format: { type: "json_object" },
+  messages: [
+    {
+      role: "system",
+      content: funnelRecommendationPrompt,
+    },
+    { role: "user", content: JSON.stringify(allData) },
+  ],
+});
+
+const funnelRecommendations = funnelLLMResponse.choices[0].message.content
+  ? JSON.parse(funnelLLMResponse.choices[0].message.content)
+  : {
+      top_of_funnel: {},
+      mid_funnel: {},
+      bottom_of_funnel: {},
+    };
+  
+    // Validate recommendations
+    // const validatedContent = validateRecommendations(llmContent);
+    
     // Normalize output
-    const combinedOutput = normalizeAuditOutput(validatedContent);
+    const combinedOutput = normalizeAuditOutput(llmContent);
     if (combinedOutput) {
       console.log("LLM response generated successfully:");
     }
-
+    const fullLLMResponse = {
+        audit_recommendations: combinedOutput,
+        funnel_recommendations: funnelRecommendations,
+      };
     // Save to database
-    console.log("Saving LLM response to database...");
-    await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
-      },
-      create: {
-        website_id,
-        recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
-      },
-    });
+    // console.log("Saving LLM response to database...");
+    // await prisma.llm_responses.upsert({
+    //   where: { website_id },
+    //   update: {
+    //     recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
+    //   },
+    //   create: {
+    //     website_id,
+    //     recommendation_by_mo_dashboard1: JSON.stringify(llmResponse),
+    //   },
+    // });
    
     await prisma.analysis_status.upsert({
       where: {
@@ -498,17 +559,17 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         },
       },
       update: {
-        recommendation_by_mo1: JSON.stringify(combinedOutput),
+        recommendation_by_mo1: JSON.stringify(fullLLMResponse),
       },
       create: {
         user_id,
         website_id,
-        recommendation_by_mo1: JSON.stringify(combinedOutput),
+        recommendation_by_mo1: JSON.stringify(fullLLMResponse),
       },
     });
     console.log("LLM response saved successfully for website_id:", website_id);
 
-    return { recommendation_by_mo_dashboard1: combinedOutput };
+    return { recommendation_by_mo_dashboard1: fullLLMResponse };
   } catch (err) {
     console.error("LLM Audit Error:", err);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });

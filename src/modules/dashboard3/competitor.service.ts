@@ -457,11 +457,7 @@ export class CompetitorService {
       competitors: competitorResults.slice(0, MAX_COMPETITORS),
     };
 
-  // competitorResults.forEach((r, i) => {
-  //   labeledResults[`competitor${i + 1}`] = r;
-  // });
-
-
+  
 }
 
   static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
