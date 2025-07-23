@@ -169,7 +169,6 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
 
 
 
-
 async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   try {
     const robotsUrl = new URL("/robots.txt", baseUrl).href;

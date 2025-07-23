@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
@@ -11,14 +10,7 @@ export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-type ValidationResult = {
-  isValid: boolean;
-  preferredUrl?: string;
-  reason?: string;
-};
-// import pLimit from "p-limit";
 
-const prisma = new PrismaClient();
 
 // Helper function to replace the p-limit package
 function createLimiter(concurrency: number) {
@@ -365,7 +357,6 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
   }
 }
 
-const MAX_CONCURRENT_VALIDATIONS = 2;
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
   // const pLimit = require("p-limit");

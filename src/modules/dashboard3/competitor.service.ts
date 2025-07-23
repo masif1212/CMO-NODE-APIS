@@ -8,12 +8,10 @@ import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
 import { performance } from "perf_hooks";
-// import pLimit from 'p-limit';
 import puppeteer from "puppeteer";
-const dnsCache = new Map<string, string[]>();
 
-import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo, CTRLossPercent } from "./seo_audit_interface";
-import { isValidCompetitorUrl, processSeoAudits, validateCompetitorUrlsInParallel } from "./competitors_validation";
+import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
+import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
 import { UserRequirement, ProcessedResult, LlmCompetitor } from "./brandprofile_interface";
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

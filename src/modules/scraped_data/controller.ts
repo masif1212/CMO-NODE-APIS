@@ -16,21 +16,14 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
     console.log("Scraping started...");
     const data = await scrapeWebsite(user_id, website_id);
 
-    if (!data.success) {
-      const status = data.status_code === 429 ? 429
-                   : data.status_code === 400 ? 400
-                   : data.status_code || 500;
-
-      return res.status(status).json({
-        success: false,
-        error: data.error || "Scraping failed",
-      });
-    }
+   
     console.log("Scraping compelted successfully");
     return res.status(200).json({
       success: true,
       website_id: data.website_id,
       logo_url: data.logo_url,
+      statuscode: data.status_code,
+      message:data.status_message
     });
 
   } catch (error) {

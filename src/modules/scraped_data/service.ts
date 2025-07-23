@@ -220,15 +220,342 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
+// export async function scrapeWebsite(user_id: string, website_id: string): Promise<ScrapeResult> {
+//   const start = Date.now();
+//   const website_url = await getWebsiteUrlById(user_id, website_id);
+//   const domain = new URL(website_url).hostname;
+//   console.log("domain ", domain);
+//   let statusCode = 0;
+//   let ipAddress = "N/A";
+//   let message = "Unknown error";
+//   let html = "";
+
+//   try {
+//     const response = await axios.get(website_url);
+//     console.log("Response received from website:", response.status);
+
+//     html = response.data;
+//     statusCode = response.status;
+//     const dnsResult = await dns.lookup(domain);
+//     ipAddress = dnsResult.address;
+//     message = statusCode >= 200 && statusCode < 400 ? "Website is up" : "Website responded with an error";
+//   } catch (error: any) {
+//     const code = error?.response?.status || 500;
+//     console.log("code",code)
+//     const raw = error?.response?.data || "";
+//     statusCode = code;
+//     html = typeof raw === "string" ? raw : "";
+//     let message;
+//     if (code >= 500 && code <= 599) {
+//   message = "Website is down";
+// } else {
+//   switch (code) {
+//     case 404:
+//       message = "Website not found (404)";
+//       break;
+//     case 429:
+//       message = "Scraping blocked (429)";
+//       break;
+//     case 403:
+//       message = "Access denied (403)";
+//       break;
+//     default:
+//       message = `Unhandled error (${code})`;
+//   }
+// }
+//   }
+  
+     
+     
+
+
+
+//   const responseTimeMs = Date.now() - start;
+//   const $ = cheerio.load(html);
+//   const headingAnalysis = evaluateHeadingHierarchy($);
+
+//   function extractTitleTags(): object {
+//     const titles = $("title")
+//       .map((_, el) => $(el).text().trim())
+//       .get()
+//       .filter(Boolean);
+//     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
+//     const message = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
+//     return { status, titles, message };
+//   }
+
+//   const meta = {
+//     page_title: extractTitleTags(),
+//     meta_description: $('meta[name="description"]').attr("content") || "not found",
+//     meta_keywords: $('meta[name="keywords"]').attr("content") || "not found",
+//     og_title: $('meta[property="og:title"]').attr("content") || "not found",
+//     og_description: $('meta[property="og:description"]').attr("content") || "not found",
+//     og_image: $('meta[property="og:image"]').attr("content") || "not found",
+//   };
+//   let twitter, facebook, instagram, linkedin, youtube, tiktok;
+//   const otherLinks: string[] = [];
+
+//   $("a").each((_, el) => {
+//     const href = $(el).attr("href");
+//     if (!href) return;
+//     const link = href.toLowerCase();
+//     if (link.includes("twitter.com")) twitter ||= href;
+//     else if (link.includes("facebook.com")) facebook ||= href;
+//     else if (link.includes("instagram.com")) instagram ||= href;
+//     else if (link.includes("linkedin.com")) linkedin ||= href;
+//     else if (link.includes("youtube.com")) youtube ||= href;
+//     else if (link.includes("tiktok.com")) tiktok ||= href;
+//     else otherLinks.push(href);
+//   });
+
+//   const totalImages = $("img").length;
+//   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
+//   const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+
+//   const sitemapUrls = await getRobotsTxtAndSitemaps(website_url);
+//   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
+//   const allSitemapUrls = [...new Set<string>([website_url, ...sitemapLinks.map((u) => u.trim())])];
+
+//   let selectedKeyPages: string[];
+//   if (allSitemapUrls.length > 10) {
+//     const homepage = website_url;
+//     const importantKeywords = ["about", "services", "service", "contact", "pricing", "plans", "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"];
+
+//     const keywordMatched = allSitemapUrls.filter((link) => {
+//       try {
+//         const path = new URL(link).pathname.toLowerCase();
+//         return importantKeywords.some((kw) => path.includes(kw));
+//       } catch {
+//         return false;
+//       }
+//     });
+
+//     const shallowPages = allSitemapUrls.filter((link) => {
+//       try {
+//         const path = new URL(link).pathname;
+//         const segments = path.split("/").filter(Boolean);
+//         return segments.length === 1;
+//       } catch {
+//         return false;
+//       }
+//     });
+
+//     const merged = [homepage, ...keywordMatched, ...shallowPages].filter((v, i, self) => self.indexOf(v) === i).slice(0, 10);
+
+//     selectedKeyPages = merged;
+//   } else {
+//     selectedKeyPages = allSitemapUrls;
+//   }
+
+ 
+
+
+//   let affectedPagesCount = 0;
+// const keyPages = await Promise.all(
+//   selectedKeyPages.map(async (pageUrl) => {
+//     try {
+//       const res = await axios.get(pageUrl);
+//       if (res.status >= 200 && res.status < 400) {
+//         const $$ = cheerio.load(res.data);
+//         const titles = $$("title")
+//           .map((_, el) => $$(el).text().trim())
+//           .get()
+//           .filter(Boolean);
+
+//         const title =
+//           titles.length > 1
+//             ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+//             : titles[0] || "not found";
+
+//         const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
+//         const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
+//         const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
+
+//         const isMultipleTitle = title.includes("needs attention");
+//         const isMissing = [title, meta_description, og_title, meta_keywords].some(
+//           (v) => !v || v.trim().toLowerCase() === "not found"
+//         ) || isMultipleTitle;
+
+//         if (isMissing) {
+//           affectedPagesCount++;
+//           console.log("Missing metadata on:", pageUrl, {
+//             title,
+//             meta_description,
+//             og_title,
+//             meta_keywords,
+//           });
+//         }
+
+//         return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+//       }
+//     } catch (err : any) {
+//       console.warn("Error fetching key page:", pageUrl, err.message);
+//       return null;
+//     }
+//   })
+// );
+
+
+//   const filteredPages = keyPages
+//     .filter((p): p is NonNullable<typeof p> => !!p)
+//     .map((p) => ({
+//       url: p.url,
+//       title: p.title ?? "not found",
+//       meta_description: p.meta_description ?? "not found",
+//       og_title: p.og_title ?? null,
+//       meta_keywords: p.meta_keywords ?? "not found",
+//     }));
+
+//   const totalKeyPages = filteredPages.length;
+//   const CTR_Loss_Percent = {
+//     total_key_pages: totalKeyPages,
+//     total_affected_pages: affectedPagesCount,
+//     CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+//     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
+//   };
+
+//   try {
+//     const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, website_id);
+//     const isCrawlable = await isCrawlableByLLMBots(website_url);
+
+//     let finalLogoUrl = schemaAnalysisData.logo ?? null;
+//     if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
+//       finalLogoUrl = null;
+//     }
+
+//     if (!finalLogoUrl) {
+//       const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
+
+//       for (const selector of logoSelectors) {
+//         const el = $(selector).first();
+//         let src = el.attr("href") || el.attr("src");
+//         if (src) {
+//           if (src.startsWith("//")) src = "https:" + src;
+//           else if (src.startsWith("/")) src = new URL(src, website_url).href;
+
+//           if (await isLogoUrlValid(src)) {
+//             finalLogoUrl = src;
+//             break;
+//           }
+//         }
+//       }
+//     }
+//     const record = await prisma.website_scraped_data.create({
+//       data: {
+//         website_id: website_id,
+//         website_url: website_url,
+//         page_title: JSON.stringify(meta.page_title),
+//         logo_url: finalLogoUrl,
+//         meta_description: meta.meta_description,
+//         meta_keywords: meta.meta_keywords,
+//         og_title: meta.og_title,
+//         og_description: meta.og_description,
+//         og_image: meta.og_image,
+//         twitter_handle: twitter,
+//         facebook_handle: facebook,
+//         instagram_handle: instagram,
+//         linkedin_handle: linkedin,
+//         youtube_handle: youtube,
+//         tiktok_handle: tiktok,
+//         isCrawlable: isCrawlable,
+//         headingAnalysis: headingAnalysis,
+//         ctr_loss_percent: CTR_Loss_Percent,
+//         sitemap_pages: filteredPages,
+//         schema_analysis: JSON.stringify(schemaAnalysisData),
+//         homepage_alt_text_coverage: homepage_alt_text_coverage,
+//         other_links: otherLinks.length > 0 ? otherLinks : "not found",
+//         raw_html: html,
+//         status_code: statusCode,
+//         ip_address: ipAddress,
+//         response_time_ms: responseTimeMs,
+//         status_message: message,
+//       },
+//     });
+
+//     return {
+//       success: true,
+//       website_id: record.website_id,
+//       logo_url: record.logo_url ?? undefined,
+//       status_code:record.status_code ?? undefined
+//     };
+//   } catch (error: any) {
+//     return {
+//       success: false,
+//       error: error.message,
+//       status_code:statusCode
+//     };
+//   }
+
+// }
+
+
+
 export async function scrapeWebsite(user_id: string, website_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
-  console.log("domain ", domain);
-  let statusCode = 0;
-  let ipAddress = "N/A";
-  let message = "Unknown error";
-  let html = "";
+
+  console.log("domain", domain);
+
+  let statusCode: number = 0;
+  let ipAddress: string = "N/A";
+  let html: string = "";
+  let message: string = "Unknown error";
+
+  function getStatusMessage(code: number): string {
+    const messages: Record<number, string> = {
+       400: "Bad Request",
+  401: "Unauthorized - Authentication required",
+  402: "Payment Required",
+  405: "Method Not Allowed",
+  406: "Not Acceptable",
+  407: "Proxy Authentication Required",
+  408: "Request Timeout",
+  409: "Conflict",
+  410: "Gone",
+  411: "Length Required",
+  412: "Precondition Failed",
+  413: "Payload Too Large",
+  414: "URI Too Long",
+  415: "Unsupported Media Type",
+  416: "Range Not Satisfiable",
+  417: "Expectation Failed",
+  418: "I'm a teapot 🍵",
+  421: "Misdirected Request",
+  422: "Unprocessable Entity",
+  423: "Locked",
+  424: "Failed Dependency",
+  425: "Too Early",
+  426: "Upgrade Required",
+  428: "Precondition Required",
+  431: "Request Header Fields Too Large",
+  451: "Unavailable For Legal Reasons",
+      403: "Access denied",
+      404: "Page not found",
+      429: "Scraping blocked",
+        500: "Internal Server Error",
+        501: "Not Implemented",
+        502: "Bad Gateway",
+        503: "Service Unavailable",
+        504: "Gateway Timeout",
+        505: "HTTP Version Not Supported",
+        506: "Variant Also Negotiates",
+        507: "Insufficient Storage",
+        508: "Loop Detected",
+        510: "Not Extended",
+        511: "Network Authentication Required",
+      521: "Web server is down",
+      522: "Webside is down",
+      523: "Origin is unreachable",
+      524: "A timeout occurred",
+      525: "SSL handshake failed",
+      526: "Invalid SSL certificate",
+    };
+    if (messages[code]) return messages[code];
+    if (code >= 500 && code <= 599) return `Server error (${code})`;
+    if (code >= 400 && code <= 499) return `Client error (${code})`;
+    return `Unhandled status code (${code})`;
+  }
 
   try {
     const response = await axios.get(website_url);
@@ -236,37 +563,20 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
 
     html = response.data;
     statusCode = response.status;
+    message = statusCode >= 200 && statusCode < 400
+      ? "Website is up"
+      : getStatusMessage(statusCode);
+    console.log("statusCode:", statusCode, "message:", message); // Debug log
+
     const dnsResult = await dns.lookup(domain);
     ipAddress = dnsResult.address;
-    message = statusCode >= 200 && statusCode < 400 ? "Website is up" : "Website responded with an error";
-  } catch (error: any) {
-    const code = error?.response?.status || 500;
-    const raw = error?.response?.data || "";
-    statusCode = code;
-    html = typeof raw === "string" ? raw : "";
-    let message;
-    switch (code) {
-      case 404:
-        message = "Website not found (404)";
-        break;
-      case 429:
-        message = "Scraping blocked (429)";
-        break;
-      case 500:
-        message = "Internal Server Error (500)";
-        break;
-      case 403:
-        message = "Access denied (403)";
-        break;
-      default:
-        message = `Fetch or DNS error: ${error.message}`;
-    }
 
-    return {
-      success: false,
-      status_code: code,
-      error: message,
-    };
+  } catch (error: any) {
+    statusCode = error?.response?.status || 500;
+    const raw = error?.response?.data || "";
+    html = typeof raw === "string" ? raw : "";
+    message = getStatusMessage(statusCode);
+    console.log("Error case - statusCode:", statusCode, "message:", message); // Debug log
   }
 
   const responseTimeMs = Date.now() - start;
@@ -279,7 +589,9 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
       .get()
       .filter(Boolean);
     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
-    const message = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
+    const message = titles.length > 1
+      ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+      : titles[0] || "not found";
     return { status, titles, message };
   }
 
@@ -291,6 +603,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
     og_description: $('meta[property="og:description"]').attr("content") || "not found",
     og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
+
   let twitter, facebook, instagram, linkedin, youtube, tiktok;
   const otherLinks: string[] = [];
 
@@ -309,16 +622,22 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
 
   const totalImages = $("img").length;
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
-  const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+  const homepage_alt_text_coverage = totalImages > 0
+    ? Math.round((imagesWithAlt / totalImages) * 100)
+    : 0;
 
   const sitemapUrls = await getRobotsTxtAndSitemaps(website_url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
   const allSitemapUrls = [...new Set<string>([website_url, ...sitemapLinks.map((u) => u.trim())])];
 
-  let selectedKeyPages: string[];
+  let selectedKeyPages: string[] = [];
+
   if (allSitemapUrls.length > 10) {
     const homepage = website_url;
-    const importantKeywords = ["about", "services", "service", "contact", "pricing", "plans", "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"];
+    const importantKeywords = [
+      "about", "services", "service", "contact", "pricing", "plans", "blog", "insights",
+      "team", "company", "features", "why", "how-it-works", "careers"
+    ];
 
     const keywordMatched = allSitemapUrls.filter((link) => {
       try {
@@ -339,87 +658,50 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
       }
     });
 
-    const merged = [homepage, ...keywordMatched, ...shallowPages].filter((v, i, self) => self.indexOf(v) === i).slice(0, 10);
-
-    selectedKeyPages = merged;
+    selectedKeyPages = [homepage, ...keywordMatched, ...shallowPages]
+      .filter((v, i, self) => self.indexOf(v) === i)
+      .slice(0, 10);
   } else {
     selectedKeyPages = allSitemapUrls;
   }
 
-  // let affectedPagesCount = 0;
-  // const keyPages = await Promise.all(
-  //   selectedKeyPages.map(async (pageUrl) => {
-  //     try {
-  //       const res = await axios.get(pageUrl);
-  //       if (res.status >= 200 && res.status < 400) {
-  //         const $$ = cheerio.load(res.data);
-  //         const titles = $$("title")
-  //           .map((_, el) => $$(el).text().trim())
-  //           .get()
-  //           .filter(Boolean);
-  //         const title = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
-  //         const meta_description = $$('meta[name="description"]').attr("content") || "not found";
-  //         const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
-  //         const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
-  //         const h1 = $$("h1").first().text().trim() || "not found";
-
-  //         const missingAny = !(title && meta_description && og_title && meta_keywords);
-  //         if (missingAny) affectedPagesCount++;
-
-  //         return { url: pageUrl, title, meta_description, og_title, meta_keywords };
-  //       }
-  //     } catch {
-  //       return null;
-  //     }
-  //   })
-  // );
-
-
   let affectedPagesCount = 0;
-const keyPages = await Promise.all(
-  selectedKeyPages.map(async (pageUrl) => {
-    try {
-      const res = await axios.get(pageUrl);
-      if (res.status >= 200 && res.status < 400) {
-        const $$ = cheerio.load(res.data);
-        const titles = $$("title")
-          .map((_, el) => $$(el).text().trim())
-          .get()
-          .filter(Boolean);
-
-        const title =
-          titles.length > 1
+  const keyPages = await Promise.all(
+    selectedKeyPages.map(async (pageUrl) => {
+      try {
+        const res = await axios.get(pageUrl);
+        if (res.status >= 200 && res.status < 400) {
+          const $$ = cheerio.load(res.data);
+          const titles = $$("title")
+            .map((_, el) => $$(el).text().trim())
+            .get()
+            .filter(Boolean);
+          const title = titles.length > 1
             ? `${titles.join(" || ")} - needs attention - multiple title tags found`
             : titles[0] || "not found";
 
-        const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
-        const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
-        const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
+          const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
+          const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
+          const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
 
-        const isMultipleTitle = title.includes("needs attention");
-        const isMissing = [title, meta_description, og_title, meta_keywords].some(
-          (v) => !v || v.trim().toLowerCase() === "not found"
-        ) || isMultipleTitle;
+          const isMultipleTitle = title.includes("needs attention");
+          const isMissing = [title, meta_description, og_title, meta_keywords].some(
+            (v) => !v || v.trim().toLowerCase() === "not found"
+          ) || isMultipleTitle;
 
-        if (isMissing) {
-          affectedPagesCount++;
-          console.log("Missing metadata on:", pageUrl, {
-            title,
-            meta_description,
-            og_title,
-            meta_keywords,
-          });
+          if (isMissing) {
+            affectedPagesCount++;
+            console.log("Missing metadata on:", pageUrl);
+          }
+
+          return { url: pageUrl, title, meta_description, og_title, meta_keywords };
         }
-
-        return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+      } catch (err: any) {
+        console.warn("Error fetching key page:", pageUrl, err.message);
+        return null;
       }
-    } catch (err : any) {
-      console.warn("Error fetching key page:", pageUrl, err.message);
-      return null;
-    }
-  })
-);
-
+    })
+  );
 
   const filteredPages = keyPages
     .filter((p): p is NonNullable<typeof p> => !!p)
@@ -435,7 +717,9 @@ const keyPages = await Promise.all(
   const CTR_Loss_Percent = {
     total_key_pages: totalKeyPages,
     total_affected_pages: affectedPagesCount,
-    CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+    CTR_Loss_Percent: totalKeyPages > 0
+      ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2))
+      : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
 
@@ -449,7 +733,10 @@ const keyPages = await Promise.all(
     }
 
     if (!finalLogoUrl) {
-      const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
+      const logoSelectors = [
+        'link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]',
+        'img[alt*="logo"]', 'img[src*="logo"]'
+      ];
 
       for (const selector of logoSelectors) {
         const el = $(selector).first();
@@ -465,10 +752,11 @@ const keyPages = await Promise.all(
         }
       }
     }
+
     const record = await prisma.website_scraped_data.create({
       data: {
-        website_id: website_id,
-        website_url: website_url,
+        website_id,
+        website_url,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
         meta_description: meta.meta_description,
@@ -482,12 +770,12 @@ const keyPages = await Promise.all(
         linkedin_handle: linkedin,
         youtube_handle: youtube,
         tiktok_handle: tiktok,
-        isCrawlable: isCrawlable,
-        headingAnalysis: headingAnalysis,
+        isCrawlable,
+        headingAnalysis,
         ctr_loss_percent: CTR_Loss_Percent,
         sitemap_pages: filteredPages,
         schema_analysis: JSON.stringify(schemaAnalysisData),
-        homepage_alt_text_coverage: homepage_alt_text_coverage,
+        homepage_alt_text_coverage,
         other_links: otherLinks.length > 0 ? otherLinks : "not found",
         raw_html: html,
         status_code: statusCode,
@@ -497,15 +785,27 @@ const keyPages = await Promise.all(
       },
     });
 
-    return {
+    const result = {
       success: true,
       website_id: record.website_id,
       logo_url: record.logo_url ?? undefined,
+      status_code: statusCode,
+      status_message: message,
     };
+    console.log("Returning result:", result); // Debug log
+    return result;
   } catch (error: any) {
-    return {
+    const result = {
       success: false,
       error: error.message,
+      status_code: statusCode,
+      status_message: message,
     };
+    console.log("Error result:", result); // Debug log
+    return result;
   }
 }
+
+
+
+
