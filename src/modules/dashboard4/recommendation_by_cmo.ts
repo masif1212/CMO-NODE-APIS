@@ -253,8 +253,9 @@ Your task is to generate a **structured JSON report** based on the given input d
 ---
 
 🧠 **Output Format**
+The following JSON structure is strictly required.
 
-Return a **valid JSON object** with the following top-level keys in this exact order:
+Return a **valid JSON object** with the following keys in this exact order:
 \`\`\`json
 {
   "brand": {
@@ -283,7 +284,8 @@ Return a **valid JSON object** with the following top-level keys in this exact o
   "website_revenue_loss": "Is your website revenue being impacted by slow loading times? Are large Total Blocking Time (TBT) or poor Largest Contentful Paint (LCP) causing users to drop off before converting? Are your product and checkout pages optimized for speed and interaction?",
   
   "seo_revenue_loss": "Is the seo revenue loss optimize ?Are you losing organic traffic due to missing keyword opportunities or underperforming landing pages? Are your high-intent keywords ranking well? Are technical SEO issues like crawl delays or poor Core Web Vitals limiting your visibility?"
-}
+  "what_to_prioritize_first": "what to prioritize first and why "
+  }
 
   
 
@@ -294,7 +296,7 @@ Return a **valid JSON object** with the following top-level keys in this exact o
    Does your website and social reflect your actual value prop?
    Brand voice alignment: Are you sounding premium, helpful, or confused?
 "
-}
+ }
  
    
   "retention_strategy": {
@@ -304,27 +306,30 @@ Return a **valid JSON object** with the following top-level keys in this exact o
     "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
   },
 
-      "market_suggestions": {
+      "market_suggestions":
+      {
     "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
     "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
-  },
+      },
+
    "channel_budget_suggestions": 
     {
       "channel": "Paid Search",
-      "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS"
-    },
-    {
+      "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS",
       "channel": "SEO",
       "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords"
+    
     },
     
-  ]
+      
+  
 }
 \`\`\`json
 ---
 
  **Special Instructions for Bottom-of-Funnel Fixes**
-- The 'priority_fixes_bottom_funnel' section must only focus on issues that **directly cause revenue loss or leakage**
+- The 'priority_fixes_bottom_funnel' section should have 3 tags website_revenue_loss, seo_revenue_loss and what_to_prioritize_first**
+       -website_revenue_loss: it is 
 - These must come from either:
   - **SEO drop-offs** (e.g., keyword cannibalization, poor SERP CTR, missing schema, etc.)
   - **Website performance issues** (e.g., broken forms, slow mobile load, friction in lead gen UX)
