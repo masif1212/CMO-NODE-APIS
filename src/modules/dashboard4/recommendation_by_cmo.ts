@@ -282,7 +282,7 @@ Return a **valid JSON object** with the following top-level keys in this exact o
   "priority_fixes_bottom_funnel": 
     {
       "use the website revenue loss and seo revenue loss check which one needs to be prioritize first .
-      what can we do do enhance these matrix "
+      what can we do do enhance these matrix based on how these are calculated "
     },
   
 
@@ -294,7 +294,20 @@ Return a **valid JSON object** with the following top-level keys in this exact o
    Brand voice alignment: Are you sounding premium, helpful, or confused?
 "
 }
-  "channel_budget_suggestions": 
+ 
+   
+  "retention_strategy": {
+    
+    "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
+    "industry_benchmark": "Provide benchmark values for the industry (e.g., SaaS = 40% returning users).",
+    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
+  },
+
+      "market_suggestions": {
+    "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
+    "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
+  },
+   "channel_budget_suggestions": 
     {
       "channel": "Paid Search",
       "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS"
@@ -303,20 +316,6 @@ Return a **valid JSON object** with the following top-level keys in this exact o
       "channel": "SEO",
       "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords"
     },
-  
-  
-
-    "market_suggestions": {
-    "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
-    "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
-  },
- 
-  "retention_strategy": {
-    
-    "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
-    "industry_benchmark": "Provide benchmark values for the industry (e.g., SaaS = 40% returning users).",
-    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
-  },
     
   ]
 }
@@ -344,6 +343,8 @@ Return a **valid JSON object** with the following top-level keys in this exact o
 
 ---
 Your output is a strategic intelligence memo. Structure it strictly as valid JSON. Prioritize clarity, business impact, and next-step relevance.
+
+NOTE: Never mention a third api like pagespeed , semrush etc
 `;
 
 

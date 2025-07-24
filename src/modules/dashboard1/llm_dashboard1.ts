@@ -175,7 +175,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       strengths_and_weaknness: llmContent,
       recommendations: funnelRecommendations,
     };
-    console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
+    // console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
 
     console.log("Saving LLM response to database...");
     await prisma.analysis_status.upsert({
@@ -191,7 +191,6 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     return ({ error: "Internal Server Error" });
   }
 };
-
 
 
 const prompt_web_and_seo = `
@@ -223,22 +222,25 @@ Return JSON with the following top-level structure:
 {
   "whats_working": {
     "website audit": [...],
-    "SEO audit": {
-      "Traffic Analysis": [...],
-      "OnPage Optimization": [...],
-      "Technical SEO": [...],
-      "GEO": [...]
-    }
+
+    "Traffic Analysis":{...},
+  
+    "OnPage Optimization": {....},
+
+    "Technical SEO": {....},
+
+    "GEO": {......}
   },
   "what_needs_fixing": {
     "website audit": [...],
-    "SEO audit": {
-      "Traffic Analysis": [...],
-      "OnPage Optimization": [...],
-      "Technical SEO": [...],
-      "GEO": [...]
-    }
-  }
+
+    "Traffic Analysis":{...},
+  
+    "OnPage Optimization": {....},
+
+    "Technical SEO": {....},
+
+    "GEO": {......}
 }
 \`\`\`
 
@@ -361,11 +363,7 @@ Each recommendation must follow this format:
         "Users aren't exploring beyond the first page — this points to a lack of curiosity or direction. Consider embedding contextual internal links, adding section previews, or guiding users with clear next-step paths.",
         "Mobile engagement is lower than desktop — likely due to speed or layout issues , Audit mobile usability and compress assets for better mobile retention."
       ],
-      "Retention & Re-engagement": [
-        "New vs returning visitors ratio is 90:10 — that’s low retention , Offer value-based lead magnets or email opt-ins to nurture return visits.",
-        "No re-engagement nudges detected — you're missing a chance to recover exits , Try adding exit-intent popups with offers or guides.",
-        "No persistent nav or sticky CTA — users may lose their way during long scrolls , Add sticky navigation or bottom-fix CTA buttons to keep actions visible."
-      ]
+     
     },
     "sample_insight": "Only 15% of your users scroll past the first section — consider using visual cues and persistent CTAs to guide users downward."
   }

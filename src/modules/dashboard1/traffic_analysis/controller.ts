@@ -244,7 +244,7 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
 
   try {
     const llm_response = await generateLLMTrafficReport(website_id, user_id);
-    console.log("llm_res",llm_response)
+    // console.log("llm_res",llm_response)
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
