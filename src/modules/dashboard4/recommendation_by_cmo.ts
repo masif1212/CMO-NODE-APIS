@@ -279,11 +279,12 @@ Return a **valid JSON object** with the following top-level keys in this exact o
   
     
 
-  "priority_fixes_bottom_funnel": 
-    {
-      "use the website revenue loss and seo revenue loss check which one needs to be prioritize first .
-      what can we do do enhance these matrix based on how these are calculated "
-    },
+ "priority_fixes_bottom_funnel": {
+  "website_revenue_loss": "Is your website revenue being impacted by slow loading times? Are large Total Blocking Time (TBT) or poor Largest Contentful Paint (LCP) causing users to drop off before converting? Are your product and checkout pages optimized for speed and interaction?",
+  
+  "seo_revenue_loss": "Is the seo revenue loss optimize ?Are you losing organic traffic due to missing keyword opportunities or underperforming landing pages? Are your high-intent keywords ranking well? Are technical SEO issues like crawl delays or poor Core Web Vitals limiting your visibility?"
+}
+
   
 
   "brand_positioning_messaging_review": 
@@ -360,10 +361,13 @@ NOTE: Never mention a third api like pagespeed , semrush etc
           { role: 'user', content: JSON.stringify(allData) },
         ],
       });
-
+      console.log("open ai response fetch")
       let rawText = response.choices[0]?.message?.content || 'No response generated.';
+      console.log("rawText",rawText)
+
        rawText = rawText.replace(/^```json|```$/g, '').trim();
       const responseContent = JSON.parse(rawText);
+      console.log("responseContent",responseContent)
       console.log('Saving response to database...');
 
       await this.prisma.llm_responses.upsert({

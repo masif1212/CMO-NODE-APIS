@@ -223,24 +223,25 @@ Return JSON with the following top-level structure:
   "whats_working": {
     "website audit": [...],
 
-    "Traffic Analysis":{...},
+    
+    "Traffic Analysis":[...],
   
-    "OnPage Optimization": {....},
+    "OnPage Optimization": [...],
 
-    "Technical SEO": {....},
+    "Technical SEO": [...],
 
-    "GEO": {......}
+    "GEO": [...]
   },
   "what_needs_fixing": {
     "website audit": [...],
 
-    "Traffic Analysis":{...},
+    "Traffic Analysis":[...],
   
-    "OnPage Optimization": {....},
+    "OnPage Optimization": [...],
 
-    "Technical SEO": {....},
+    "Technical SEO": [...],
 
-    "GEO": {......}
+    "GEO": [...]
 }
 \`\`\`
 

@@ -192,7 +192,7 @@ export async function createComparisonPrompt(website_id: string) {
  
 
 
- const analysisStatus = await prisma.analysis_status.findFirst({
+const analysisStatus = await prisma.analysis_status.findFirst({
       where: { website_id },
       select: {
         
@@ -202,14 +202,13 @@ export async function createComparisonPrompt(website_id: string) {
     });
 
 
-
-
-return `
+ return `
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
 ### Input Data
 - ${analysisStatus?.competitor_details || 'No competitor comparison data available.'}
-
+Note if website REVENUE LOSS IS IN NEGATVE it means that it is good and all the website keypoints  (lcp/fcp etc) are better than the threshold value.
+If seo revenue loss is zero its good , and if its positive it means it is bad 
 ### Task
 Generate a JSON object with a single key, "recommendations", which is an array of recommendation objects.
 
@@ -219,11 +218,11 @@ Each object must contain:
     (Use metrics like 'Length of meta description', 'Presence of tags', 'Missing keywords', or vague messaging)
   - 'SEO and Website Revenue Loss'  
     (Tie search ranking issues to traffic/conversion loss. Use bounce rate, click-through rate, high-exit pages, etc.)
-  - 'Big Idea/USP Comparison'  
+  - 'Big Idea'  
     (Evaluate clarity and strength of homepage messaging vs competitors. Does the site clearly differentiate itself?)
   - 'Performance Comparison'  
     (Use metrics like Core Web Vitals, Largest Contentful Paint, Accessibility, Mobile Experience, etc.)
-- **how_to_close_the_gap**: A detailed plan (3–5 sentences) that includes:
+- **how_to_close_the_gap**: A detailed plan (5-6 sentences) that includes:
   - Which **competitor** is performing better and **how**
   - A **technical or strategic fix**
   - A **measurable goal or threshold**
@@ -231,7 +230,8 @@ Each object must contain:
   - The **business impact** of closing this gap (e.g., more traffic, better UX, higher conversions)
 
 ### Notes:
-- Multiple recommendations can share the same 'tag', but each must cover a distinct issue.
+- The following 4 tags are **mandatory** but not limited and must be included **exactly once** each in the final JSON array. Each tag should have its own unique, non-overlapping recommendation:
+- If other meaningful gaps are identified based on the input data, you may include additional recommendations with **new, unique tags** that reflect those issues. However, the 4 tags above are **required** and must appear in the output exactly once, each addressing a distinct gap.
 - Mention the **best-performing competitor** when available. If not, fallback to industry best practices (e.g., LCP < 2.5s, meta description ≤ 160 characters, alt text on all homepage images).
 - Do **not** mention external tools or APIs (e.g., Lighthouse, Google Search Console).
 - Be specific: avoid vague language like “improve SEO” or “enhance user experience.”

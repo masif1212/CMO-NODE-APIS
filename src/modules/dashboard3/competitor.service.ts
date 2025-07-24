@@ -948,7 +948,9 @@ let browser;
       max_tokens: 3000,
     });
 
-    const raw = response.choices?.[0]?.message?.content || "{}";
+    const responseraw = response.choices?.[0]?.message?.content || "{}";
+    const raw = responseraw.trim().replace(/^```json\s*|```$/g, "");
+
     let parsed;
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
