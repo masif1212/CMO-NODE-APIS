@@ -26,11 +26,12 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - JWT_SECRET_SECRET # <-- ADDED
-      - CHECKOUT_SECRET_KEY_SECRET # <-- UPDATED for consistency
-      - CHECKOUT_WEBHOOK_SECRET_SECRET # <-- UPDATED for consistency
-      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET # <-- UPDATED for consistency
-      - CKO_PROCESSING_CHANNEL_ID_SECRET # <-- UPDATED for consistency
+      - JWT_SECRET_SECRET
+      - CHECKOUT_SECRET_KEY_SECRET
+      - CHECKOUT_WEBHOOK_SECRET_SECRET
+      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET
+      - CKO_PROCESSING_CHANNEL_ID_SECRET
+      - NODE_SECRET # <-- ADDED
     args:
       - "-c"
       - |
@@ -54,6 +55,7 @@ steps:
           --set-secrets=CHECKOUT_WEBHOOK_SECRET=checkout-webhook-secret:latest \
           --set-secrets=CHECKOUT_WEBHOOK_AUTH_KEY=checkout-webhook-auth-key:latest \
           --set-secrets=CKO_PROCESSING_CHANNEL_ID=cko-processing-channel-id:latest \
+          --set-secrets=NODE=node-secret:latest \
           --max-retries=3 \
           --task-timeout=10m
 
@@ -84,11 +86,12 @@ steps:
       - YOUTUBE_API_KEY_SECRET
       - OPENAI_API_KEY_SECRET
       - NEXT_PUBLIC_BASE_URL_SECRET
-      - JWT_SECRET_SECRET # <-- ADDED
-      - CHECKOUT_SECRET_KEY_SECRET # <-- UPDATED for consistency
-      - CHECKOUT_WEBHOOK_SECRET_SECRET # <-- UPDATED for consistency
-      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET # <-- UPDATED for consistency
-      - CKO_PROCESSING_CHANNEL_ID_SECRET # <-- UPDATED for consistency
+      - JWT_SECRET_SECRET
+      - CHECKOUT_SECRET_KEY_SECRET
+      - CHECKOUT_WEBHOOK_SECRET_SECRET
+      - CHECKOUT_WEBHOOK_AUTH_KEY_SECRET
+      - CKO_PROCESSING_CHANNEL_ID_SECRET
+      - NODE_SECRET # <-- ADDED
     args:
       - "-c"
       - |
@@ -113,6 +116,7 @@ steps:
           --set-secrets=CHECKOUT_WEBHOOK_SECRET=checkout-webhook-secret:latest \
           --set-secrets=CHECKOUT_WEBHOOK_AUTH_KEY=checkout-webhook-auth-key:latest \
           --set-secrets=CKO_PROCESSING_CHANNEL_ID=cko-processing-channel-id:latest \
+          --set-secrets=NODE=node-secret:latest \
           --no-allow-unauthenticated \
           --port=3001
 
@@ -138,10 +142,8 @@ availableSecrets:
       env: "OPENAI_API_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/next-public-base-url/versions/latest
       env: "NEXT_PUBLIC_BASE_URL_SECRET"
-    # --- ADDED JWT SECRET ---
     - versionName: projects/$PROJECT_ID/secrets/jwt-secret/versions/latest
       env: "JWT_SECRET_SECRET"
-    # --- UPDATED CHECKOUT SECRETS FOR CONSISTENCY ---
     - versionName: projects/$PROJECT_ID/secrets/checkout-secret-key/versions/latest
       env: "CHECKOUT_SECRET_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/checkout-webhook-secret/versions/latest
@@ -150,6 +152,9 @@ availableSecrets:
       env: "CHECKOUT_WEBHOOK_AUTH_KEY_SECRET"
     - versionName: projects/$PROJECT_ID/secrets/cko-processing-channel-id/versions/latest
       env: "CKO_PROCESSING_CHANNEL_ID_SECRET"
+    # --- ADDED NODE SECRET ---
+    - versionName: projects/$PROJECT_ID/secrets/node-secret/versions/latest
+      env: "NODE_SECRET"
 
 options:
   logging: CLOUD_LOGGING_ONLY
