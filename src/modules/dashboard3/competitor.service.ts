@@ -8,12 +8,10 @@ import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
 import { performance } from "perf_hooks";
-// import pLimit from 'p-limit';
 import puppeteer from "puppeteer";
-const dnsCache = new Map<string, string[]>();
 
-import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo, CTRLossPercent } from "./seo_audit_interface";
-import { isValidCompetitorUrl, processSeoAudits, validateCompetitorUrlsInParallel } from "./competitors_validation";
+import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
+import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
 import { UserRequirement, ProcessedResult, LlmCompetitor } from "./brandprofile_interface";
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -149,21 +147,52 @@ export class CompetitorService {
     let orderIndex = 0;
 
     // THIS IS THE CORRECTED CODE
-    const launchOptions = {
-      executablePath: "/usr/bin/google-chrome-stable",
-      headless: "new" as any,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    };
+    // const launchOptions = {
+    //   executablePath: "/usr/bin/google-chrome-stable",
+    //   headless: "new" as any,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // };
 
-    console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
+    // console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
 
-    const browser = await puppeteer.launch(launchOptions);
+    // // const browser = await puppeteer.launch(launchOptions);
 
-    // Use the correct launch options for Puppeteer local
-    // const browser = await puppeteer.launch({ headless: true });
-    // console.log(`[brandprofile] Puppeteer browser launched`);
+    // // Use the correct launch options for Puppeteer local
+    // // const browser = await puppeteer.launch({ headless: true });
+    // // console.log(`[brandprofile] Puppeteer browser launched`);
 
-    // Process user-provided competitors
+    // // Process user-provided competitors
+
+    const mode = process.env.MODE;
+
+    console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
+
+    let browser;
+
+    if (mode === "production") {
+      const launchOptions = {
+        executablePath: "/usr/bin/google-chrome-stable",
+        headless: false, // Running full browser in cloud
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      };
+
+      console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
+      browser = await puppeteer.launch(launchOptions);
+    } else if (mode === "development") {
+      const localLaunchOptions = {
+        headless: "new" as any,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      };
+
+      console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
+      browser = await puppeteer.launch(localLaunchOptions);
+    } else {
+      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
+      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
+    }
+
+    console.log("[brandprofile] Puppeteer browser launched successfully.");
+
     for (const originalUrl of userRequirement.competitor_urls) {
       if (competitorResults.length >= MAX_COMPETITORS) break;
 
@@ -910,7 +939,9 @@ export class CompetitorService {
       max_tokens: 3000,
     });
 
-    const raw = response.choices?.[0]?.message?.content || "{}";
+    const responseraw = response.choices?.[0]?.message?.content || "{}";
+    const raw = responseraw.trim().replace(/^```json\s*|```$/g, "");
+
     let parsed;
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;

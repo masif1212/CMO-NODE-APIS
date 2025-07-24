@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
@@ -10,15 +9,6 @@ import fetch from "node-fetch";
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-type ValidationResult = {
-  isValid: boolean;
-  preferredUrl?: string;
-  reason?: string;
-};
-// import pLimit from "p-limit";
-
-const prisma = new PrismaClient();
 
 // Helper function to replace the p-limit package
 function createLimiter(concurrency: number) {
@@ -271,6 +261,34 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       return { isValid: false, reason };
     }
 
+    // // Example from isValidCompetitorUrl
+    // const launchOptions = {
+    //   executablePath: "/usr/bin/google-chrome-stable",
+    //   headless: "new" as any,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // };
+
+    // if (!browser) {
+    //   console.log("Launching new browser instance with options:", JSON.stringify(launchOptions));
+    //     // browser = await puppeteer.launch(launchOptions);
+
+    //   const mode = process.env.MODE;
+
+    //   if (mode === 'cloud') {
+    //     const launchOptions = {
+    //       headless: false,
+    //       args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    //     };
+    //     browser = await puppeteer.launch(launchOptions);
+    //   } else if (mode === 'local') {
+    //     browser = await puppeteer.launch({ headless: true });
+    //   } else {
+    //     throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
+    //   }
+
+    //         browserLaunchedHere = true;
+    //       }
+
     // Example from isValidCompetitorUrl
     const launchOptions = {
       executablePath: "/usr/bin/google-chrome-stable",
@@ -279,9 +297,28 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     };
 
     if (!browser) {
-      console.log("Launching new browser instance with options:", JSON.stringify(launchOptions));
-      browser = await puppeteer.launch(launchOptions);
+      const mode = process.env.MODE;
+
+      console.log(`[Browser Init] MODE is set to: ${mode}`);
+
+      if (mode === "production") {
+        const launchOptions = {
+          headless: false,
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        };
+        console.log("[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:", JSON.stringify(launchOptions));
+        browser = await puppeteer.launch(launchOptions);
+      } else if (mode === "development") {
+        const localOptions = { headless: true };
+        console.log("[Browser Init] Launching headless browser for development environment with options:", JSON.stringify(localOptions));
+        browser = await puppeteer.launch(localOptions);
+      } else {
+        console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'production' or 'development'.`);
+        throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
+      }
+
       browserLaunchedHere = true;
+      console.log("[Browser Init] Browser instance successfully launched.");
     }
 
     const firstCheck = await checkLandingHomepage(url, browser);
@@ -321,8 +358,6 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     }
   }
 }
-
-const MAX_CONCURRENT_VALIDATIONS = 2;
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
   // const pLimit = require("p-limit");

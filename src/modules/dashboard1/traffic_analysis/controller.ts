@@ -12,6 +12,7 @@ import * as cheerio from "cheerio";
 const prisma = new PrismaClient();
 
 export const startGoogleAuth = (req: Request, res: Response) => {
+  console.log("Starting Google Auth");
   const scopes = [
     "openid",
     "https://www.googleapis.com/auth/analytics.readonly",
@@ -22,7 +23,7 @@ export const startGoogleAuth = (req: Request, res: Response) => {
     "profile",
     "email",
   ];
-
+  console.log("login"); // Log the redirect URI for debugging
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -33,9 +34,14 @@ export const startGoogleAuth = (req: Request, res: Response) => {
 };
 
 export const handleGoogleCallback = async (req: Request, res: Response) => {
+  console.log("Handling Google Callback");
+  if (!req.query.code) {
+    console.error("No authorization code provided");
+    return res.status(400).send("Authorization code not provided");
+  }
   const code = req.query.code as string;
-  // console.log("Received Authorization Code:", code);
-  // console.log("Configured Redirect URI:", oAuth2Client.redirectUri); // Cannot access private property
+  console.log("Received Authorization Code:", code);
+  console.log("Configured Redirect URI:", oAuth2Client); // Cannot access private property
   try {
     const { tokens } = await oAuth2Client.getToken(code);
     // console.log("Tokens Received:", tokens.access_token, tokens.refresh_token);
@@ -49,7 +55,8 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
       refreshToken: tokens.refresh_token,
       profile: decodedToken,
     };
-    // console.log("Session Updated:", req.session.user);
+    console.log("User Session Updated:", req.session.user);
+    console.log("Session Updated:", req.session.user);
     res.send(`
       <script>
         window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', data: ${JSON.stringify({ userId, profile: decodedToken })} }, '*');
@@ -79,8 +86,10 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
 
 export const getCurrentUser = async (req: Request, res: Response) => {
   if (req.session?.user) {
+    console.log("Current User Session:", req.session.user);
     return res.status(200).json(req.session.user);
   }
+  console.warn("No user session found");
   return res.status(401).json({ error: "Not authenticated" });
 };
 
@@ -234,32 +243,14 @@ export const dashborad1_Recommendation = async (req: Request, res: Response) => 
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_res = await generateLLMTrafficReport(website_id, user_id);
-
-    if (!llm_res) {
+    const llm_response = await generateLLMTrafficReport(website_id, user_id);
+    // console.log("llm_res",llm_response)
+    if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      update: {
-        dashboard1: "true",
-        updated_at: new Date(),
-      },
-      create: {
-        user_id,
-        website_id,
-        dashboard1: "true",
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+   
 
-    return res.status(200).json(llm_res);
+    return res.status(200).json(llm_response);
   } catch (error: any) {
     console.error("Analytics save error:", error);
     return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });

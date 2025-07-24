@@ -28,182 +28,12 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-
-
-
-
-
-
-// export async function getPageSpeedData(user_id: string, website_id: string) {
-//   const url = await getWebsiteUrlById(user_id, website_id);
-
-//   const params = new URLSearchParams({
-//     url,
-//     key: API_KEY,
-//     strategy: "desktop",
-//     cacheBust: Date.now().toString(),
-//   });
-
-//   ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) =>
-//     params.append("category", c)
-//   );
-
-//   try {
-//     const response = await axios.get(`${API_URL}?${params}`);
-//     const data = response.data;
-//     const lighthouse = data?.lighthouseResult;
-
-//     if (!lighthouse?.categories || !lighthouse.audits) {
-//       throw new Error("Missing Lighthouse categories or audits in response");
-//     }
-
-//     const getScore = (cat: string) =>
-//       lighthouse.categories[cat]?.score != null
-//         ? Math.round(lighthouse.categories[cat].score * 100)
-//         : null;
-
-//     const getAudit = (id: string) => {
-//       const audit = lighthouse.audits[id];
-//       return audit
-//         ? {
-//             id,
-//             title: audit.title ?? null,
-//             description: audit.description ?? null,
-//             display_value: audit.displayValue ?? null,
-//             score: audit.score ?? null,
-//             details: audit.details ?? null,
-//             scoreDisplayMode: audit.scoreDisplayMode ?? null,
-//           }
-//         : {
-//             id,
-//             title: null,
-//             description: null,
-//             display_value: null,
-//             score: null,
-//             details: null,
-//             scoreDisplayMode: null,
-//           };
-//     };
-
-//     const allAuditIds = Object.keys(lighthouse.audits);
-//     const detailedAuditResults = allAuditIds.map(getAudit);
-
-      
-
-
-//   const accessibilityAuditIds =
-//   lighthouse.categories["accessibility"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
-
-// const accessibilityAudits = detailedAuditResults.filter((audit) =>
-//   accessibilityAuditIds.includes(audit.id)
-// );
-
-// const user_access_readiness = {
-//   critical: [] as any[],
-//   enhancements: [] as any[],
-//   passed: [] as any[],
-//   notApplicable: [] as any[],
-// };
-
-// for (const audit of accessibilityAudits) {
-//   if (audit.scoreDisplayMode === "notApplicable") {
-//     user_access_readiness.notApplicable.push(audit);
-//   } else if (audit.score === 1) {
-//     user_access_readiness.passed.push(audit);
-//   } else if (audit.score === 0) {
-//     user_access_readiness.critical.push(audit);
-//   } else {
-//     user_access_readiness.enhancements.push(audit);
-//   }
-// }
-
-    
-
-//     // SEO audits
-//     const seoAuditIds = lighthouse.categories["seo"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
-//     const seoAudits = seoAuditIds.map(getAudit);
-
-  
-//     const TRUST_AND_SAFETY_IDS = [
-//       "is-on-https",
-//       "uses-http2",
-//       "x-content-type-options",
-//       "x-frame-options",
-//       "xss-protection",
-//       "bypass",
-//     ];
-
-//     const bestPracticeAuditIds =
-//       lighthouse.categories?.["best-practices"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
-
-//     const bestPracticeAudits = detailedAuditResults.filter((audit) =>
-//       bestPracticeAuditIds.includes(audit.id)
-//     );
-
-//     const bestPracticeGroups = {
-//       trustAndSafety: [] as any[],
-//       general: [] as any[],
-//       passed: [] as any[],
-//       notApplicable: [] as any[],
-//     };
-
-//     for (const audit of bestPracticeAudits) {
-//       if (TRUST_AND_SAFETY_IDS.includes(audit.id)) {
-//         bestPracticeGroups.trustAndSafety.push(audit);
-//       } else if (audit.id === "js-libraries") {
-//         bestPracticeGroups.general.push(audit);
-//       } else if (audit.scoreDisplayMode === "notApplicable") {
-//         bestPracticeGroups.notApplicable.push(audit);
-//       } else if (audit.score === 1) {
-//         bestPracticeGroups.passed.push(audit);
-//       } else if (audit.score === 0) {
-//         bestPracticeGroups.general.push(audit);
-//       }
-//     }
-
-//     // Revenue loss estimation
-//     const LCP = lighthouse?.audits["largest-contentful-paint"]?.numericValue;
-//     const TBT = lighthouse?.audits["total-blocking-time"]?.numericValue;
-//     const CLS = lighthouse?.audits["cumulative-layout-shift"]?.numericValue;
-
-//     const lcpSeconds = LCP / 1000;
-//     const rawRevenueLoss =
-//       (lcpSeconds - 2.5) * 7 + ((TBT - 200) / 100) * 3 + (CLS * 10);
-//     const revenueLossPercent = Number(rawRevenueLoss.toFixed(2));
-//     const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
-
-//     console.log("Revenue Loss Formula:", fullExpression);
-
-//     return {
-//       categories: {
-//         performance: getScore("performance"),
-//         seo: getScore("seo"),
-//         accessibility: getScore("accessibility"),
-//         best_practices: getScore("best-practices"),
-//         pwa: getScore("pwa"),
-//       },
-//       audits: {
-//         speed_index: getAudit("speed-index"),
-//         first_contentful_paint: getAudit("first-contentful-paint"),
-//         total_blocking_time: getAudit("total-blocking-time"),
-//         interactive: getAudit("interactive"),
-//         largest_contentful_paint: getAudit("largest-contentful-paint"),
-//         cumulative_layout_shift: getAudit("cumulative-layout-shift"),
-//       },
-//       audit_details: {
-//         allAudits: detailedAuditResults,
-//         optimization_opportunities:bestPracticeGroups,
-//         user_access_readiness,
-//         seoAudits,
-//         // bestPracticeGroups,
-//       },
-//       revenueLossPercent,
-//     };
-//   } catch (err: any) {
-//     console.error(`PageSpeed fetch failed for ${url}:`, err.message);
-//     return null;
-//   }
-// }
+const mobileFriendlyAudits = [
+  "viewport",
+  "font-size",
+  "tap-targets",
+  "mobile-friendly",
+];
 
 
 
@@ -268,6 +98,9 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
       accessibilityAuditIds.includes(audit.id)
     );
 
+    const mobileFriendliness = mobileFriendlyAudits.map(getAudit);
+
+
     // --- Friendly accessibility mappings and types ---
     type AccessibilityGroupKey =
       | "critical"
@@ -281,78 +114,10 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
       | "passed"
       | "notApplicable";
 
-  //   const customAccessibilityContent: Record<
-  //     string,
-  //     { title: string; description: string }
-  //   > = {
-  //     "color-contrast": {
-  //       title: "Ensure sufficient color contrast",
-  //       description:
-  //         "Text should have enough contrast against its background to be easily readable by everyone.",
-  //     },
-  //     "image-alt": {
-  //       title: "Provide meaningful alt text for images",
-  //       description:
-  //         "Images should have descriptive alt text to support screen readers and accessibility tools.",
-  //     },
-  //     "link-name": {
-  //       title: "Use descriptive text for links",
-  //       description:
-  //         "All links should clearly describe their destination or purpose.",
-  //     },
-  //     "label": {
-  //       title: "Label all form inputs properly",
-  //       description:
-  //         "Ensure each form input has an associated and descriptive label.",
-  //     },
-  //     "document-title": {
-  //       title: "Add a descriptive page title",
-  //       description:
-  //         "A page title helps users understand the purpose of the page and improves screen reader navigation.",
-  //     },
-  //     "meta-description": {
-  //       title: "Include a relevant meta description",
-  //       description:
-  //         "Meta descriptions summarize the page for search engines and users. Add one to improve SEO and clarity.",
-  //     },
-  //     "aria-valid-attr": {
-  //       title: "Fix invalid ARIA attributes",
-  //       description:
-  //         "Ensure all ARIA attributes used are valid to maintain proper accessibility semantics.",
-  //     },
-
-  //       "image-redundant-alt": {
-  //   title: "Alt text is not redundant",
-  //   description:
-  //     "Avoid repeating nearby text in image alt attributes. Redundant descriptions can be confusing for screen reader users.",
-  // },
-  // "html-has-lang": {
-  //   title: "Page has a language attribute set",
-  //   description:
-  //     "Setting the page language ensures screen readers pronounce content correctly and improves accessibility for multilingual users.",
-  // },
-  // "aria-roles": {
-  //   title: "All ARIA roles are valid",
-  //   description:
-  //     "ARIA roles must use correct values so assistive technologies can interpret and interact with elements as intended.",
-  // },
-  // "aria-valid-attr-value": {
-  //   title: "All ARIA attributes use valid values",
-  //   description:
-  //     "Make sure ARIA attributes are set to valid values to avoid issues for users relying on assistive technologies.",
-  // },
-
-  //     "viewport": {
-  //       title: "Avoid restricting zoom with the viewport tag",
-  //       description:
-  //         "Avoid disabling zoom on mobile devices to support better accessibility and user control.",
-  //     },
-  //   };
 
 
 
-
-    const customAccessibilityContent: Record<
+const customAccessibilityContent: Record<
   string,
   { title: string; description: string }
 > = {
@@ -852,14 +617,10 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
 
     console.log("Revenue Loss Formula:", fullExpression);
 
+    console.log("performance: getScore(performance)",getScore("performance"),)
+    
     return {
-      categories: {
-        performance: getScore("performance"),
-        seo: getScore("seo"),
-        accessibility: getScore("accessibility"),
-        best_practices: getScore("best-practices"),
-        pwa: getScore("pwa"),
-      },
+      
       audits: {
         speed_index: getAudit("speed-index"),
         first_contentful_paint: getAudit("first-contentful-paint"),
@@ -873,6 +634,23 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
         optimization_opportunities: bestPracticeGroups,
         user_access_readiness,
         seoAudits,
+        categoryScores:
+        {
+        performance: getScore("performance"),
+        seo: getScore("seo"),
+        accessibility: getScore("accessibility"),
+        best_practices: getScore("best-practices"),
+        mobileFriendliness:mobileFriendliness
+        // pwa: getScore("pwa"),
+      },
+      audits: {
+        speed_index: getAudit("speed-index"),
+        first_contentful_paint: getAudit("first-contentful-paint"),
+        total_blocking_time: getAudit("total-blocking-time"),
+        interactive: getAudit("interactive"),
+        largest_contentful_paint: getAudit("largest-contentful-paint"),
+        cumulative_layout_shift: getAudit("cumulative-layout-shift"),
+      },
       },
       revenueLossPercent,
     };
@@ -883,10 +661,8 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
 }
 
 
-
-
-
 export async function savePageSpeedAnalysis(user_id: string, website_id: string, mainPageSpeedData: any) {
+  // console.log("mainPageSpeedData.categories,", mainPageSpeedData.audit_details.categoryScores);
   const audits = mainPageSpeedData.audits || {};
 
   const getAuditValue = (id: string) => {
@@ -899,10 +675,11 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       website_id,
 
       // Score categories (already percentage from getPageSpeedData)
-      performance_score: mainPageSpeedData.categories?.performance ?? null,
-      seo_score: mainPageSpeedData.categories?.seo ?? null,
-      accessibility_score: mainPageSpeedData.categories?.accessibility ?? null,
-      best_practices_score: mainPageSpeedData.categories?.["best-practices"] ?? null,
+      performance_score: mainPageSpeedData.audit_details.categoryScores?.performance ?? null,
+      // pwa_score: mainPageSpeedData.audit_details.categoryScores?.pwa ?? null,
+      seo_score: mainPageSpeedData.audit_details.categoryScores?.seo ?? null,
+      accessibility_score: mainPageSpeedData.audit_details.categoryScores?.accessibility ?? null,
+      best_practices_score: mainPageSpeedData.audit_details.categoryScores?.["best-practices"] ?? null,
 
       // Timing metrics
       first_contentful_paint: getAuditValue("first-contentful-paint"),
@@ -917,9 +694,11 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
       // Audit groups
       audit_details: {
         allAudits: mainPageSpeedData.audit_details.allAudits,
+        categoryScores: mainPageSpeedData.audit_details.categoryScores,
         optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
         user_access_readiness: mainPageSpeedData.audit_details.user_access_readiness,
         seoAudits: mainPageSpeedData.audit_details.seoAudits,
+        audits: mainPageSpeedData.audit_details.audits,
       },
 
       created_at: new Date(),
