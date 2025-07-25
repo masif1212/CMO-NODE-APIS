@@ -171,10 +171,10 @@ export class CompetitorService {
 
     if (mode === "production") {
       const launchOptions = {
-        executablePath: "/usr/bin/google-chrome-stable",
-        headless: false, // Running full browser in cloud
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-      };
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
 
       console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
       browser = await puppeteer.launch(launchOptions);
