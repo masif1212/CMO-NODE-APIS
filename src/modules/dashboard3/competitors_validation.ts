@@ -290,22 +290,19 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     //       }
 
     // Example from isValidCompetitorUrl
-    const launchOptions = {
-      executablePath: "/usr/bin/google-chrome-stable",
-      headless: "new" as any,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    };
+    
 
     if (!browser) {
       const mode = process.env.NODE;
-
+      
       console.log(`[Browser Init] MODE is set to: ${mode}`);
 
       if (mode === "production") {
         const launchOptions = {
-          headless: false,
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        };
+        executablePath: "/usr/bin/google-chrome-stable",
+        headless: "new" as any,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+      };
         console.log("[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:", JSON.stringify(launchOptions));
         browser = await puppeteer.launch(launchOptions);
       } else if (mode === "development") {
