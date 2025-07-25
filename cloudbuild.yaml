@@ -116,7 +116,7 @@ steps:
           --set-secrets=CHECKOUT_WEBHOOK_SECRET=checkout-webhook-secret:latest \
           --set-secrets=CHECKOUT_WEBHOOK_AUTH_KEY=checkout-webhook-auth-key:latest \
           --set-secrets=CKO_PROCESSING_CHANNEL_ID=cko-processing-channel-id:latest \
-          --set-secrets=MODE=node-secret:latest \
+          --set-secrets=NODE=node-secret:latest \
           --no-allow-unauthenticated \
           --port=3001
 

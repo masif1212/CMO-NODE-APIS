@@ -297,7 +297,7 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     };
 
     if (!browser) {
-      const mode = process.env.MODE;
+      const mode = process.env.NODE;
 
       console.log(`[Browser Init] MODE is set to: ${mode}`);
 

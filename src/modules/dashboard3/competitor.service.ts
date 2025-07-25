@@ -163,7 +163,7 @@ export class CompetitorService {
 
     // // Process user-provided competitors
 
-    const mode = process.env.MODE;
+    const mode = process.env.NODE;
 
     console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
 
