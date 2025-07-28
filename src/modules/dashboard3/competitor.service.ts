@@ -116,18 +116,20 @@ async function extractH1(rawHtml: string | null): Promise<string> {
 }
 
 export class CompetitorService {
-  static async brandprofile(user_id: string, website_id: string): Promise<Record<string, any>> {
+  static async brandprofile(user_id: string, website_id: string,report_id:string): Promise<Record<string, any>> {
     const t0 = performance.now();
-    console.log(`[brandprofile] Starting brand profile generation for website_id=${website_id}`);
-
-    if (!user_id || !website_id) throw new Error("user_id and website_id are required");
+    console.log(`[brandprofile] Starting brand profile generation for report id=${report_id}`);
+    if (!user_id || !website_id || !report_id) throw new Error("user_id,report_id and website_id are required");
 
     const website_url = await getWebsiteUrlById(user_id, website_id);
     if (!website_url) throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
     console.log(`[brandprofile] Found main website URL: ${website_url}`);
-
-    const [scrapedMain, userRequirementRaw] = await Promise.all([prisma.website_scraped_data.findUnique({ where: { website_id } }), prisma.user_requirements.findFirst({ where: { website_id } })]);
-
+         const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, // You must have 'report_id' from req.body
+      select: { scraped_data_id: true }
+    });
+    const [scrapedMain, userRequirementRaw] = await Promise.all([prisma.website_scraped_data.findUnique({ where: { scraped_data_id : report?.scraped_data_id?? undefined } }), prisma.user_requirements.findFirst({ where: { website_id } })]);
+    
     if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for website_id=${website_id}`);
     console.log(`[brandprofile] Loaded scraped main website data`);
 
@@ -146,46 +148,23 @@ export class CompetitorService {
     const processedNames = new Set<string>();
     let orderIndex = 0;
 
-    // THIS IS THE CORRECTED CODE
-    // const launchOptions = {
-    //   executablePath: "/usr/bin/google-chrome-stable",
-    //   headless: "new" as any,
-    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    // };
-
-    // console.log("[brandprofile] Launching Puppeteer with correct options for Cloud Run...");
-
-    // // const browser = await puppeteer.launch(launchOptions);
-
-    // // Use the correct launch options for Puppeteer local
-    // // const browser = await puppeteer.launch({ headless: true });
-    // // console.log(`[brandprofile] Puppeteer browser launched`);
-
-    // // Process user-provided competitors 
-
 
     const mode = process.env.MODE;
 
 console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
 
-let browser;
+ let browser;
 
-    if (mode === 'production') {
+    if (mode === "production") {
       const launchOptions = {
-        executablePath: "/usr/bin/google-chrome-stable",
-        headless: false, // Running full browser in cloud
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu"
-        ],
-      };
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
 
       console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
       browser = await puppeteer.launch(launchOptions);
-
-    } else if (mode === 'development') {
+    } else if (mode === "development") {
       const localLaunchOptions = {
         headless: "new" as any,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -193,7 +172,6 @@ let browser;
 
       console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
       browser = await puppeteer.launch(localLaunchOptions);
-
     } else {
       console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
       throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
@@ -235,6 +213,7 @@ let browser;
           data: {
             competitor_id,
             website_id,
+            report_id,
             name,
             competitor_website_url: preferredUrl,
             industry: competitorData?.industry || userRequirement.industry,
@@ -289,6 +268,7 @@ let browser;
             data: {
               competitor_id,
               website_id,
+              report_id,
               name,
               competitor_website_url: preferredUrl,
               industry: comp.industry || userRequirement.industry,
@@ -342,7 +322,7 @@ let browser;
     };
   }
 
-  static async seo_audit(user_id: string, website_id: string): Promise<SeoAuditResponse> {
+  static async seo_audit(user_id: string, website_id: string,report_id:string): Promise<SeoAuditResponse> {
     const response: SeoAuditResponse = {
       mainWebsite: {
         brand_profile: {
@@ -363,10 +343,15 @@ let browser;
     if (!main_website_url) {
       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
     }
-
-    const [main_website_scrapeddata, geollm] = await Promise.all([
+         const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, // You must have 'report_id' from req.body
+      select: { scraped_data_id: true ,
+                geo_llm:true,
+      }
+    });
+    const [main_website_scrapeddata] = await Promise.all([
       prisma.website_scraped_data.findUnique({
-        where: { website_id },
+        where: { scraped_data_id:report?.scraped_data_id??undefined },
         select: {
           meta_description: true,
           page_title: true,
@@ -379,24 +364,21 @@ let browser;
           ctr_loss_percent: true,
         },
       }),
-      prisma.llm_responses.findUnique({
-        where: { website_id },
-        select: { geo_llm: true },
-      }),
+    
     ]);
 
     let AI_Discoverability: any;
-    if (!geollm || geollm.geo_llm === null) {
+    if (!report?.geo_llm  === null) {
       console.log("No geo_llm response found");
-      AI_Discoverability = await fetchBrands(user_id, website_id);
+      AI_Discoverability = await fetchBrands(user_id, website_id,report_id);
       console.log("geo_llm response fetched:", AI_Discoverability);
-      await prisma.analysis_status.upsert({
-        where: { user_id_website_id: { user_id, website_id } },
+      await prisma.report.upsert({
+        where: { report_id:  report_id  },
         update: { geo_llm: AI_Discoverability },
-        create: { user_id, website_id, geo_llm: AI_Discoverability },
+        create: { report_id, website_id, geo_llm: AI_Discoverability },
       });
     } else {
-      AI_Discoverability = geollm.geo_llm;
+      AI_Discoverability = report?.geo_llm;
       console.log("geo_llm found");
     }
 
@@ -450,7 +432,7 @@ let browser;
 
     // Fetch competitors sorted by order_index
     const competitors = await prisma.competitor_details.findMany({
-      where: { website_id },
+      where: { report_id },
       select: { competitor_id: true, name: true, competitor_website_url: true },
       orderBy: { order_index: "asc" },
       take: 7,
@@ -516,6 +498,7 @@ let browser;
           create: {
             competitor_id,
             website_id,
+            report_id,
             ...scraped,
             schema_analysis: scraped.schema_analysis && typeof scraped.schema_analysis === "object" ? JSON.stringify(scraped.schema_analysis) : scraped.schema_analysis,
             website_url: scraped.website_url || competitor_website_url,
@@ -541,7 +524,7 @@ let browser;
     return response;
   }
 
-  static async website_audit(user_id: string, website_id: string) {
+  static async website_audit(user_id: string, website_id: string,report_id:string) {
     if (!website_id || !user_id) {
       throw new Error("website_id and user_id are required");
     }
@@ -551,15 +534,18 @@ let browser;
     if (!website_url) {
       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
     }
-
+const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, // You must have 'report_id' from req.body
+      select: { scraped_data_id: true }
+    });
     const [userRequirements, websiteScraped, mainPageSpeedData, geo_llm] = await Promise.all([
       prisma.user_requirements.findFirst({ where: { website_id } }),
-      prisma.website_scraped_data.findFirst({ where: { website_id } }),
+      
+      prisma.website_scraped_data.findUnique({ where: {scraped_data_id:report?.scraped_data_id?? undefined }}),
       getPageSpeedData(website_url),
 
-      prisma.llm_responses.findFirst({
-        where: { website_id },
-        orderBy: { created_at: "desc" },
+      prisma.report.findUnique({
+        where: { report_id },
         select: {
           geo_llm: true,
         },
@@ -576,7 +562,6 @@ let browser;
 
       mainWebsitePageSpeed = await prisma.brand_website_analysis.create({
         data: {
-          website_id,
           performance_score: mainPageSpeedData.categories?.performance ?? null,
           seo_score: mainPageSpeedData.categories?.seo ?? null,
           accessibility_score: mainPageSpeedData.categories?.accessibility ?? null,
@@ -594,7 +579,7 @@ let browser;
     }
 
     const competitors = await prisma.competitor_details.findMany({
-      where: { website_id },
+      where: { report_id},
       select: {
         competitor_id: true,
         name: true,
@@ -616,7 +601,7 @@ let browser;
     );
 
     const competitors_data = await prisma.competitor_data.findMany({
-      where: { website_id },
+      where: { report_id },
       take: 7,
     });
 
@@ -891,52 +876,38 @@ let browser;
       competitors: [],
     };
 
-    // labeledResults.competitors = competitorResults
     labeledResults.competitors = sortedCompetitorResults;
 
-    await prisma.analysis_status.upsert({
+    await prisma.report.upsert({
       where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
+        report_id
       },
       update: {
-        competitor_details: JSON.stringify(labeledResults),
+        dashborad3_data: JSON.stringify(labeledResults),
       },
       create: {
-        user_id,
+        report_id,
         website_id,
-        competitor_details: JSON.stringify(labeledResults),
+        dashborad3_data: JSON.stringify(labeledResults),
       },
     });
 
     return labeledResults;
   }
 
-  static async getComparisonRecommendations(website_id: string) {
-    if (!website_id) {
+  static async getComparisonRecommendations(website_id:string,report_id: string) {
+    if (!report_id) {
       throw new Error("website_id is required");
     }
 
-    console.log(`Fetching comparison recommendations for website_id: ${website_id}`);
-    const mainWebsite = await prisma.user_websites.findUnique({
-      where: { website_id },
-      include: {
-        website_scraped_data: true,
-        brand_website_analysis: { orderBy: { created_at: "desc" }, take: 1 },
-      },
-    });
-
-    if (!mainWebsite) {
-      throw new Error("Website not found");
-    }
+    console.log(`Fetching comparison recommendations for website_id: ${report_id}`);
+    
 
     const userRequirementRaw = await prisma.user_requirements.findFirst({
       where: { website_id },
     });
 
-    const prompt = await createComparisonPrompt(website_id);
+    const prompt = await createComparisonPrompt(report_id);
     if (!prompt) {
       throw new Error("Failed to generate prompt for LLM");
     }
@@ -954,15 +925,15 @@ let browser;
     let parsed;
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      await prisma.llm_responses.upsert({
-        where: { website_id },
-        update: { recommendation_by_mo_dashboard3: JSON.stringify(response) },
-        create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(response) },
-      });
-      await prisma.analysis_status.upsert({
-        where: { user_id_website_id: { user_id: userRequirementRaw?.user_id ?? "", website_id } },
-        update: { recommendation_by_mo3: JSON.stringify(parsed) },
-        create: { website_id, user_id: userRequirementRaw?.user_id ?? "", recommendation_by_mo3: JSON.stringify(parsed) },
+      // await prisma.llm_responses.upsert({
+      //   where: { website_id },
+      //   update: { recommendation_by_mo_dashboard3: JSON.stringify(response) },
+      //   create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(response) },
+      // });
+      await prisma.report.upsert({
+        where: { report_id },
+        update: { recommendationbymo3: JSON.stringify(parsed) },
+        create: { website_id,report_id, recommendationbymo3: JSON.stringify(parsed) },
       });
       console.log("LLM response saved successfully for website_id:", website_id);
     } catch (err) {

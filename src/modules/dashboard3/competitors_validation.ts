@@ -263,61 +263,37 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       return { isValid: false, reason };
     }
    
-    // // Example from isValidCompetitorUrl
-    // const launchOptions = {
-    //   executablePath: "/usr/bin/google-chrome-stable",
-    //   headless: "new" as any,
-    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    // };
+    
 
-    // if (!browser) {
-    //   console.log("Launching new browser instance with options:", JSON.stringify(launchOptions));
-    //     // browser = await puppeteer.launch(launchOptions);
+    const mode = process.env.MODE;
 
-    //   const mode = process.env.MODE;
+console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
 
 
-    //   if (mode === 'cloud') {
-    //     const launchOptions = {
-    //       headless: false,
-    //       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    //     };
-    //     browser = await puppeteer.launch(launchOptions);
-    //   } else if (mode === 'local') {
-    //     browser = await puppeteer.launch({ headless: true });
-    //   } else {
-    //     throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
-    //   }
 
-    //         browserLaunchedHere = true;
-    //       }
-
-
-    if (!browser) {
-  const mode = process.env.MODE;
-
-  console.log(`[Browser Init] MODE is set to: ${mode}`);
-
-  if (mode === 'production') {
-    const launchOptions = {
-      headless: false,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    if (mode === "production") {
+      const launchOptions = {
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
     };
-    console.log('[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:', JSON.stringify(launchOptions));
-    browser = await puppeteer.launch(launchOptions);
-  } else if (mode === 'development') {
-    const localOptions = { headless: true };
-    console.log('[Browser Init] Launching headless browser for development environment with options:', JSON.stringify(localOptions));
-    browser = await puppeteer.launch(localOptions);
-  } else {
-    console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'production' or 'development'.`);
-    throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
-  }
 
-  browserLaunchedHere = true;
-  console.log('[Browser Init] Browser instance successfully launched.');
-}
+      console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
+      browser = await puppeteer.launch(launchOptions);
+    } else if (mode === "development") {
+      const localLaunchOptions = {
+        headless: "new" as any,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      };
 
+      console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
+      browser = await puppeteer.launch(localLaunchOptions);
+    } else {
+      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
+      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
+    }
+
+    console.log("[brandprofile] Puppeteer browser launched successfully.");
 
     const firstCheck = await checkLandingHomepage(url, browser);
     if (firstCheck.valid) {

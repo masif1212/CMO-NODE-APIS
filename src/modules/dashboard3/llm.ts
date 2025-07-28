@@ -105,16 +105,16 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
     
 
 
-    await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        dashboard3_competi_camparison: JSON.stringify(output),
-      },
-      create: {
-        website_id,
-        dashboard3_competi_camparison: JSON.stringify(output),
-      },
-    });    
+    // await prisma.llm_responses.upsert({
+    //   where: { website_id },
+    //   update: {
+    //     dashboard3_competi_camparison: JSON.stringify(output),
+    //   },
+    //   create: {
+    //     website_id,
+    //     dashboard3_competi_camparison: JSON.stringify(output),
+    //   },
+    // });    
     let fixedOutput = output
       .replace(/```json\n|\n```|```/g, '')
       .replace(/,\s*([\]}])/g, '$1')
@@ -188,15 +188,15 @@ If data is insufficient, return null without wrapping in code blocks or backtick
   }
 }
 
-export async function createComparisonPrompt(website_id: string) {
+export async function createComparisonPrompt(report_id: string,) {
  
 
 
-const analysisStatus = await prisma.analysis_status.findFirst({
-      where: { website_id },
+const competitor_data = await prisma.report.findUnique({
+      where: { report_id },
       select: {
         
-        competitor_details: true,
+        dashborad3_data: true,
       
       },
     });
@@ -206,7 +206,7 @@ const analysisStatus = await prisma.analysis_status.findFirst({
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
 ### Input Data
-- ${analysisStatus?.competitor_details || 'No competitor comparison data available.'}
+- ${competitor_data?.dashborad3_data || 'No competitor comparison data available.'}
 Note if website REVENUE LOSS IS IN NEGATVE it means that it is good and all the website keypoints  (lcp/fcp etc) are better than the threshold value.
 If seo revenue loss is zero its good , and if its positive it means it is bad 
 ### Task

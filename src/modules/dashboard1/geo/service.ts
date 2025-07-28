@@ -1,7 +1,10 @@
 import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import { parse } from 'tldts'; // For root domain extraction
+import { parse } from 'tldts';
+ // For root domain extraction
+import { report } from '@prisma/client';
+ // For root domain extraction
 dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -14,7 +17,9 @@ const getDomainRoot = (url: string): string => {
 
 export const fetchBrands = async (
   user_id: string,
-  website_id: string
+  website_id: string,
+  report: report | null
+ 
 ): Promise<any> => {
   const websiteEntry = await prisma.user_websites.findUnique({
     where: {
@@ -128,11 +133,7 @@ Format:
       parsedBrands = JSON.parse(content);
       if (!Array.isArray(parsedBrands)) throw new Error();
     } catch {
-      await prisma.llm_responses.upsert({
-        where: { website_id },
-        update: { geo_llm: content },
-        create: { website_id, geo_llm: content },
-      });
+      console.log("error ")
 
       return {
         raw: content,
@@ -152,63 +153,93 @@ Format:
 
    
 
-   await prisma.llm_responses.upsert({
-  where: { website_id },
-  update: { geo_llm: websiteFound.toString() }, // converts boolean to "true"/"false"
-  create: { website_id, geo_llm: websiteFound.toString() },
-});
-    const traffic = await prisma.brand_traffic_analysis.findFirst({
-      where: { website_id },
-      orderBy: { created_at: "desc" },
-      select: {
-        top_sources: true,
-      },
-    })
+
+// const [traffic, schema] = await Promise.all([
+//   prisma.brand_traffic_analysis.findUnique({
+//     where: { traffic_analysis_id :report?.traffic_analysis_id ?? undefined},
+//     select: { top_sources: true },
+//   }),
+//   prisma.website_scraped_data.findUnique({
+//     where: { scraped_data_id:report?.scraped_data_id?? undefined },
+//     select: { schema_analysis: true },
+//   }),
+// ]);
+   
+
+      const [traffic, schema] = await Promise.all([
+        report?.traffic_analysis_id
+          ? prisma.brand_traffic_analysis.findUnique({
+              where: { traffic_analysis_id: report.traffic_analysis_id },
+              select: { top_sources: true },
+            })
+          : Promise.resolve(null),
+
+        report?.scraped_data_id
+          ? prisma.website_scraped_data.findUnique({
+              where: { scraped_data_id: report.scraped_data_id },
+              select: { schema_analysis: true },
+            })
+          : Promise.resolve(null),
+      ]);
+
+
+
 
     const sources = traffic?.top_sources as any[]; // assuming it's JSON array
-    // const bingSource = sources?.find(
-    //   (src) => src.name?.toLowerCase().includes("bing.com"||"bing")
-    // );  
+   
 
     const bingSource = sources?.find((src) =>
       ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
     ) ?? { type: "source", name: "bing.com", sessions: 0 };
 
-    const schema = await prisma.website_scraped_data.findUnique(
-  {
-    where : {website_id},
-    select: {
-      schema_analysis: true
-    }
-  }
-) 
-    return {
 
 
-      AI_Discoverability: {
-        found: websiteFound.toString()
-      },
+const reportResult = {
+  AI_Discoverability: {
+    found: websiteFound.toString(),
+  },
 
-      SearchBotcrawlability: {
-          message: schema && schema.schema_analysis
-            ? (typeof schema.schema_analysis === "string"
-                ? JSON.parse(schema.schema_analysis).message
-                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "message" in schema.schema_analysis
-                  ? (schema.schema_analysis as { message?: string }).message
-                  : undefined))
-            : "No schema data found.",
-          valid: schema?.schema_analysis
-            ? (typeof schema.schema_analysis === "string"
-                ? JSON.parse(schema.schema_analysis).schemas?.summary
-                : (typeof schema.schema_analysis === "object" && schema.schema_analysis !== null && "schemas" in schema.schema_analysis
-                    ? (schema.schema_analysis as { schemas?: { summary?: any } }).schemas?.summary
-                    : null))
-            : null
-      },
+  SearchBotcrawlability: {
+    message:
+      schema && schema.schema_analysis
+        ? typeof schema.schema_analysis === "string"
+          ? JSON.parse(schema.schema_analysis).message
+          : typeof schema.schema_analysis === "object" &&
+            "message" in schema.schema_analysis
+          ? (schema.schema_analysis as { message?: string }).message
+          : undefined
+        : "No schema data found.",
 
-      bingSource: bingSource
+    valid:
+      schema?.schema_analysis
+        ? typeof schema.schema_analysis === "string"
+          ? JSON.parse(schema.schema_analysis).schemas?.summary
+          : typeof schema.schema_analysis === "object" &&
+            "schemas" in schema.schema_analysis
+          ? (schema.schema_analysis as { schemas?: { summary?: any } }).schemas
+              ?.summary
+          : null
+        : null,
+  },
 
-    };
+  bingSource: bingSource,
+};
+
+
+  await prisma.report.upsert({
+  where: { report_id:report?.report_id },
+  update: { geo_llm: websiteFound.toString(),traffic_analysis_id :report?.traffic_analysis_id },
+  create: {
+   report_id:report?.report_id,
+    geo_llm: websiteFound.toString(),
+    website_id, // ✅ required foreign key for relation to user_websites
+  },
+});
+
+    return reportResult
+
+
+    ;
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);
   }

@@ -1,50 +1,75 @@
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
+import { UnsupportedOperation } from "puppeteer";
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
 
-export const generateLLMTrafficReport = async (website_id: string, user_id: string) => {
+export const generateLLMTrafficReport = async (website_id: string, user_id: string, report_id:string) => {
   if (!website_id || !user_id) {
     return ({ error: "Missing website_id or user_id" });
   }
   console.log("Report generation started for website_id:", website_id);
-
+  const report = await prisma.report.findUnique({
+        where: { report_id }
+      })
+      console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
   try {
-    const [scraped, analysis, traffic, llm_Response, analysis_status] = await Promise.all([
-      prisma.website_scraped_data.findUnique({ where: { website_id } }),
-      prisma.brand_website_analysis.findFirst({
-        where: { website_id },
-        orderBy: { created_at: "desc" },
-      }),
-      prisma.brand_traffic_analysis.findFirst({
-        where: { website_id },
-        orderBy: { created_at: "desc" },
-      }),
-      prisma.llm_responses.findFirst({
-        where: { website_id },
-        orderBy: { created_at: "desc" },
-        select: { geo_llm: true },
-      }),
-      prisma.analysis_status.findFirst({
-        where: { website_id },
-        orderBy: { created_at: "desc" },
-        select: { dashboard1: true },
-      }),
-    ]);
+    // const [scraped, analysis, traffic] = await Promise.all([
+    //   prisma.website_scraped_data.findUnique({ where: { scraped_data_id : report?.scraped_data_id ?? undefined } }),
+    //   prisma.brand_website_analysis.findUnique({
+    //     where: { website_analysis_id :report?.website_analysis_id ?? undefined },
+    //   }),
+    //   prisma.brand_traffic_analysis.findUnique({
+    //     where: { traffic_analysis_id : report?.traffic_analysis_id?? undefined},
+    //   }),
+      
+     
+    // ]);
+  const [scraped, analysis, traffic] = await Promise.all([
+  prisma.website_scraped_data.findUnique({
+    where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+  
+  }),
+  prisma.brand_website_analysis.findUnique({
+    where: { website_analysis_id: report?.website_analysis_id ?? undefined },
+    select: {
+      audit_details: true,
+      broken_links: true,
+      total_broken_links: true,
+    },
+  }),
+  report?.traffic_analysis_id
+    ? prisma.brand_traffic_analysis.findUnique({
+        where: { traffic_analysis_id: report.traffic_analysis_id },
+      })
+    : null,
+]);
 
     let h1Text = "Not Found";
     if (scraped?.raw_html) {
       const $ = cheerio.load(scraped.raw_html);
       h1Text = $("h1").first().text().trim() || "Not Found";
     }
-
+    let parsedData: any = {};
+try {
+  parsedData = JSON.parse(report?.dashborad1_Freedata || '{}');
+  // console.log("parsedData",parsedData)
+} catch (e) {
+  console.error("Failed to parse dashboard data:", e);
+}
     const allDataforstrength: any = {
       website_audit: {
-        Site_Speedcore_Web_Vitals_and_mobile_Experience: analysis_status?.dashboard1 ?? "N/A",
+        // Site_Speedcore_Web_Vitals_and_mobile_Experience: report?.dashborad1_Freedata?.combinedata?.data_for_llm ?? "N/A",
+        // Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.data_for_llm ?? "N/A",
+        siteSpeedAndMobileExperience: {
+  speedHealth: parsedData?.data_for_llm?.speed_health ?? {},
+  mobileFriendliness: parsedData?.data_for_llm?.categories?.mobileFriendliness ?? [],
+}
+
       },
       traffic: {
         avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
@@ -76,17 +101,17 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       },
       GEO: {
         schema: scraped?.schema_analysis ?? "None",
-        AI_discovilibilty: llm_Response?.geo_llm ?? "None",
+        AI_discovilibilty: report?.geo_llm ?? "None",
         appears_accross_bing: traffic?.top_sources ?? "N/A",
       },
     };
-
+    // console.log("allDataforstrength",allDataforstrength)
     const allDataforrecommendation: any = {
       top_of_funnel: {
-        Site_Speed_and_Accessibility: analysis_status?.dashboard1 ?? "N/A",
+        Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.dashboard_summary?.data_for_llm ?? "N/A",
         Search_Discoverability: {
           schema: scraped?.schema_analysis ?? "None",
-          AI_discovilibilty: llm_Response?.geo_llm ?? "None",
+          AI_discovilibilty: report?.geo_llm ?? "None",
           appears_accross_bing: traffic?.top_sources ?? "N/A",
           title: scraped?.page_title ?? "N/A",
           description: scraped?.meta_description ?? "N/A",
@@ -135,7 +160,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
         { role: "user", content: JSON.stringify(allDataforstrength) },
       ],
     });
-
+    console.log("allDataforrecommendation",allDataforrecommendation)
     // console.log("Raw LLM Response:", llmResponse.choices[0].message.content);
     let llmContent;
     try {
@@ -175,14 +200,41 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       strengths_and_weaknness: llmContent,
       recommendations: funnelRecommendations,
     };
-    // console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
+    console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
 
     console.log("Saving LLM response to database...");
-    await prisma.analysis_status.upsert({
-      where: { user_id_website_id: { user_id, website_id } },
-      update: { recommendation_by_mo1: JSON.stringify(fullLLMResponse) },
-      create: { user_id, website_id, recommendation_by_mo1: JSON.stringify(fullLLMResponse) },
-    });
+    await prisma.report.upsert({
+  where: { report_id },
+  update: {
+    recommendationbymo1: JSON.stringify(fullLLMResponse),
+  },
+  create: {
+    report_id,
+    recommendationbymo1: JSON.stringify(fullLLMResponse),
+    user_websites: {
+      connect: {
+        website_id: website_id, // or whatever FK field links to user_websites
+      },
+    },
+  },
+});
+     
+   const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+let update;
+if (existing) {
+  update = await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: { website_id, recommendationbymo1: true }
+  });
+} else {
+  update = await prisma.analysis_status.create({
+    data: { report_id, website_id, recommendationbymo1: true ,user_id}
+  });
+}
+
     console.log("LLM response saved successfully for website_id:", website_id);
 
     return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
@@ -375,3 +427,6 @@ Each recommendation must follow this format:
 
 NOTE : Never mention a 3rd party like pagespeed or smrush etc 
 `
+
+
+
