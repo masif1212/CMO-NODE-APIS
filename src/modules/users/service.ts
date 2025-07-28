@@ -177,7 +177,23 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
 
     website_id = newWebsite.website_id;
   }
+   const matchingRequirement = await prisma.user_requirements.findFirst({
+    where: {
+      website_id,
+      
+    },
+    select :{
+      target_location:true,
+      USP:true,
+      primary_offering:true,
+      industry:true,
+      competitor_urls:true,
+      target_audience:true
+      
 
+
+      },
+  });
   // Step 3: Always create new report (even if website is reused)
   const newReport = await prisma.report.create({
     data: {
@@ -185,5 +201,5 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
     },
   });
 
-  return { report_id: newReport.report_id, website_id };
+  return { report_id: newReport.report_id, website_id,matchingRequirement };
 }
