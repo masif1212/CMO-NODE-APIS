@@ -54,13 +54,14 @@ model analysisServices {
   type        String?  @unique // e.g., "website_audit", "seo_report"
   name        String?// e.g., "Website Audit"
   price       Decimal
+  report      String?
   description String?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
 
 // --- ADD THIS NEW MODEL ---
-// Stores saved payment methods for users.
+
 model paymentMethods {
   method_id          String     @id @default(uuid())
   user_id            String

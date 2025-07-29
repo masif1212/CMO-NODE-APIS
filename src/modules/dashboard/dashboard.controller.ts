@@ -17,7 +17,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     // 🔹 Fetch audit prices
     const servicePrices = await prisma.analysisServices.findMany();
     const priceMap = Object.fromEntries(
-  servicePrices.map(s => [s.name, s.price.toNumber()])
+  servicePrices.map(s => [s.report, s.price.toNumber()])
 );
 
 

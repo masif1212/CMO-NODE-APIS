@@ -55,7 +55,7 @@
 //   };
 
 //   const existing = await prisma.brand_social_media_analysis.findFirst({
-//     where: { social_media_id, platform_name: "YouTube" },
+//     where: { platform_name: "YouTube" },
 //   });
 
 //   if (existing) {
@@ -77,7 +77,6 @@
 //   } else {
 //     await prisma.brand_social_media_analysis.create({
 //       data: {
-//         website_id,
 //         platform_name: "YouTube",
 //         followers,
 //         comments,
@@ -92,15 +91,29 @@
 //     });
 //   }
 
-//   return {
-//     comments,
-//     engagement_rate: engagementRate,
-//     engagementToFollowerRatio: engagementToFollowerRatio,
-//     postingFrequency: postingFrequency,
-//     graphData,
-//     Data: safeJson,
-//   };
-// }
+
+// //   return {
+// //     comments,
+// //     engagement_rate: engagementRate,
+// //     engagementToFollowerRatio: engagementToFollowerRatio,
+// //     postingFrequency: postingFrequency,
+// //     graphData,
+// //     Data: safeJson,
+// //   };
+// // }
+
+// const youtube = {
+//   comments,
+//   engagement_rate: engagementRate,
+//   engagementToFollowerRatio,
+//   postingFrequency,
+//   graphData,
+//   Data: safeJson,
+// };
+  
+
+
+// return { youtube };
 
 // async function resolveYouTubeChannelId(url: string): Promise<string | null> {
 //   const channelMatch = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]{24})/);
@@ -283,6 +296,8 @@
 //     count,
 //   }));
 // }
+
+
 
 // function formatDate(date: Date): string {
 //   return date.toLocaleDateString("en-US", {
