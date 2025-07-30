@@ -141,12 +141,12 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       update: {
         website_id: website_id, 
           website_analysis_id: saved.website_analysis_id,
-          dashborad1_Freedata: JSON.stringify(combine_data),
+          dashboard1_Freedata: JSON.stringify(combine_data),
       },
       create: {
           website_id: website_id,
           website_analysis_id: saved.website_analysis_id,
-          dashborad1_Freedata: JSON.stringify(combine_data),
+          dashboard1_Freedata: JSON.stringify(combine_data),
       }
 });
 

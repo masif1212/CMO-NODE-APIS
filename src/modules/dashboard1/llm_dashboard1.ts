@@ -56,14 +56,14 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
     }
     let parsedData: any = {};
 try {
-  parsedData = JSON.parse(report?.dashborad1_Freedata || '{}');
+  parsedData = JSON.parse(report?.dashboard1_Freedata || '{}');
   // console.log("parsedData",parsedData)
 } catch (e) {
   console.error("Failed to parse dashboard data:", e);
 }
     const allDataforstrength: any = {
       website_audit: {
-        // Site_Speedcore_Web_Vitals_and_mobile_Experience: report?.dashborad1_Freedata?.combinedata?.data_for_llm ?? "N/A",
+        // Site_Speedcore_Web_Vitals_and_mobile_Experience: report?.dashboard1_Freedata?.combinedata?.data_for_llm ?? "N/A",
         // Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.data_for_llm ?? "N/A",
         siteSpeedAndMobileExperience: {
   speedHealth: parsedData?.data_for_llm?.speed_health ?? {},
@@ -206,15 +206,17 @@ try {
     await prisma.report.upsert({
   where: { report_id },
   update: {
-    recommendationbymo1: JSON.stringify(fullLLMResponse),
+    recommendationbymo1: JSON.stringify(funnelRecommendations),
+    strengthandissues_d1:JSON.stringify(llmContent),
   },
   create: {
     report_id,
-    recommendationbymo1: JSON.stringify(fullLLMResponse),
+    recommendationbymo1: JSON.stringify(funnelRecommendations),
+    strengthandissues_d1:JSON.stringify(llmContent),
     user_websites: {
       connect: {
-        website_id: website_id, // or whatever FK field links to user_websites
-      },
+        website_id: website_id, 
+           },
     },
   },
 });

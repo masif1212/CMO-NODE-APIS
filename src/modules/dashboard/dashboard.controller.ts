@@ -6,6 +6,10 @@ const prisma = new PrismaClient();
 
 
 
+
+
+
+
 export const getUserDashboard = async (req: Request, res: Response) => {
   const userId = req.query.user_id;
 
@@ -14,162 +18,150 @@ export const getUserDashboard = async (req: Request, res: Response) => {
   }
 
   try {
-    // 🔹 Fetch audit prices
-    const servicePrices = await prisma.analysisServices.findMany();
-    const priceMap = Object.fromEntries(
-  servicePrices.map(s => [s.report, s.price.toNumber()])
-);
+    // 🔹 Load service prices
+    const analysisServices = await prisma.analysisServices.findMany();
+    const reportPriceMap: Record<string, number> = Object.fromEntries(
+      analysisServices.map(service => [service.report, service.price])
+    );
 
+    // 🔹 Field groups
+    const brandFields = [
+      'dashboard1_Freedata',
+      'dashboard_paiddata',
+      'strengthandissues_d1',
+      'recommendationbymo1',
+      'traffic_analysis_id',
+    ];
+    const socialFields = [
+      'dashboard2_data',
+      'strengthandissues_d2',
+      'recommendationbymo2',
+    ];
+    const competitorFields = [
+      'dashboard3_data',
+      'recommendationbymo3',
+    ];
+    const cmoFields = ['cmorecommendation'];
 
-    // 🔹 Fetch user's websites and reports
+    // 🔹 Aliases for field names (keys in response)
+    const renameFields: Record<string, string> = {
+      dashboard1_Freedata: 'website_audit',
+      dashboard_paiddata: 'seo_audit',
+      strengthandissues_d1: 'strength_and_issues',
+      traffic_analysis_id: 'traffic_analysis',
+      recommendationbymo1: 'recommendationbymo',
+
+      dashboard2_data: 'social_data',
+      strengthandissues_d2: 'social_issues',
+      recommendationbymo2: 'recommendationbymo',
+
+      dashboard3_data: 'competitor_data',
+      recommendationbymo3: 'recommendationbymo',
+
+      cmorecommendation: 'cmo_recommendation',
+    };
+
+    // 🔹 Fetch data
     const userWebsites = await prisma.user_websites.findMany({
       where: { user_id: userId },
       select: {
-        website_id: true,
         website_url: true,
-        website_name: true,
-        website_type: true,
-        created_at: true,
-        updated_at: true,
+        website_id:true,
         report: {
           orderBy: { created_at: 'desc' },
+          select: {
+            report_id: true,
+            created_at: true,
+            updated_at: true,
+            dashboard1_Freedata: true,
+            dashboard_paiddata: true,
+            strengthandissues_d1: true,
+            recommendationbymo1: true,
+            traffic_analysis_id: true,
+            dashboard2_data: true,
+            strengthandissues_d2: true,
+            recommendationbymo2: true,
+            dashboard3_data: true,
+            recommendationbymo3: true,
+            cmorecommendation: true,
+          },
         },
       },
     });
 
-    // 🔹 Field name mapping
-    const renameFields = (report: any) => ({
-      website_audit: !!report.dashborad1_Freedata,
-      seo_audit: !!report.dashborad_paiddata,
-      recommendationbymo1: !!report.recommendationbymo1,
-      data2: !!report.dashborad2_data,
-      recommendationbymo2: !!report.recommendationbymo2,
-      competitor_analysis: !!report.dashborad3_data,
-      recommendationbymo3: !!report.recommendationbymo3,
-      data4: !!report.dashborad4_data,
-      recommendationbycmo: !!report.cmorecommendation,
-    });
+    // 🔹 Output containers
+    const brandAudit: any[] = [];
+    const socialMedia: any[] = [];
+    const competitorsAnalysis: any[] = [];
+    const finalRecommendationByCMO: any[] = [];
 
-    // 🔹 Extract audit prices
-    const extractFieldPrices = (report: any) => {
-      const prices: Record<string, number> = {};
-      for (const field in report) {
-        if (
-          report[field] !== null &&
-          typeof report[field] !== 'undefined' &&
-          priceMap[field] !== undefined
-        ) {
-          prices[field] = priceMap[field];
-        }
-      }
-      return prices;
-    };
-
-    // 🔹 Aggregate counters and collectors
-    let totalWebsiteAudit = 0;
-    let totalSeoAudit = 0;
-    let totalRecommendationByCMO = 0;
-    let totalCompetitorAnalysis = 0;
-
-    const websitesWithWebsiteAudit: any[] = [];
-    const websitesWithSeoAudit: any[] = [];
-    const websitesWithRecommendationByCMO: any[] = [];
-    const websitesWithCompetitorAnalysis: any[] = [];
-
-    // 🔹 Process websites
-    const filteredWebsites = userWebsites
-      .map(site => {
-        const validReports = site.report?.filter(r =>
-          Object.values(renameFields(r)).some(Boolean)
-        );
-
-        if (!validReports?.length) return null;
-
-        const formattedReports = validReports.map(report => {
-          const fields = renameFields(report);
-          const prices = extractFieldPrices(report);
-
-          const auditMeta = {
-            website_id: site.website_id,
-            website_url: site.website_url,
-            report_id: report.report_id,
-            created_at: report.created_at,
-            prices,
-          };
-
-          if (fields.website_audit) {
-            totalWebsiteAudit++;
-            websitesWithWebsiteAudit.push(auditMeta);
-          }
-          if (fields.seo_audit) {
-            totalSeoAudit++;
-            websitesWithSeoAudit.push(auditMeta);
-          }
-          if (fields.recommendationbycmo) {
-            totalRecommendationByCMO++;
-            websitesWithRecommendationByCMO.push(auditMeta);
-          }
-          if (fields.competitor_analysis) {
-            totalCompetitorAnalysis++;
-            websitesWithCompetitorAnalysis.push(auditMeta);
-          }
-
-          return {
-            report_id: report.report_id,
-            created_at: report.created_at,
-            updated_at: report.updated_at,
-            fields_present: fields,
-            prices,
-          };
-        });
-
-        return {
-          website_id: site.website_id,
+    for (const site of userWebsites) {
+      for (const report of site.report) {
+        const base = {
+          report_id: report.report_id,
           website_url: site.website_url,
-          website_name: site.website_name,
-          website_type: site.website_type,
-          created_at: site.created_at,
-          updated_at: site.updated_at,
-          total_reports: formattedReports.length,
-          reports: formattedReports,
+          created_at: report.created_at,
+          updated_at: report.updated_at,
         };
-      })
-      .filter((site): site is NonNullable<typeof site> => !!site); // filter nulls with type guard
 
-    // 🔹 Calculate total revenue from audits
-    const totalRevenue = filteredWebsites.reduce((acc, site) => {
-      return (
-        acc +
-        site.reports.reduce((rAcc: number, report) => {
-          return rAcc + Object.values(report.prices).reduce((sum, price) => sum + price, 0);
-        }, 0)
-      );
-    }, 0);
+        const extractFields = (fields: string[]) => {
+          const result: Record<string, number> = {};
+          for (const key of fields) {
+            const value = report[key as keyof typeof report];
+            if (value != null) {
+              const priceKey = key.startsWith('recommendationbymo') ? 'recommendationbymo' : key;
+              if (reportPriceMap[priceKey]) {
+                const renamed = renameFields[key] ?? key;
+                result[renamed] = reportPriceMap[priceKey];
+              }
+            }
+          }
+          return result;
+        };
 
-    // 🔹 Final result
-    const result = {
-      total_websites: filteredWebsites.length,
-      total_website_audit: totalWebsiteAudit,
-      total_seo_audit: totalSeoAudit,
-      total_recommendationbycmo: totalRecommendationByCMO,
-      total_competitor_analysis: totalCompetitorAnalysis,
-      // total_revenue: totalRevenue,
+        const brand = extractFields(brandFields);
+        const social = extractFields(socialFields);
+        const competitor = extractFields(competitorFields);
+        const cmo = extractFields(cmoFields);
+
+        if (Object.keys(brand).length) brandAudit.push({ ...base, columns: brand });
+        if (Object.keys(social).length) socialMedia.push({ ...base, columns: social });
+        if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base, columns: competitor });
+        if (Object.keys(cmo).length) finalRecommendationByCMO.push({ ...base, columns: cmo });
+      }
+    }
+
+    const dashboardCounts = {
+  total_brand_audit: brandAudit.length,
+  total_social_media: socialMedia.length,
+  total_competitor_analysis: competitorsAnalysis.length,
+  total_cmo_recommendations: Array.isArray(finalRecommendationByCMO) 
+    ? finalRecommendationByCMO.length 
+    : (finalRecommendationByCMO ? 1 : 0)
+};
+
+    // 🔹 Return grouped response
+    res.json({
+      ...dashboardCounts,
       data: {
-        brand_audit :{websites_with_website_audit: websitesWithWebsiteAudit,
-        websites_with_seo_audit: websitesWithSeoAudit},
-      
-          
-        cmoRecommendation: websitesWithRecommendationByCMO,
-        competitorswebsites: websitesWithCompetitorAnalysis,
+        brand_audit: brandAudit,
+        social_media: socialMedia,
+        competitors_analysis: competitorsAnalysis,
+        recommendation_by_cmo: finalRecommendationByCMO,
       },
-    };
-
-    res.json(result);
+    });
   } catch (error) {
-    console.error('Error fetching user dashboard:', error);
+    console.error('❌ Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+
+
+
+
+
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const reportId = req.query.report_id as string;
@@ -187,8 +179,9 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
    
 
     // Parse and extract
-    const websiteAudit = safeParse(reportData?.dashborad1_Freedata)?.full_report || null;
-    const seoAuditData = safeParse(reportData?.dashborad_paiddata)?.dashboard_paiddata || {};
+    const websiteAudit = safeParse(reportData?.dashboard1_Freedata)?.full_report || null;
+    const seoAuditData = safeParse(reportData?.dashboard_paiddata)?.dashboard_paiddata || {};
+    const competitor_data = safeParse(reportData?.dashboard3_data)?.dashboardData || {};
     const {
       traffic_analysis,
       onpage_optimization,
@@ -202,12 +195,16 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       ...(onpage_optimization && { onpage_optimization }),
       ...(technical_seo && { technical_seo }),
       ...otherSeoFields,
-      recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
-      dashborad2_data: safeParse(reportData?.dashborad2_data),
+      // recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
+      recommendation_by_mo_dashboard1 : {
+      strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
+      recommendations: safeParse(reportData?.recommendationbymo1),
+    },
+      dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dasboard2: safeParse(reportData?.recommendationbymo2),
-      competitors: safeParse(reportData?.dashborad3_data),
+      competitors: competitor_data,
       recommendation_by_mo_dasboard3: safeParse(reportData?.recommendationbymo3),
-      dashborad4_data: safeParse(reportData?.dashborad4_data),
+      dashboard4_data: safeParse(reportData?.dashboard4_data),
       recommendationbycmo: safeParse(reportData?.cmorecommendation),
       
     };

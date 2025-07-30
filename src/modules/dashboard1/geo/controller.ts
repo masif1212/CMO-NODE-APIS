@@ -16,22 +16,23 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
       where: { report_id: report_id }, // 'record_id' must be defined
     });
 
-
+    console.log("fetching llm response...")
     const result = await fetchBrands(user_id, website_id,report);
+        console.log("llm response", result)
 
 
-        const responsePayload: Record<string, any> = { success: true };
+      const responsePayload: Record<string, any> = { success: true };
        
         
 
 
     
-        if (!report) throw new Error("Missing report object");
+      if (!report) throw new Error("Missing report object");
 
 
 
 
-
+console.log("fetching data from db...")
 const [scrapedData, pageSpeedData, traffic] = await Promise.all([
   report?.scraped_data_id
     ? prisma.website_scraped_data.findUnique({
@@ -70,9 +71,10 @@ const [scrapedData, pageSpeedData, traffic] = await Promise.all([
       })
     : Promise.resolve(null),
 ]);
+ 
 
-
-// console.log("report.traffic_analysis_id",report.traffic_analysis_id)
+console.log("report.traffic_analysis_id",report.traffic_analysis_id)
+console.log("data fetch")
 
         function safeParse(jsonStr: any) {
           try {
@@ -168,18 +170,15 @@ const [scrapedData, pageSpeedData, traffic] = await Promise.all([
         }
         let sources: any[] = [];
         if (report?.traffic_analysis_id != null) {
-          const traffic = await prisma.brand_traffic_analysis.findUnique({
-            where: { traffic_analysis_id: report.traffic_analysis_id },
-            select: { top_sources: true },
-          });
+         
           sources = traffic?.top_sources ? safeParse(traffic.top_sources) : [];
         }
         geo.bingSource = sources.find((src) =>
           ["bing", "bing.com"].some((kw) => src.name?.toLowerCase().includes(kw))
         ) ?? { type: "source", name: "bing.com", sessions: 0 };
     
-        if (report?.dashborad1_Freedata != null) {
-          responsePayload.website_audit = safeParse(report?.dashborad1_Freedata);
+        if (report?.dashboard1_Freedata != null) {
+          responsePayload.website_audit = safeParse(report?.dashboard1_Freedata);
         }
         if (traffic && Object.keys(traffic).length > 0) {
           responsePayload.traffic_anaylsis = traffic;
@@ -200,9 +199,34 @@ const dashboard_paiddata = {
 
 // Create a deep copy and remove technical_seo.user_access_readiness
 const datafor_llm = JSON.parse(JSON.stringify(dashboard_paiddata));
-if (datafor_llm?.technical_seo) {
+// if (datafor_llm?.technical_seo) {
+//   delete datafor_llm.technical_seo.user_access_readiness;
+//   delete datafor_llm.traffic_analysis.traffic_analysis_id;
+//   delete datafor_llm.traffic_analysis.daily_active_users;
+//   if (datafor_llm?.traffic_analysis?.top_sources) {
+//     datafor_llm.traffic_analysis.top_sources = datafor_llm.traffic_analysis.top_sources.slice(0, 5);
+//   }
+//    if (datafor_llm?.traffic_analysis?.high_bonce_pages) {
+//     datafor_llm.traffic_analysis.high_bounce_pages = datafor_llm.traffic_analysis.high_bounce_pages.slice(0, 5);
+//   }
+
+
+// }
+
+if (datafor_llm?.traffic_anaylsis) {
   delete datafor_llm.technical_seo.user_access_readiness;
+  delete datafor_llm.traffic_anaylsis.traffic_analysis_id;
+  delete datafor_llm.traffic_anaylsis.daily_active_users;
+
+  if (datafor_llm?.traffic_anaylsis?.top_sources) {
+    datafor_llm.traffic_anaylsis.top_sources = datafor_llm.traffic_anaylsis.top_sources.slice(0, 5);
+  }
+
+  if (datafor_llm?.traffic_anaylsis?.high_bounce_pages) {
+    datafor_llm.traffic_anaylsis.high_bounce_pages = datafor_llm.traffic_anaylsis.high_bounce_pages.slice(0, 5);
+  }
 }
+
 
 // Combine both into one structure under a new param
 const fullreport = {
@@ -217,12 +241,12 @@ const record = await prisma.report.upsert({
   },
   update: {
     website_id,
-    dashborad_paiddata: JSON.stringify(fullreport), // existing field
+    dashboard_paiddata: JSON.stringify(fullreport), // existing field
            // new nested object
   },
   create: {
     website_id,
-     dashborad_paiddata: JSON.stringify(fullreport),
+     dashboard_paiddata: JSON.stringify(fullreport),
     
   },
 });

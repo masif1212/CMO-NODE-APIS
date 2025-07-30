@@ -17,10 +17,10 @@
   - You are about to alter the column `website_audit` on the `analysis_status` table. The data in that column could be lost. The data in that column will be cast from `LongText` to `TinyInt`.
   - You are about to drop the column `record_id` on the `competitor_data` table. All the data in the column will be lost.
   - You are about to drop the column `record_id` on the `competitor_details` table. All the data in the column will be lost.
-  - You are about to drop the column `dashborad1_rdata` on the `report` table. All the data in the column will be lost.
-  - You are about to drop the column `dashborad2_rdata` on the `report` table. All the data in the column will be lost.
-  - You are about to drop the column `dashborad3_rdata` on the `report` table. All the data in the column will be lost.
-  - You are about to drop the column `dashborad4_rdata` on the `report` table. All the data in the column will be lost.
+  - You are about to drop the column `dashboard1_rdata` on the `report` table. All the data in the column will be lost.
+  - You are about to drop the column `dashboard2_rdata` on the `report` table. All the data in the column will be lost.
+  - You are about to drop the column `dashboard3_rdata` on the `report` table. All the data in the column will be lost.
+  - You are about to drop the column `dashboard4_rdata` on the `report` table. All the data in the column will be lost.
   - You are about to drop the `llm_responses` table. If the table is not empty, all the data it contains will be lost.
   - Added the required column `report_id` to the `competitor_data` table without a default value. This is not possible if the table is not empty.
   - Added the required column `report_id` to the `competitor_details` table without a default value. This is not possible if the table is not empty.
@@ -67,10 +67,10 @@ ALTER TABLE `competitor_details` DROP COLUMN `record_id`,
     ADD COLUMN `report_id` VARCHAR(191) NOT NULL;
 
 -- AlterTable
-ALTER TABLE `report` DROP COLUMN `dashborad1_rdata`,
-    DROP COLUMN `dashborad2_rdata`,
-    DROP COLUMN `dashborad3_rdata`,
-    DROP COLUMN `dashborad4_rdata`,
+ALTER TABLE `report` DROP COLUMN `dashboard1_rdata`,
+    DROP COLUMN `dashboard2_rdata`,
+    DROP COLUMN `dashboard3_rdata`,
+    DROP COLUMN `dashboard4_rdata`,
     ADD COLUMN `cmorecommendation` LONGTEXT NULL,
     ADD COLUMN `onpageoptimization_id` LONGTEXT NULL,
     ADD COLUMN `recommendationbymo1` LONGTEXT NULL,

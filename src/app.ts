@@ -15,7 +15,7 @@ import userRequirementsRouter from "./modules/form_data/router";
 import mainDashboard from "./modules/dashboard/dashboard.router";
 import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
 // import dashboard4Router from "./modules/dashboard4/router";
-// import cmoRecommendationRouter from "./modules/dashboard4/router";
+import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
 // import facebookRoutes from './modules/dashboard2/facebook/facebook.controller';
 
@@ -86,7 +86,7 @@ app.use("/api/competitors", competitorRouter);
 
 //dashboard4 routes
 // app.use("/api/recommendationbycmo", dashboard4Router);
-// app.use("/api/cmo-recommendation", cmoRecommendationRouter);
+app.use("/api/cmo-recommendation", cmoRecommendationRouter);
 
 // Global error handler
 app.use(errorHandler);

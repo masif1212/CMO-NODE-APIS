@@ -182,12 +182,12 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
       update: {
         website_id: website_id, 
           traffic_analysis_id: savedTraffic.traffic_analysis_id,
-          // dashborad1_Freedata: JSON.stringify(combine_data),
+          // dashboard1_Freedata: JSON.stringify(combine_data),
       },
       create: {
           website_id: website_id,
           traffic_analysis_id: savedTraffic.traffic_analysis_id,
-          // dashborad1_Freedata: JSON.stringify(combine_data),
+          // dashboard1_Freedata: JSON.stringify(combine_data),
       }});
 
     let h1Text = "Not Found";
@@ -248,8 +248,8 @@ if (existing) {
   }
 };
 
-export const dashborad1_Recommendation = async (req: Request, res: Response) => {
-  // console.log("dashborad1_Recommendation called");
+export const dashboard1_Recommendation = async (req: Request, res: Response) => {
+  // console.log("dashboard1_Recommendation called");
   const { website_id, user_id ,report_id} = req.body;
 
   console.log("Request Body:", req.body);

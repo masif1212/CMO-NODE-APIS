@@ -521,17 +521,19 @@ model report {
 
   geo_llm                  String? @db.LongText
   scraped_data_id          String?
-  dashborad1_Freedata       String? @db.LongText
-  dashborad_paiddata        String? @db.LongText
+  dashboard1_Freedata       String? @db.LongText
+  dashboard_paiddata        String? @db.LongText
+  strengthandissues_d1         String?  @db.LongText
   recommendationbymo1         String? @db.LongText
 
-  dashborad2_data          String? @db.LongText
+  dashboard2_data          String? @db.LongText
+  strengthandissues_d2         String?  @db.LongText
   recommendationbymo2         String? @db.LongText
 
-  dashborad3_data          String? @db.LongText
+  dashboard3_data          String? @db.LongText
   recommendationbymo3         String? @db.LongText
 
-  dashborad4_data          String? @db.LongText
+  dashboard4_data          String? @db.LongText
   cmorecommendation         String? @db.LongText
 
   updated_at DateTime @updatedAt @default(now())
@@ -540,4 +542,3 @@ model report {
 
   @@index([website_id, updated_at])
 }
-

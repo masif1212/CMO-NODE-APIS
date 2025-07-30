@@ -816,7 +816,7 @@ const report = await prisma.report.findUnique({
     });
 
     const mainH1Heading = await extractH1(websiteScraped?.raw_html ?? null);
-    const labeledResults: Record<string, any> = {
+    const dashboarddata: Record<string, any> = {
       mainWebsite:
         mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData)
           ? {
@@ -875,24 +875,67 @@ const report = await prisma.report.findUnique({
           : null,
       competitors: [],
     };
+     
+    dashboarddata.competitors = sortedCompetitorResults;
 
-    labeledResults.competitors = sortedCompetitorResults;
+
+
+    const dataForLLM = {
+  mainWebsite: dashboarddata.mainWebsite
+    ? {
+        ...dashboarddata.mainWebsite,
+        seo_audit: {
+          meta_description: dashboarddata.mainWebsite.seo_audit.meta_description,
+          page_title: dashboarddata.mainWebsite.seo_audit.page_title,
+          schema_markup_status: dashboarddata.mainWebsite.seo_audit.schema_markup_status,
+          isCrawlable: dashboarddata.mainWebsite.seo_audit.isCrawlable,
+          headingAnalysis: dashboarddata.mainWebsite.seo_audit.headingAnalysis,
+          alt_text_coverage: dashboarddata.mainWebsite.seo_audit.alt_text_coverage,
+          h1_heading: dashboarddata.mainWebsite.seo_audit.h1_heading,
+          AI_Discoverability: dashboarddata.mainWebsite.seo_audit.AI_Discoverability,
+        },
+      }
+    : null,
+  competitors: Array.isArray(dashboarddata.competitors)
+    ? dashboarddata.competitors.map((competitor: any) => ({
+        ...competitor,
+        seo_audit: competitor.seo_audit
+          ? {
+              meta_description: competitor.seo_audit.meta_description,
+              page_title: competitor.seo_audit.page_title,
+              schema_markup_status: competitor.seo_audit.schema_markup_status,
+              isCrawlable: competitor.seo_audit.isCrawlable,
+              headingAnalysis: competitor.seo_audit.headingAnalysis,
+              alt_text_coverage: competitor.seo_audit.alt_text_coverage,
+              h1_heading: competitor.seo_audit.h1_heading,
+              AI_Discoverability: competitor.seo_audit.AI_Discoverability,
+            }
+          : null,
+      }))
+    : [],
+};
+
+// Combine both datasets into a single result object
+const combinedResults = {
+  dashboardData: dashboarddata,
+  llmData: dataForLLM,
+};
 
     await prisma.report.upsert({
       where: {
         report_id
       },
       update: {
-        dashborad3_data: JSON.stringify(labeledResults),
+        dashboard3_data: JSON.stringify(combinedResults),
       },
       create: {
         report_id,
         website_id,
-        dashborad3_data: JSON.stringify(labeledResults),
+        dashboard3_data: JSON.stringify(combinedResults),
       },
     });
 
-    return labeledResults;
+    return dashboarddata;
   }
 
   static async getComparisonRecommendations(website_id:string,report_id: string) {
@@ -903,9 +946,7 @@ const report = await prisma.report.findUnique({
     console.log(`Fetching comparison recommendations for website_id: ${report_id}`);
     
 
-    const userRequirementRaw = await prisma.user_requirements.findFirst({
-      where: { website_id },
-    });
+  
 
     const prompt = await createComparisonPrompt(report_id);
     if (!prompt) {
@@ -925,11 +966,8 @@ const report = await prisma.report.findUnique({
     let parsed;
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      // await prisma.llm_responses.upsert({
-      //   where: { website_id },
-      //   update: { recommendation_by_mo_dashboard3: JSON.stringify(response) },
-      //   create: { website_id, recommendation_by_mo_dashboard3: JSON.stringify(response) },
-      // });
+      
+    
       await prisma.report.upsert({
         where: { report_id },
         update: { recommendationbymo3: JSON.stringify(parsed) },
