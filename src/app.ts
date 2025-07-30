@@ -17,7 +17,7 @@ import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
 // import dashboard4Router from "./modules/dashboard4/router";
 import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
-// import facebookRoutes from './modules/dashboard2/facebook/facebook.controller';
+import facebookRoutes from './modules/dashboard2/facebook/facebook_router';
 
 
 const app = express();
@@ -53,7 +53,7 @@ app.use(
 );
 
 
-// app.use('/auth/facebook', facebookRoutes);
+app.use('/api/auth/facebook', facebookRoutes);
 
 // Main dashboard route
 app.use("/api/main_dashboard", mainDashboard);

@@ -1,12 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
-
-
-
-
-
-
+ 
 
 
 
@@ -131,7 +126,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       }
     }
 
-    const dashboardCounts = {
+  const dashboardCounts = {
   total_brand_audit: brandAudit.length,
   total_social_media: socialMedia.length,
   total_competitor_analysis: competitorsAnalysis.length,
@@ -226,3 +221,291 @@ function safeParse(input: any) {
   }
 }
 
+export const getaudit = async (req: Request, res: Response) => {
+  const userId = req.query.user_id;
+
+  if (typeof userId !== 'string') {
+    return res.status(400).json({ error: 'Invalid or missing user_id' });
+  }
+
+  try {
+    // 🔹 Field groups
+    const brandFields = [
+      'dashboard1_Freedata',
+      'dashboard_paiddata',
+      'strengthandissues_d1',
+      'recommendationbymo1',
+      'traffic_analysis_id',
+    ];
+    const socialFields = [
+      'dashboard2_data',
+      'strengthandissues_d2',
+      'recommendationbymo2',
+    ];
+    const competitorFields = [
+      'dashboard3_data',
+      'recommendationbymo3',
+    ];
+
+    // 🔹 Aliases for field names (keys in response)
+    const renameFields: Record<string, string> = {
+      dashboard1_Freedata: 'website_audit',
+      dashboard_paiddata: 'seo_audit',
+      strengthandissues_d1: 'strength_and_issues',
+      traffic_analysis_id: 'traffic_analysis',
+      recommendationbymo1: 'recommendationbymo',
+      dashboard2_data: 'social_data',
+      strengthandissues_d2: 'social_issues',
+      recommendationbymo2: 'recommendationbymo',
+      dashboard3_data: 'competitor_data',
+      recommendationbymo3: 'recommendationbymo',
+    };
+
+    // 🔹 Fetch data with cmorecommendation null filter
+    const userWebsites = await prisma.user_websites.findMany({
+      where: { user_id: userId },
+      select: {
+        website_url: true,
+        website_id: true,
+        report: {
+          where: { cmorecommendation: null },
+          orderBy: { created_at: 'desc' },
+          select: {
+            report_id: true,
+            created_at: true,
+            updated_at: true,
+            dashboard1_Freedata: true,
+            dashboard_paiddata: true,
+            strengthandissues_d1: true,
+            recommendationbymo1: true,
+            traffic_analysis_id: true,
+            dashboard2_data: true,
+            strengthandissues_d2: true,
+            recommendationbymo2: true,
+            dashboard3_data: true,
+            recommendationbymo3: true,
+          },
+        },
+      },
+    });
+
+    // 🔹 Structure response by website, including only the latest report for each type
+    const websites = userWebsites
+      .map(site => {
+        const brandAudit: any[] = [];
+        const socialMedia: any[] = [];
+        const competitorsAnalysis: any[] = [];
+
+        // Group reports by type and find the latest for each
+        const latestReports: {
+          brand?: any;
+          social?: any;
+          competitor?: any;
+        } = {};
+
+        for (const report of site.report) {
+          const base = {
+            report_id: report.report_id,
+            created_at: report.created_at,
+            updated_at: report.updated_at,
+          };
+
+          const extractFields = (fields: string[]) => {
+            const result: Record<string, boolean> = {};
+            for (const key of fields) {
+              const value = report[key as keyof typeof report];
+              if (value != null) {
+                const renamed = renameFields[key] ?? key;
+                result[renamed] = true;
+              }
+            }
+            return result;
+          };
+
+          const brand = extractFields(brandFields);
+          const social = extractFields(socialFields);
+          const competitor = extractFields(competitorFields);
+
+          // Update latest report for each type based on created_at
+          if (Object.keys(brand).length && (!latestReports.brand || report.created_at > latestReports.brand.created_at)) {
+            latestReports.brand = { ...base };
+          }
+          if (Object.keys(social).length && (!latestReports.social || report.created_at > latestReports.social.created_at)) {
+            latestReports.social = { ...base };
+          }
+          if (Object.keys(competitor).length && (!latestReports.competitor || report.created_at > latestReports.competitor.created_at)) {
+            latestReports.competitor = { ...base};
+          }
+        }
+
+        // Add latest reports to their respective arrays
+        if (latestReports.brand) brandAudit.push(latestReports.brand);
+        if (latestReports.social) socialMedia.push(latestReports.social);
+        if (latestReports.competitor) competitorsAnalysis.push(latestReports.competitor);
+
+        // Only return website if at least one report array is non-empty
+        if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
+          return {
+            website_url: site.website_url,
+            website_id: site.website_id,
+            reports: {
+              brand_audit: brandAudit,
+              social_media_audit: socialMedia,
+              competitors_analysis: competitorsAnalysis,
+            },
+          };
+        }
+        return null;
+      })
+      .filter((site): site is NonNullable<typeof site> => site !== null);
+
+    // 🔹 Calculate counts
+    // const dashboardCounts = {
+    //   total_websites: websites.length,
+    //   total_brand_audit: websites.reduce((sum, site) => sum + site.reports.brand_audit.length, 0),
+    //   total_social_media: websites.reduce((sum, site) => sum + site.reports.social_media_audit.length, 0),
+    //   total_competitor_analysis: websites.reduce((sum, site) => sum + site.reports.competitors_analysis.length, 0),
+    // };
+
+    // 🔹 Return grouped response
+    res.json({
+      // ...dashboardCounts,
+      websites,
+    });
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// export const getaudit = async (req: Request, res: Response) => {
+//   const userId = req.query.user_id;
+
+//   if (typeof userId !== 'string') {
+//     return res.status(400).json({ error: 'Invalid or missing user_id' });
+//   }
+
+//   try {
+//     // 🔹 Field groups
+//     const brandFields = [
+//       'dashboard1_Freedata',
+//       'dashboard_paiddata',
+//       'strengthandissues_d1',
+//       'recommendationbymo1',
+//       'traffic_analysis_id',
+//     ];
+//     const socialFields = [
+//       'dashboard2_data',
+//       'strengthandissues_d2',
+//       'recommendationbymo2',
+//     ];
+//     const competitorFields = [
+//       'dashboard3_data',
+//       'recommendationbymo3',
+//     ];
+
+//     // 🔹 Aliases for field names (keys in response)
+//     const renameFields: Record<string, string> = {
+//       dashboard1_Freedata: 'website_audit',
+//       dashboard_paiddata: 'seo_audit',
+//       strengthandissues_d1: 'strength_and_issues',
+//       traffic_analysis_id: 'traffic_analysis',
+//       recommendationbymo1: 'recommendationbymo',
+//       dashboard2_data: 'social_data',
+//       strengthandissues_d2: 'social_issues',
+//       recommendationbymo2: 'recommendationbymo',
+//       dashboard3_data: 'competitor_data',
+//       recommendationbymo3: 'recommendationbymo',
+//     };
+
+//     // 🔹 Fetch data with cmorecommendation null filter
+//     const userWebsites = await prisma.user_websites.findMany({
+//       where: { user_id: userId },
+//       select: {
+//         website_url: true,
+//         website_id: true,
+//         report: {
+//           where: { cmorecommendation: null },
+//           orderBy: { created_at: 'desc' },
+//           select: {
+//             report_id: true,
+//             created_at: true,
+//             updated_at: true,
+//             dashboard1_Freedata: true,
+//             dashboard_paiddata: true,
+//             strengthandissues_d1: true,
+//             recommendationbymo1: true,
+//             traffic_analysis_id: true,
+//             dashboard2_data: true,
+//             strengthandissues_d2: true,
+//             recommendationbymo2: true,
+//             dashboard3_data: true,
+//             recommendationbymo3: true,
+//           },
+//         },
+//       },
+//     });
+
+//     // 🔹 Structure response by website
+//     const websites = userWebsites.map(site => {
+//       const brandAudit: any[] = [];
+//       const socialMedia: any[] = [];
+//       const competitorsAnalysis: any[] = [];
+
+//       for (const report of site.report) {
+//         const base = {
+//           report_id: report.report_id,
+//           created_at: report.created_at,
+//           updated_at: report.updated_at,
+//         };
+
+//         const extractFields = (fields: string[]) => {
+//           const result: Record<string, boolean> = {};
+//           for (const key of fields) {
+//             const value = report[key as keyof typeof report];
+//             if (value != null) {
+//               const renamed = renameFields[key] ?? key;
+//               result[renamed] = true;
+//             }
+//           }
+//           return result;
+//         };
+
+//         const brand = extractFields(brandFields);
+//         const social = extractFields(socialFields);
+//         const competitor = extractFields(competitorFields);
+
+//         if (Object.keys(brand).length) brandAudit.push({ ...base, columns: brand });
+//         if (Object.keys(social).length) socialMedia.push({ ...base, columns: social });
+//         if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base, columns: competitor });
+//       }
+
+//       return {
+//         website_url: site.website_url,
+//         website_id: site.website_id,
+//         reports: {
+//           brand_audit: brandAudit,
+//           social_media_audit: socialMedia,
+//           competitors_analysis: competitorsAnalysis,
+//         },
+//       };
+//     });
+
+//     // 🔹 Calculate counts
+//     const dashboardCounts = {
+//       total_websites: websites.length,
+//       total_brand_audit: websites.reduce((sum, site) => sum + site.reports.brand_audit.length, 0),
+//       total_social_media: websites.reduce((sum, site) => sum + site.reports.social_media_audit.length, 0),
+//       total_competitor_analysis: websites.reduce((sum, site) => sum + site.reports.competitors_analysis.length, 0),
+//     };
+
+//     // 🔹 Return grouped response
+//     res.json({
+//       ...dashboardCounts,
+//       websites,
+//     });
+//   } catch (error) {
+//     console.error('❌ Error:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
