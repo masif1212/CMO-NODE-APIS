@@ -340,6 +340,8 @@ model brand_social_media_analysis {
 
 }
 
+
+
 model website_scraped_data {
   scraped_data_id            String   @id @default(uuid())
   website_url               String?
