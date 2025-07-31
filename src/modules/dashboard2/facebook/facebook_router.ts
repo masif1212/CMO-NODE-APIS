@@ -343,10 +343,10 @@ const prisma = new PrismaClient();
 
 const router = require("express").Router();
 
-router.get('/login/:reportId', asyncHandler(async (req: Request, res: Response) => {
+router.get('/login', asyncHandler(async (req: Request, res: Response) => {
   const report_id = req.params.reportId;
   const userAccessToken = req.query.token as string;
-  console.log("report_id",report_id)
+  // console.log("report_id",report_id)
 
   try { 
     // Fetch report data to get scraped_data_id
