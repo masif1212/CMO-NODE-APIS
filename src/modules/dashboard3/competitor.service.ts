@@ -152,7 +152,8 @@ export class CompetitorService {
 
     let browser;
 
-    let browser;
+    // let browser;
+    const mode = process.env.NODE;
 
     if (mode === "production") {
       const launchOptions = {
