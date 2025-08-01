@@ -148,8 +148,6 @@ export class CompetitorService {
     const processedNames = new Set<string>();
     let orderIndex = 0;
 
-    console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
-
     let browser;
 
     // let browser;
