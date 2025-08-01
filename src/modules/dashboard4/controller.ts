@@ -6,6 +6,7 @@ import { OpenAI } from 'openai';
 interface CMORecommendationRequestBody {
   user_id: string;
   website_id: string;
+  report_ids: string[];
 }
 
 export class CMORecommendationController {
@@ -17,20 +18,21 @@ export class CMORecommendationController {
 
   public async generateRecommendation(req: Request, res: Response): Promise<void> {
     try {
-      const { user_id, website_id } = req.body as CMORecommendationRequestBody;
+      const { user_id, website_id,report_ids} = req.body as CMORecommendationRequestBody;
 
       // Validate input
       if (!user_id || !website_id) {
         res.status(400).json({ error: 'Missing user_id or website_id' });
         return;
       }
-
+      console.log("report_ids",report_ids)
       // Call the service to generate recommendation
       const result = await this.recommendationService.generateCMORecommendation({
         user_id,
         website_id,
+        report_ids,
       });
-
+      console.log("cmo recommendation compelete")
       // Send success response
       res.status(200).json(
         

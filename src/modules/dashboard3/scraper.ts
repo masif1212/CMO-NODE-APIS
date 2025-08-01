@@ -401,7 +401,7 @@ export async function scrapeWebsiteCompetitors(url: string) {
   }
 }
 
-export const fetchBrands = async (user_id: string, website_id: string): Promise<any> => {
+export const fetchBrands = async (user_id: string, website_id: string, report_id: string): Promise<any> => {
   const websiteEntry = await prisma.user_websites.findUnique({
     where: {
       user_id_website_id: { user_id, website_id },
@@ -504,8 +504,8 @@ Format:
       parsedBrands = JSON.parse(content);
       if (!Array.isArray(parsedBrands)) throw new Error();
     } catch {
-      await prisma.llm_responses.upsert({
-        where: { website_id },
+      await prisma.report.upsert({
+        where: { report_id },
         update: { geo_llm: content },
         create: { website_id, geo_llm: content },
       });
@@ -531,8 +531,8 @@ Format:
 
     // });
 
-    await prisma.llm_responses.upsert({
-      where: { website_id },
+    await prisma.report.upsert({
+      where: { report_id },
       update: { geo_llm: websiteFound.toString() },
       create: { website_id, geo_llm: websiteFound.toString() },
     });

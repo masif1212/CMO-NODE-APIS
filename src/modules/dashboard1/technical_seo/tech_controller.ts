@@ -1,43 +1,63 @@
 import { Request, Response } from "express";
 import { checkBrokenLinks ,getWebsiteUrlById} from "./tech_service";
-import { saveBrokenLinkAnalysis} from "../technical_seo/brokenLink.service";
-import { PrismaClient } from "@prisma/client";
+// import { saveBrokenLinkAnalysis} from "../technical_seo/brokenLink.service";
+import { PrismaClient, Prisma } from "@prisma/client";
+
 
 
 const prisma = new PrismaClient();
 
 
 export const technical_seo = async (req: Request, res: Response) => {
-  console.log("🚀 ~ file: tech_controller.ts:11 ~ technical_seo ~ req.body:", req.body);
+  console.log("🚀 technical seo started:", req.body);
 
-  const { website_id, user_id, maxDepth = 0 } = req.body;
+  const { website_id, user_id, maxDepth = 0,report_id } = req.body;
   const website_url = await getWebsiteUrlById(user_id, website_id);
 
   if (!website_id || !user_id) {
     return res.status(400).json({ error: "Both 'url' and 'user_id' are required." });
   }
-
-try {   
-    console.log("fetching broken links");
+     console.log("fetching broken links");
     const brokenLinksResult = await checkBrokenLinks(user_id, website_id, website_url,maxDepth);
     if( brokenLinksResult) {
       console.log("Broken links fetched successfully:") }
 
     const totalBroken = brokenLinksResult.length;
-
+    console.log("report_id",report_id)
+    const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, // You must have 'record_id' from req.body
+      select: { scraped_data_id: true ,
+        website_analysis_id : true,
+      }
+    });
     // Step 3: Save analysis to DB
     console.log("Saving broken link analysis to database...");
-    const saved = await saveBrokenLinkAnalysis(user_id, website_id, brokenLinksResult, totalBroken);
-    if (saved) {
-      console.log("Broken link analysis saved successfully:", saved);
-
-     const analysis = await prisma.brand_website_analysis.findFirst({
-  where: { website_id },
-  orderBy: { updated_at: "desc" },
+const analysis = await prisma.brand_website_analysis.upsert({
+  where: {
+    website_analysis_id: report?.website_analysis_id ?? undefined, // must be unique or PK
+  },
+  update: {
+    // website_id,
+    total_broken_links: totalBroken,
+    broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
+  },
+  create: {
+    website_analysis_id:report?.website_analysis_id ?? undefined, // required here if PK
+    // website_id,
+    total_broken_links: totalBroken,
+    broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
+  },
   select: {
-    audit_details: true,
+    website_analysis_id: true,
+    // website_id: true,
+    total_broken_links: true,
+    broken_links: true,
+    audit_details:true,
+    created_at: true,
   },
 });
+
+
 
 
 
@@ -60,32 +80,14 @@ if (analysis?.audit_details) {
    
  const schema = await prisma.website_scraped_data.findUnique(
   {
-    where : {website_id},
+    where : {scraped_data_id:report?.scraped_data_id ?? undefined},
     select: {
       schema_analysis: true
     }
   }
 )   
 
-        await prisma.analysis_status.upsert({
-    where: {
-    user_id_website_id: {
-      user_id,
-      website_id,
-    },
-  },
-  update: {
-    technical_seo: saved.website_analysis_id,
-  },
-  create: {
-    user_id,
-    website_id,
-    technical_seo: saved.website_analysis_id,
-  },
 
-
-
-});
     return res.status(200).json({
       technical_seo: {
       Schema_Markup_Status: {
@@ -108,21 +110,11 @@ if (analysis?.audit_details) {
         
       Link_Health: {
           message: totalBroken ? "Broken links found and saved." : "No broken links found.",
-          // website_id: website_id,
-          // analysis_id: saved.website_analysis_id,
+      
           totalBroken,
           brokenLinks: brokenLinksResult,
       }}
     });
-    }
-  }
-  // Removed extra closing brace here
+    
+}
 
-catch (err: any) {
-    console.error("❌ handleBrokenLinks error:", err);
-    return res.status(500).json({
-      error: "Failed to check broken links.",
-      detail: (err && typeof err === "object" && "message" in err) ? (err as Error).message : "Internal server error",
-    });
-  }
-};

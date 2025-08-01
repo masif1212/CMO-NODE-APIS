@@ -18,7 +18,6 @@ export interface ScrapeResult {
   error?: string;
   raw_html?: string;
   scraped_data_id?: string;
-  // optional, useful for debugging blockers
 }
 
 function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
@@ -222,7 +221,7 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-export async function scrapeWebsite(user_id: string, website_id: string): Promise<ScrapeResult> {
+export async function scrapeWebsite(user_id: string, website_id: string, report_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
@@ -438,7 +437,7 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
   };
 
   try {
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, website_id);
+    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, report_id);
     const isCrawlable = await isCrawlableByLLMBots(website_url);
 
     let finalLogoUrl = schemaAnalysisData.logo ?? null;
@@ -466,7 +465,6 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
 
     const record = await prisma.website_scraped_data.create({
       data: {
-        website_id,
         website_url,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
@@ -498,7 +496,6 @@ export async function scrapeWebsite(user_id: string, website_id: string): Promis
 
     const result = {
       success: true,
-      website_id: record.website_id,
       logo_url: record.logo_url ?? undefined,
       status_code: statusCode,
       status_message: message,

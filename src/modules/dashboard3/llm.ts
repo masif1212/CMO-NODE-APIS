@@ -12,7 +12,7 @@ export const openai = new OpenAI({
 export async function fetchCompetitorsFromLLM(
   user_id: string,
   website_id: string,
-  site: any,
+  scrapedMain: any,
   userRequirement: any,
   existingUrls: string[] = [],
   existingNames: string[] = []
@@ -31,7 +31,14 @@ You are an expert market research assistant specializing in competitor analysis.
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
 
 **Main Website **:
-- Website URL: ${site.website_url ?? 'Unknown'}
+- Website URL: ${scrapedMain.website_url ?? 'Unknown'}
+**main website meta description: ${scrapedMain.meta_description ?? 'Unknown'}
+**main website meta keywords: ${scrapedMain.meta_keywords ?? 'Unknown'}
+**main website title: ${scrapedMain.meta_title ?? 'Unknown'}
+
+
+
+
 -
 
 
@@ -75,7 +82,7 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
 
 
 
-
+console.log("prompt",prompt)
  
     try {
     const response = await openai.responses.create({
@@ -98,23 +105,23 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
     const output = response.output_text?.trim();
 
     if (!output) {
-      console.warn(`LLM returned empty response for website_id: ${site.website_id}`);
+      console.warn(`LLM returned empty response for website_id: ${scrapedMain.website_id}`);
       return '[]';
     }
-    console.log(`LLM response for website_id ${site.website_id}:`, output);
+    console.log(`LLM response for website_id ${scrapedMain.website_id}:`, output);
     
 
 
-    await prisma.llm_responses.upsert({
-      where: { website_id },
-      update: {
-        dashboard3_competi_camparison: JSON.stringify(output),
-      },
-      create: {
-        website_id,
-        dashboard3_competi_camparison: JSON.stringify(output),
-      },
-    });    
+    // await prisma.llm_responses.upsert({
+    //   where: { website_id },
+    //   update: {
+    //     dashboard3_competi_camparison: JSON.stringify(output),
+    //   },
+    //   create: {
+    //     website_id,
+    //     dashboard3_competi_camparison: JSON.stringify(output),
+    //   },
+    // });    
     let fixedOutput = output
       .replace(/```json\n|\n```|```/g, '')
       .replace(/,\s*([\]}])/g, '$1')
@@ -129,7 +136,7 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
       competitors = JSON.parse(fixedOutput);
     } catch (parseErr) {
       const errMsg = parseErr instanceof Error ? parseErr.message : String(parseErr);
-      console.error(`LLM returned invalid JSON for website_id: ${site.website_id}: ${errMsg}`);
+      console.error(`LLM returned invalid JSON for website_id: ${scrapedMain.website_id}: ${errMsg}`);
       console.error(`Raw output: ${output}`);
       return '[]';
     }
@@ -144,7 +151,7 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
 
     return JSON.stringify(validCompetitors.slice(0,6));
   } catch (err: any) {
-    console.error(`Error fetching competitors from LLM for website_id: ${site.website_id}: ${err.message}`);
+    console.error(`Error fetching competitors from LLM for website_id: ${scrapedMain.website_id}: ${err.message}`);
     return '[]';
   }
 }
@@ -188,15 +195,15 @@ If data is insufficient, return null without wrapping in code blocks or backtick
   }
 }
 
-export async function createComparisonPrompt(website_id: string) {
+export async function createComparisonPrompt(report_id: string,) {
  
 
 
-const analysisStatus = await prisma.analysis_status.findFirst({
-      where: { website_id },
+const competitor_data = await prisma.report.findUnique({
+      where: { report_id },
       select: {
         
-        competitor_details: true,
+        dashboard3_data: true,
       
       },
     });
@@ -206,7 +213,7 @@ const analysisStatus = await prisma.analysis_status.findFirst({
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
 ### Input Data
-- ${analysisStatus?.competitor_details || 'No competitor comparison data available.'}
+- ${competitor_data?.dashboard3_data || 'No competitor comparison data available.'}
 Note if website REVENUE LOSS IS IN NEGATVE it means that it is good and all the website keypoints  (lcp/fcp etc) are better than the threshold value.
 If seo revenue loss is zero its good , and if its positive it means it is bad 
 ### Task

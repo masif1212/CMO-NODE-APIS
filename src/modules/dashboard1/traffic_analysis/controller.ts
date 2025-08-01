@@ -119,7 +119,7 @@ export const fetchProperties = async (req: Request, res: Response) => {
 };
 
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
-  const { property_id, website_id, user_id } = req.body;
+  const { property_id, website_id, user_id ,report_id} = req.body;
   console.log("Request Body:", req.body);
 
   if (!req.session?.user?.accessToken) {
@@ -130,7 +130,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
   }
 
-  // console.log(website_id, "website id");
+  
 
   try {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
@@ -140,41 +140,24 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     if (!summary || !summary.traffic || !summary.country || !summary.bouncePages) {
       return res.status(404).json({ message: "Analytics summary not found" });
     }
-
-    // Save traffic analytics and get traffic_analysis_id
-    const savedTraffic = await saveTrafficAnalysis(website_id, summary); // should return traffic_analysis_id
+    const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, // You must have 'report_id' from req.body
+      select: { scraped_data_id: true }
+    });
+    const savedTraffic = await saveTrafficAnalysis(summary); // should return traffic_analysis_id
 
     // Save user requirement inline here
     await saveUserRequirement({
       user_id,
-      website_id,
-      property_id,
+     property_id,
+     website_id,
       access_token: req.session.user.accessToken,
       profile: req.session.user.profile,
     });
 
-    // Save traffic_analysis_id in analysis_status
-    await prisma.analysis_status.upsert({
-      where: {
-        user_id_website_id: {
-          user_id,
-          website_id,
-        },
-      },
-      update: {
-        seo_audit: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
-        updated_at: new Date(),
-      },
-      create: {
-        user_id,
-        website_id,
-        seo_audit: savedTraffic.traffic_analysis_id, // Use traffic_analysis_id
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
+   
     const scrapedMeta = await prisma.website_scraped_data.findUnique({
-      where: { website_id },
+      where: { scraped_data_id: report?.scraped_data_id?? undefined },
       select: {
         page_title: true,
         meta_description: true,
@@ -191,6 +174,21 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
         response_time_ms: true,
       },
     });
+               
+    const record = await prisma.report.upsert({
+      where: {
+        report_id: report_id, // this must be a UNIQUE constraint or @id in the model
+      },
+      update: {
+        website_id: website_id, 
+          traffic_analysis_id: savedTraffic.traffic_analysis_id,
+          // dashboard1_Freedata: JSON.stringify(combine_data),
+      },
+      create: {
+          website_id: website_id,
+          traffic_analysis_id: savedTraffic.traffic_analysis_id,
+          // dashboard1_Freedata: JSON.stringify(combine_data),
+      }});
 
     let h1Text = "Not Found";
 
@@ -215,7 +213,23 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     }
 
     const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
+    
+ const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
 
+let update;
+if (existing) {
+  update = await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: { website_id, trafficanaylsis: true }
+  });
+} else {
+  update = await prisma.analysis_status.create({
+    data: { report_id, website_id, trafficanaylsis: true ,user_id}
+  });
+}
+    
     return res.status(200).json({
       message: "seo audit",
       traffic_anaylsis: savedTraffic,
@@ -234,16 +248,16 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
   }
 };
 
-export const dashborad1_Recommendation = async (req: Request, res: Response) => {
-  // console.log("dashborad1_Recommendation called");
-  const { website_id, user_id } = req.body;
+export const dashboard1_Recommendation = async (req: Request, res: Response) => {
+  // console.log("dashboard1_Recommendation called");
+  const { website_id, user_id ,report_id} = req.body;
 
   console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_response = await generateLLMTrafficReport(website_id, user_id);
+    const llm_response = await generateLLMTrafficReport(website_id, user_id, report_id);
     // console.log("llm_res",llm_response)
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });

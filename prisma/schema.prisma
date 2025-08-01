@@ -13,14 +13,14 @@ datasource db {
 }
 
 model users {
-  user_id               String    @id @default(uuid())
-  email                 String    @unique
+  user_id               String     @id @default(uuid())
+  email                 String?   @unique
   first_name            String?
   last_name             String?
   user_type             String?
   is_email_verified     Boolean   @default(false)
   is_mfa_enabled        Boolean   @default(false)
-  account_status        String    @default("active")
+  account_status        String?   @default("active")
   created_at            DateTime  @default(now())
   updated_at            DateTime  @default(now()) @updatedAt
   last_login            DateTime?
@@ -28,7 +28,7 @@ model users {
 
   // --- ADD THIS FIELD ---
   // Stores the customer ID from Checkout.com for repeat transactions.
-  checkout_customer_id  String?   @unique
+  checkout_customer_id String? @unique
 
   // relations
   user_websites          user_websites[]
@@ -47,27 +47,27 @@ model users {
   payments               payments[]
   payment_methods        paymentMethods[] // Relation to the new model
 }
-
 // --- ADD THIS NEW MODEL ---
 // Stores different analysis services and their prices.
 model analysisServices {
-  id          String   @id @default(uuid())
-  type        String   @unique // e.g., "website_audit", "seo_report"
-  name        String   // e.g., "Website Audit"
+  id          String     @id @default(uuid())
+  type        String?  @unique // e.g., "website_audit", "seo_report"
+  name        String?// e.g., "Website Audit"
   price       Decimal
+  report      String?
   description String?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
 
 // --- ADD THIS NEW MODEL ---
-// Stores saved payment methods for users.
+
 model paymentMethods {
-  method_id          String   @id @default(uuid())
+  method_id          String     @id @default(uuid())
   user_id            String
-  checkout_source_id String   @unique // The source ID from Checkout.com
-  card_type          String   // e.g., "Visa", "Mastercard"
-  last4              String   // Last 4 digits of the card
+  checkout_source_id String?  @unique // The source ID from Checkout.com
+  card_type          String?// e.g., "Visa", "Mastercard"
+  last4              String?// Last 4 digits of the card
   is_default         Boolean  @default(false)
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
@@ -76,8 +76,10 @@ model paymentMethods {
   user users @relation(fields: [user_id], references: [user_id])
 }
 
+
+
 model payments {
-  payment_id      String    @id @default(uuid())
+  payment_id      String        @id @default(uuid())
   user_id         String
   amount          Decimal
   currency        String
@@ -87,44 +89,36 @@ model payments {
   subscription_id String?
   website_id      String?
   analysis_type   String?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @default(now()) @updatedAt
-  users           users     @relation(fields: [user_id], references: [user_id])
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @default(now()) @updatedAt
+  users           users          @relation(fields: [user_id], references: [user_id])
   subscriptions   subscriptions? @relation(fields: [subscription_id], references: [subscription_id])
 
-  // The relation to user_websites has been removed as it was not correctly defined.
-  // The 'website_id' can still be stored, but a direct Prisma relation is not established here
-  // to prevent schema errors, since website_id is not unique in the user_websites model.
 }
 
 // --- NO CHANGES NEEDED FOR THE MODELS BELOW ---
 // (Your other models remain the same)
 
 model user_websites {
-  website_id    String   @id @default(uuid())
-  user_id       String   
-  website_url   String
-  website_type  String?
-  website_name  String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now()) @updatedAt
+  website_id   String  @id @default(uuid())
+  user_id      String
+  website_url  String
+  website_type String?
+  website_name String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
 
   users                       users                         @relation(fields: [user_id], references: [user_id])
-  brand_website_analysis      brand_website_analysis[]
-  brand_traffic_analysis      brand_traffic_analysis[]
-  brand_social_media_analysis brand_social_media_analysis[]
-  website_scraped_data        website_scraped_data?         @relation("WebsiteScrapedData_UserWebsite")
-  competitor_data             competitor_data[]
-  llm_responses               llm_responses?
-  user_requirements           user_requirements[]
-  analysis_status             analysis_status[]
+
+  user_requirements  user_requirements[]
+  analysis_status    analysis_status[]
+  report             report[]
 
   @@unique([user_id, website_id], name: "user_id_website_id")
 }
 
-
 model authentication_methods {
-  auth_id                String    @id @default(uuid())
+  auth_id                String   @id @default(uuid())
   user_id                String
   auth_type              String
   auth_provider_id       String?
@@ -139,7 +133,7 @@ model authentication_methods {
 }
 
 model magic_links {
-  magic_link_id String    @id @default(uuid())
+  magic_link_id String     @id @default(uuid())
   user_id       String
   token_hash    String
   expires_at    DateTime
@@ -151,8 +145,8 @@ model magic_links {
 }
 
 model roles {
-  role_id          String             @id @default(uuid())
-  role_name        String             @unique
+  role_id          String     @id @default(uuid())
+  role_name        String?            @unique
   description      String?
   updated_at       DateTime           @default(now()) @updatedAt
   user_roles       user_roles[]
@@ -160,8 +154,8 @@ model roles {
 }
 
 model permissions {
-  permission_id    String             @id @default(uuid())
-  permission_name  String             @unique
+  permission_id    String     @id @default(uuid())
+  permission_name  String?            @unique
   description      String?
   updated_at       DateTime           @default(now()) @updatedAt
   role_permissions role_permissions[]
@@ -188,32 +182,32 @@ model user_roles {
 }
 
 model sessions {
-  session_id  String    @id @default(uuid())
+  session_id  String     @id @default(uuid())
   user_id     String
-  token       String    @db.LongText
+  token       String?  @db.LongText
   device_info Json?
   ip_address  String?
   expires_at  DateTime
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @default(now()) @updatedAt
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now()) @updatedAt
 
   users users @relation(fields: [user_id], references: [user_id])
 }
 
 model audit_logs {
-  log_id            String    @id @default(uuid())
+  log_id            String     @id @default(uuid())
   user_id           String?
   action_type       String
   resource_affected String
   ip_address        String?
   device_info       Json?
-  timestamp         DateTime  @default(now())
+  timestamp         DateTime @default(now())
 
   users users? @relation(fields: [user_id], references: [user_id])
 }
 
 model login_attempts {
-  attempt_id  String   @id @default(uuid())
+  attempt_id  String     @id @default(uuid())
   user_id     String
   auth_method String
   status      String
@@ -225,7 +219,7 @@ model login_attempts {
 }
 
 model mfa_methods {
-  mfa_id       String   @id @default(uuid())
+  mfa_id       String     @id @default(uuid())
   user_id      String
   mfa_type     String
   secret       String
@@ -238,7 +232,7 @@ model mfa_methods {
 }
 
 model email_verifications {
-  verification_id String    @id @default(uuid())
+  verification_id String     @id @default(uuid())
   user_id         String
   token_hash      String
   expires_at      DateTime
@@ -250,7 +244,7 @@ model email_verifications {
 }
 
 model api_keys {
-  key_id        String    @id @default(uuid())
+  key_id        String     @id @default(uuid())
   user_id       String
   service_name  String
   encrypted_key String
@@ -262,15 +256,15 @@ model api_keys {
 }
 
 model system_settings {
-  setting_id    String   @id @default(uuid())
-  setting_key   String   @unique
+  setting_id    String     @id @default(uuid())
+  setting_key   String?  @unique
   setting_value String
   description   String?
   updated_at    DateTime @default(now()) @updatedAt
 }
 
 model data_retention_policies {
-  policy_id             String   @id @default(uuid())
+  policy_id             String     @id @default(uuid())
   data_type             String
   retention_period_days Int
   description           String?
@@ -279,8 +273,7 @@ model data_retention_policies {
 }
 
 model brand_website_analysis {
-  website_analysis_id      String   @id @default(uuid())
-  website_id               String
+  website_analysis_id      String     @id @default(uuid())
   performance_score        Float?
   seo_score                Float?
   first_contentful_paint   String?
@@ -300,76 +293,35 @@ model brand_website_analysis {
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
 
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
-    @@index([website_id, updated_at])
 }
 
 model brand_traffic_analysis {
-  traffic_analysis_id String   @id @default(uuid())
-  website_id          String
-  total_visitors      Int?
-  organic_search      Int?
-  direct              Int?
-  referral            Int?
-  organic_social      Int?
-  unassigned          Int?
-  high_bounce_pages   Json?
-  top_countries       Json?
-  overall_bounce_rate Float?
-  actionable_fix      String?
-  daily_active_users  Json?
+  traffic_analysis_id  String     @id @default(uuid())
+  total_visitors       Int?
+  organic_search       Int?
+  direct               Int?
+  referral             Int?
+  organic_social       Int?
+  unassigned           Int?
+  high_bounce_pages    Json?
+  top_countries        Json?
+  overall_bounce_rate  Float?
+  actionable_fix       String?
+  daily_active_users   Json?
   avg_session_duration Float?
-  engagement_rate     Float?
-  engaged_sessions    Int?
-  top_devices         Json?
-  top_browsers        Json?
-  top_sources         Json?
-  new_vs_returning    Json?
-  created_at          DateTime @default(now())
-  updated_at          DateTime @default(now()) @updatedAt
+  engagement_rate      Float?
+  engaged_sessions     Int?
+  top_devices          Json?
+  top_browsers         Json?
+  top_sources          Json?
+  new_vs_returning     Json?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @default(now()) @updatedAt
 
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
-}
-
-model website_scraped_data {
-  scraped_data_id          String               @id @default(uuid())
-  website_id               String               @unique
-  website_url              String
-  isCrawlable              Boolean?
-  headingAnalysis          Json?
-  page_title               String?              @db.LongText
-  logo_url                 String?              @db.LongText
-  meta_description         String?              @db.LongText
-  meta_keywords            String?              @db.LongText
-  og_title                 String?              @db.LongText
-  og_description           String?              @db.LongText
-  og_image                 String?              @db.LongText
-  twitter_handle           String?              @db.LongText
-  facebook_handle          String?              @db.LongText
-  instagram_handle         String?              @db.LongText
-  linkedin_handle          String?              @db.LongText
-  youtube_handle           String?              @db.LongText
-  ctr_loss_percent         Json?
-  homepage_alt_text_coverage Int?
-  sitemap_pages            Json?
-  schema_analysis          Json?
-  tiktok_handle            String?
-  other_links              Json?
-  raw_html                 String?              @db.LongText
-  ai_response              String?              @db.LongText
-  status_code              Int?
-  ip_address               String?
-  response_time_ms         Int?
-  status_message           String?              @db.LongText
-  scraped_at               DateTime             @default(now())
-  updated_at               DateTime             @default(now()) @updatedAt
-  user_website             user_websites        @relation("WebsiteScrapedData_UserWebsite", fields: [website_id], references: [website_id])
-  competitor_details       competitor_details[] @relation("SiteCompetitors")
 }
 
 model brand_social_media_analysis {
-  social_media_id           String   @id @default(uuid())
-  website_id                String
+  social_media_id           String     @id @default(uuid())
   platform_name             String
   followers                 Int?
   likes                     Int?
@@ -386,91 +338,102 @@ model brand_social_media_analysis {
   created_at                DateTime @default(now())
   updated_at                DateTime @default(now()) @updatedAt
 
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
 }
 
 
 
+model website_scraped_data {
+  scraped_data_id            String   @id @default(uuid())
+  website_url               String?
+  isCrawlable               Boolean?
+  headingAnalysis           Json?
+  page_title                String?  @db.LongText
+  logo_url                  String?  @db.LongText
+  meta_description          String?  @db.LongText
+  meta_keywords             String?  @db.LongText
+  og_title                  String?  @db.LongText
+  og_description            String?  @db.LongText
+  og_image                  String?  @db.LongText
+  twitter_handle            String?  @db.LongText
+  facebook_handle           String?  @db.LongText
+  instagram_handle          String?  @db.LongText
+  linkedin_handle           String?  @db.LongText
+  youtube_handle            String?  @db.LongText
+  ctr_loss_percent          Json?
+  homepage_alt_text_coverage Int?
+  sitemap_pages             Json?
+  schema_analysis           Json?
+  tiktok_handle             String?
+  other_links               Json?
+  raw_html                  String?  @db.LongText
+  ai_response               String?  @db.LongText
+  status_code               Int?
+  ip_address                String?
+  response_time_ms          Int?
+  status_message            String?  @db.LongText
+  scraped_at                DateTime @default(now())
+  updated_at                DateTime @default(now()) @updatedAt
+  competitor_details        competitor_details[] @relation("SiteCompetitors") // Added opposite relation
+}
+
 model competitor_details {
-  competitor_id    String   @id @default(uuid())
-  website_id       String
-  name             String?
-  competitor_website_url      String? @db.LongText
-  industry         String?  @db.LongText
-  region           String?  @db.LongText
-  target_audience  String?  @db.LongText
-  primary_offering String?  @db.LongText
-  usp              String?  @db.LongText
-  created_at       DateTime @default(now())
-  updated_at       DateTime @default(now()) @updatedAt
-  order_index           Int?     // For maintaining competitor order
+  competitor_id          String   @id @default(uuid())
+  website_id             String
+  report_id              String
+  scraped_data_id        String?
+  name                   String?
+  competitor_website_url String?  @db.LongText
+  industry               String?  @db.LongText
+  region                 String?  @db.LongText
+  target_audience        String?  @db.LongText
+  primary_offering       String?  @db.LongText
+  usp                    String?  @db.LongText
+  created_at             DateTime @default(now())
+  updated_at             DateTime @default(now()) @updatedAt
+  order_index            Int?
+  competitor_data        competitor_data?
+  website_scraped_data   website_scraped_data? @relation("SiteCompetitors", fields: [scraped_data_id], references: [scraped_data_id])
   @@index([website_id])
   @@index([website_id, order_index])
-  // relations
-  website_scraped_data    website_scraped_data     @relation("SiteCompetitors", fields: [website_id], references: [website_id])
-  competitor_data competitor_data?
+  @@index([scraped_data_id])
 }
 
 model competitor_data {
-  competitor_scraped_id    String             @id @default(uuid())
-  competitor_id            String             @unique
-  website_id               String
-  isCrawlable              Boolean?
-  website_url              String
-  page_title               String?            @db.LongText
-  logo_url                 String?            @db.LongText
-  meta_description         String?            @db.LongText
-  meta_keywords            String?            @db.LongText
-  og_title                 String?            @db.LongText
-  headingAnalysis          Json?
-  og_description           String?            @db.LongText
-  og_image                 String?            @db.LongText
-  twitter_handle           String?            @db.LongText
-  facebook_handle          String?            @db.LongText
-  instagram_handle         String?            @db.LongText
-  linkedin_handle          String?            @db.LongText
+  competitor_scraped_id String   @id @default(uuid())
+  competitor_id         String?  @unique
+  website_id            String
+  report_id             String
+  isCrawlable           Boolean?
+  website_url           String
+  page_title            String?  @db.LongText
+  logo_url              String?  @db.LongText
+  meta_description      String?  @db.LongText
+  meta_keywords         String?  @db.LongText
+  og_title              String?  @db.LongText
+  headingAnalysis       Json?
+  og_description        String?  @db.LongText
+  og_image              String?  @db.LongText
+  twitter_handle        String?  @db.LongText
+  facebook_handle       String?  @db.LongText
+  instagram_handle      String?  @db.LongText
+  linkedin_handle       String?  @db.LongText
   homepage_alt_text_coverage Int?
-  youtube_handle           String?            @db.LongText
-  tiktok_handle            String?            @db.LongText
-  ctr_loss_percent         Json?
-  revenue_loss_percent     Int?
-  sitemap_pages            Json?
-  schema_analysis          Json?
-  page_speed               Json?
-  other_links              Json?
-  raw_html                 String?            @db.LongText
-  scraped_at               DateTime           @default(now())
-  updated_at               DateTime           @default(now()) @updatedAt
-  competitor_details       competitor_details @relation(fields: [competitor_id], references: [competitor_id])
-  user_websites            user_websites      @relation(fields: [website_id], references: [website_id])
-}
-
-model llm_responses {
-  id                                String   @id @default(uuid())
-  website_id                        String   @unique
-  dashboard1_what_working           String?  @db.LongText
-  dashboard2_what_working           String?  @db.LongText
-  dashboard3_competi_camparison     String?  @db.LongText
-  dashboard3_competi_recommedation  String?  @db.LongText
-  recommendation_by_mo_dashboard1   String?  @db.LongText
-  recommendation_by_mo_dashboard2   String?  @db.LongText
-  recommendation_by_mo_dashboard3   String?  @db.LongText
-  recommendation_by_cmo             String?  @db.LongText
-  pagespeed_report                  String?  @db.LongText
-  traffic_report                    String?  @db.LongText
-  broken_links_report               String?  @db.LongText
-  brand_audit                       String?  @db.LongText
-  geo_llm                           String?  @db.LongText
-  competitor_ps_report              String?  @db.LongText
-  competitor_social_media_report    String?  @db.LongText
-  created_at                        DateTime @default(now())
-  updated_at                        DateTime @default(now()) @updatedAt
-
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+  youtube_handle        String?  @db.LongText
+  tiktok_handle         String?  @db.LongText
+  ctr_loss_percent      Json?
+  revenue_loss_percent  Int?
+  sitemap_pages         Json?
+  schema_analysis       Json?
+  page_speed            Json?
+  other_links           Json?
+  raw_html              String?  @db.LongText
+  scraped_at            DateTime @default(now())
+  updated_at            DateTime @default(now()) @updatedAt
+  competitor_details    competitor_details? @relation(fields: [competitor_id], references: [competitor_id]) // Made optional
 }
 
 model user_requirements {
-  requirement_id      String   @id @default(uuid())
+  requirement_id      String     @id @default(uuid())
   user_id             String
   website_id          String
   property_id         String?
@@ -498,34 +461,29 @@ model user_requirements {
 }
 
 model analysis_status {
-  id                    String   @id @default(uuid())
+  id                    String     @id @default(uuid())
   user_id               String
-  website_id            String
-  dashboard1            String?  @db.LongText
-  dashboard2            String?  @db.LongText
-  dashboard3            String?  @db.LongText
-  dashboard4            String?  @db.LongText
-  website_audit         String?  @db.LongText
-  seo_audit             String?  @db.LongText
-  technical_seo         String?  @db.LongText
-  geo_llm               String?  @db.LongText
-  social_media_analysis String?  @db.LongText
-  competitor_details    String?  @db.LongText
-  recommendation_by_mo1 String?  @db.LongText
-  recommendation_by_mo2 String?  @db.LongText
-  recommendation_by_mo3 String?  @db.LongText
-  recommendation_by_cmo String?  @db.LongText
+  website_id            String?
+  report_id             String?
+  website_audit         Boolean?  
+  trafficanaylsis       Boolean? 
+  onpageoptimization    Boolean?
+  offpageoptimization   Boolean?
+  social_media_anaylsis Boolean?
+  competitors_identification Boolean?
+   recommendationbymo1  Boolean?
+  recommendationbymo2  Boolean?
+  recommendationbymo3  Boolean? 
+  cmo_recommendation   Boolean?  
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
-
+  user_websites user_websites? @relation(fields: [website_id], references: [website_id])
   users         users         @relation(fields: [user_id], references: [user_id])
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
 
-  @@unique([user_id, website_id])
 }
 
 model plans {
-  plan_id       String          @id @default(uuid())
+  plan_id       String     @id @default(uuid())
   plan_name     String
   price         Decimal
   currency      String
@@ -536,16 +494,53 @@ model plans {
 }
 
 model subscriptions {
-  subscription_id String    @id @default(uuid())
+  subscription_id String     @id @default(uuid())
   user_id         String
   plan_id         String
   start_date      DateTime
   end_date        DateTime?
   status          String
   payment_status  String
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @default(now()) @updatedAt
-  users           users     @relation(fields: [user_id], references: [user_id])
-  plans           plans     @relation(fields: [plan_id], references: [plan_id])
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @default(now()) @updatedAt
+  users           users      @relation(fields: [user_id], references: [user_id])
+  plans           plans      @relation(fields: [plan_id], references: [plan_id])
   payments        payments[]
+}
+
+model report {
+  report_id  String @id @default(uuid())
+  website_id String
+
+  // Your current fields
+  website_analysis_id         String? @db.LongText
+  traffic_analysis_id         String? @db.LongText
+  onpageoptimization_id       String? @db.LongText
+  social_media_id             String? @db.LongText
+  competitor_scraped_id       String? @db.LongText
+  competitor_id               String? @db.LongText
+
+
+  geo_llm                  String? @db.LongText
+  scraped_data_id          String?
+  dashboard1_Freedata       String? @db.LongText
+  dashboard_paiddata        String? @db.LongText
+  strengthandissues_d1         String?  @db.LongText
+  recommendationbymo1         String? @db.LongText
+
+  dashboard2_data          String? @db.LongText
+  strengthandissues_d2         String?  @db.LongText
+  recommendationbymo2         String? @db.LongText
+
+  dashboard3_data          String? @db.LongText
+  recommendationbymo3         String? @db.LongText
+
+  dashboard4_data          String? @db.LongText
+  cmorecommendation         String? @db.LongText
+
+  updated_at DateTime @updatedAt @default(now())
+  created_at DateTime @default(now())
+  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+
+  @@index([website_id, updated_at])
 }

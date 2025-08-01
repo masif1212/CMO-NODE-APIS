@@ -249,7 +249,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
 };
 
 
-export const saveTrafficAnalysis = async (website_id: string, summary: any) => {
+export const saveTrafficAnalysis = async (summary: any) => {
   const trafficMap = Object.fromEntries(
     summary?.traffic?.map((item: any) => [
       item.dimensionValues[0]?.value?.toLowerCase()?.replace(/\s/g, "_"),
@@ -295,7 +295,6 @@ if (!hasChatGPT) {
 }
   return prisma.brand_traffic_analysis.create({
     data: {
-      website_id,
       total_visitors,
       organic_search: trafficMap["organic_search"] || 0,
       direct: trafficMap["direct"] || 0,

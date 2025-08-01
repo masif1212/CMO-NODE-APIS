@@ -52,30 +52,67 @@ export const getUserById = async (userId: string) => {
 };
 
 
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url.trim());
+    u.pathname = u.pathname.replace(/\/+$/, ""); // Remove trailing slashes
+    return u.origin + u.pathname;
+  } catch (e) {
+    throw new Error("Invalid URL: " + url);
+  }
+}
 
+export async function add_userwebsite(user_id: string, rawUrl: string) {
+  const websiteUrl = normalizeUrl(rawUrl);
 
-export async function add_userwebsite(user_id: string, website_url: string): Promise<{ website_id: string;}> {
-  const start = Date.now();
-
- 
- 
-
-  const responseTimeMs = Date.now() - start;
-  const newWebsite = await prisma.user_websites.create({
-    data: {
-      website_url: website_url,
-      users: { connect: { user_id } },
+  // Step 1: Check if website already exists
+  let existingWebsite = await prisma.user_websites.findFirst({
+    where: {
+      website_url: websiteUrl,
+      user_id,
     },
-    select: { website_id: true },
   });
 
- 
-  
-  
+  let website_id: string;
 
-  const website_id = newWebsite.website_id;
-  return {
-    website_id: website_id,
-    // responseTimeMs,
+  if (existingWebsite) {
+    website_id = existingWebsite.website_id;
+  } else {
+    // Step 2: Create new website
+    const newWebsite = await prisma.user_websites.create({
+      data: {
+        website_url: websiteUrl,
+        user_id,
+        website_type: null,
+        website_name: null,
+      },
+    });
+
+    website_id = newWebsite.website_id;
   }
+   const matchingRequirement = await prisma.user_requirements.findFirst({
+    where: {
+      website_id,
+      
+    },
+    select :{
+      target_location:true,
+      USP:true,
+      primary_offering:true,
+      industry:true,
+      competitor_urls:true,
+      target_audience:true
+      
+
+
+      },
+  });
+  // Step 3: Always create new report (even if website is reused)
+  const newReport = await prisma.report.create({
+    data: {
+      website_id,
+    },
+  });
+
+  return { report_id: newReport.report_id, website_id,matchingRequirement };
 }

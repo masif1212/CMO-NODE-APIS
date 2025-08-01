@@ -261,18 +261,9 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       return { isValid: false, reason };
     }
 
-    // // Example from isValidCompetitorUrl
-    // const launchOptions = {
-    //   executablePath: "/usr/bin/google-chrome-stable",
-    //   headless: "new" as any,
-    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    // };
+    const mode = process.env.MODE;
 
-    // if (!browser) {
-    //   console.log("Launching new browser instance with options:", JSON.stringify(launchOptions));
-    //     // browser = await puppeteer.launch(launchOptions);
-
-    //   const mode = process.env.MODE;
+    console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
 
     //   if (mode === 'cloud') {
     //     const launchOptions = {
@@ -290,19 +281,18 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     //       }
 
     // Example from isValidCompetitorUrl
-    
 
     if (!browser) {
       const mode = process.env.NODE;
-      
+
       console.log(`[Browser Init] MODE is set to: ${mode}`);
 
       if (mode === "production") {
         const launchOptions = {
-        executablePath: "/usr/bin/google-chrome-stable",
-        headless: "new" as any,
-        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-      };
+          executablePath: "/usr/bin/google-chrome-stable",
+          headless: "new" as any,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        };
         console.log("[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:", JSON.stringify(launchOptions));
         browser = await puppeteer.launch(launchOptions);
       } else if (mode === "development") {
