@@ -13,9 +13,13 @@ export class FacebookService {
       redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
       scope: 'email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic,instagram_manage_insights',
       response_type: 'code',
+
+      auth_type:"rerequest",
     });
     return `https://www.facebook.com/v19.0/dialog/oauth?${params}`;
   }
+
+
 
   static async getAccessToken(code: string) {
     try {
@@ -23,8 +27,12 @@ export class FacebookService {
         client_id: process.env.FACEBOOK_APP_ID!,
         client_secret: process.env.FACEBOOK_APP_SECRET!,
         redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
+        // auth_type:"rerequest",
+
         code,
       };
+    
+      
       const res = await axios.get(`${FB_BASE}/oauth/access_token`, { params });
       return res.data;
     } catch (err: any) {
@@ -48,40 +56,99 @@ export class FacebookService {
     }
   }
 
-  static async getPages(access_token: string) {
-    try {
-      const res = await axios.get(`${FB_BASE}/me/accounts`, {
-        params: { access_token },
-      });
+  // static async getPages(access_token: string) {
+  //   try {
+  //     const res = await axios.get(`${FB_BASE}/me/accounts`, {
+  //       params: { access_token },
+  //     });
+  //     console.log("res",res)
+  //     const pages = res.data?.data ?? [];
+  //     console.log("pages",pages)
+  //     const enrichedPages = await Promise.all(
+  //       pages.map(async (page: any) => {
+  //         try {
+  //           const [followers, postCount,pageMetrics,instagram_basic] = await Promise.all([
+  //             this.getPageFollowers(page.id, page.access_token),
+  //             this.getPagePostCount(page.id, page.access_token),
+  //             this.getPageMetrics(page.id,page.token),
+  //             this.getInstagramMetrics(page.id,page.token)
+  //           ]);
+  //           return {
+  //             ...page,
+  //             followers,
+  //             postCount,
+  //             postingFrequency: postCount / 30,
+  //             pageMetrics,
+  //             instagram_basic
+  //           };
+  //         } catch (err: any) {
+  //           console.warn(`Failed to fetch analytics for page ${page.name}:`, err.response?.data || err.message);
+  //           return { ...page, followers: null, postCount: null, postingFrequency: null, error: true };
+  //         }
+  //       })
+  //     );
 
-      const pages = res.data?.data ?? [];
-      const enrichedPages = await Promise.all(
-        pages.map(async (page: any) => {
-          try {
-            const [followers, postCount] = await Promise.all([
-              this.getPageFollowers(page.id, page.access_token),
-              this.getPagePostCount(page.id, page.access_token),
-            ]);
+  //     return { data: enrichedPages,pages };
+  //   } catch (err: any) {
+  //     console.error('Error fetching pages:', err.response?.data || err.message);
+  //     throw err;
+  //   }
+  // }
 
-            return {
-              ...page,
-              followers,
-              postCount,
-              postingFrequency: postCount / 30,
-            };
-          } catch (err: any) {
-            console.warn(`Failed to fetch analytics for page ${page.name}:`, err.response?.data || err.message);
-            return { ...page, followers: null, postCount: null, postingFrequency: null, error: true };
+
+static async getPages(access_token: string) {
+  try {
+    const res = await axios.get(`${FB_BASE}/me/accounts`, {
+      params: { access_token },
+    });
+    const pages = res.data?.data ?? [];
+    console.log("pages", pages);
+
+    const enrichedPages = await Promise.all(
+      pages.map(async (page: any) => {
+        try {
+          const [followers, postCount, pageMetrics, instagram_basic] = await Promise.all([
+            this.getPageFollowers(page.id, page.access_token),
+            this.getPagePostCount(page.id, page.access_token),
+            this.getPageMetrics(page.id, page.access_token),
+            this.getInstagramMetrics(page.id, page.access_token),
+          ]);
+
+          return {
+            ...page,
+            followers,
+            postCount,
+            postingFrequency: postCount / 30,
+            pageMetrics,
+            instagram_basic,
+          };
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.error?.message || err.message;
+          if (errorMessage.includes('valid app ID')) {
+            console.warn(`Skipping page ${page.name} due to invalid App ID: ${errorMessage}`);
+            return null; // Skip page with invalid app ID
           }
-        })
-      );
+          console.warn(`Failed to fetch analytics for page ${page.name}:`, errorMessage);
+          return { ...page, followers: null, postCount: null, postingFrequency: null, error: true };
+        }
+      })
+    );
+    await axios.delete(`https://graph.facebook.com/v18.0/me/permissions`, {
+        params: { access_token }
+      });
+      console.log('✅ Permissions revoked.');
 
-      return { data: enrichedPages };
-    } catch (err: any) {
-      console.error('Error fetching pages:', err.response?.data || err.message);
-      throw err;
+    return { data: enrichedPages.filter(page => page !== null), pages };
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.error?.message || err.message;
+    console.error('Error fetching pages:', errorMessage);
+    if (errorMessage.includes('valid app ID')) {
+      throw new Error('Invalid Facebook App ID. Please check your App ID configuration in the Facebook Developer Portal.');
     }
+    throw err;
   }
+}
+
 
   static async getPageFollowers(pageId: string, token: string) {
     try {

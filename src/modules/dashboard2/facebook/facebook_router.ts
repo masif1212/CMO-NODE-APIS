@@ -1,6 +1,12 @@
 import express, { Request, Response } from 'express';
 import { FacebookService } from './facebook.service';
+import axios from 'axios';
+import querystring from 'querystring';
 
+import { PrismaClient } from "@prisma/client";
+
+
+const prisma = new PrismaClient();
 const router = express.Router();
 
 const asyncHandler = (fn: Function) => (req: any, res: any, next: any) => {
@@ -13,91 +19,69 @@ router.get('/login', (req: Request, res: Response) => {
   res.redirect(authUrl);
 });
 
-// Callback endpoint after Facebook login
-// router.get('/callback', asyncHandler(async (req: Request, res: Response) => {
-//   const code = req.query.code as string;
-//   if (!code) {
-//     return res.status(400).json({ error: 'Missing authorization code' });
-//   }
-
-//   try {
-//     // Exchange code for access token
-//     const { access_token } = await FacebookService.getAccessToken(code);
-
-//     // Fetch user profile
-//     const profile = await FacebookService.getProfile(access_token);
-
-//     // Fetch user-managed pages
-//     const pages = await FacebookService.getPages(access_token);
-//     if (!pages.data || pages.data.length === 0) {
-//       return res.status(400).json({ error: 'No pages found' });
-//     }
-
-//     // Select first page
-//     const selectedPage = pages.data[0];
-//     const pageId = selectedPage.id;
-//     const pageAccessToken = selectedPage.access_token;
-
-//     // Fetch page metrics
-//     const pageMetrics = await FacebookService.getPageMetrics(pageId, pageAccessToken);
-
-//     // Fetch Instagram data if connected
-//     const instagramData = await FacebookService.getInstagramMetrics(pageId, pageAccessToken);
-
-//     return res.json({
-//       access_token,
-//       user: profile,
-//       page: { ...selectedPage, metrics: pageMetrics },
-//       instagram: instagramData,
-//     });
-//   } catch (error: any) {
-//     console.error('Error in callback:', error.response?.data || error.message);
-//     return res.status(500).json({ error: 'Internal server error', details: error.response?.data?.error?.message || error.message });
-//   }
-// }));
-
 
 
 router.get('/callback', asyncHandler(async (req: Request, res: Response) => {
   const code = req.query.code as string;
-  if (!code) {
-    return res.status(400).json({ error: 'Missing authorization code' });
-  }
+ 
+  console.log("➡️ Incoming /callback request");
+  console.log("🔹 Query Params:", { code });
 
-  try {
-    // Exchange code for access token
-    const { access_token } = await FacebookService.getAccessToken(code);
+  // 🔹 Case 1: Handle OAuth callback
+  
+    console.log("🔄 Handling OAuth code exchange...");
+    try {
+      const { access_token: userAccessToken } = await FacebookService.getAccessToken(code);
+      console.log("✅ Received user access token:", userAccessToken);
 
-    // Fetch user profile
-    const profile = await FacebookService.getProfile(access_token);
+      const userProfile = await FacebookService.getProfile(userAccessToken);
+      console.log("✅ Fetched user profile:", userProfile);
 
-    // Fetch user-managed pages
-    const pages = await FacebookService.getPages(access_token);
-    if (!pages.data || pages.data.length === 0) {
-      return res.status(400).json({ error: 'No pages found' });
+      // req.session.access_token = userAccessToken;
+      req.session.profile = userProfile;
+
+      const pages = await FacebookService.getPages(userAccessToken);
+      req.session.pages = pages;
+
+      console.log("📄 Retrieved pages:", pages);
+    
+      return res.json({
+       pages
+      });
+    } catch (err) {
+      console.error('❌ Error during OAuth flow:', err);
+      return res.status(500).json({ error: 'OAuth login failed' });
     }
-
-    // Select first page
-    const selectedPage = pages.data[0];
-    const pageId = selectedPage.id;
-    const pageAccessToken = selectedPage.access_token;
-
-    // Fetch page metrics
-    const pageMetrics = await FacebookService.getPageMetrics(pageId, pageAccessToken);
-
-    // Fetch Instagram data if connected
-    const instagramData = await FacebookService.getInstagramMetrics(pageId, pageAccessToken);
-
-    return res.json({
-      access_token,
-      user: profile,
-      page: { ...selectedPage, metrics: pageMetrics },
-      instagram: instagramData,
-    });
-  } catch (error: any) {
-    console.error('Error in callback:', error.response?.data || error.message);
-    return res.status(500).json({ error: 'Internal server error', details: error.response?.data?.error?.message || error.message });
   }
+
+
+));
+
+
+
+router.post('/save-pages', asyncHandler(async (req: Request, res: Response) => {
+  const pages = req.body.pages;
+  const profile = req.body.profile;
+  const report_id = req.body.report_id
+  const website_id = req.body.website_id
+
+     const record = await prisma.report.upsert({
+      where: {
+        report_id: report_id, // this must be a UNIQUE constraint or @id in the model
+      },
+      update: {
+        scraped_data_id: pages
+        // add any other fields you want to update
+      },
+      create: {
+        website_id: website_id,
+        scraped_data_id: pages
+        // add any other fields required for creation
+      }
+});
+
+  return res.json({ status: 'saved' });
 }));
+
 
 export default router;
