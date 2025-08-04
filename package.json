@@ -43,7 +43,7 @@
     "express-session": "^1.18.1",
     "googleapis": "^148.0.0",
     "jsonwebtoken": "^9.0.2",
-    "lighthouse": "^12.8.0",
+    "lighthouse": "^12.8.1",
     "microdata-node": "^2.0.0",
     "mysql2": "^3.14.0",
     "node": "^24.0.1",

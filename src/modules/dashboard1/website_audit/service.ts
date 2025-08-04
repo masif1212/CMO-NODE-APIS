@@ -1,32 +1,20 @@
 import axios from "axios";
 import { PrismaClient } from "@prisma/client";
-// Note: We will dynamically import lighthouse and chrome-launcher later
+// Note: chrome-launcher is also often better when imported dynamically with lighthouse.
+import chromeLauncher from "chrome-launcher";
+import puppeteer from "puppeteer";
 
 const prisma = new PrismaClient();
 const API_KEY = process.env.PAGESPEED_API_KEY || "YOUR_KEY";
 const API_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
-import puppeteer from "puppeteer";
 
 /**
- * Dynamically imports and returns the lighthouse and chrome-launcher modules.
- * This is necessary because they are ES Modules and this project uses CommonJS.
- * @returns A promise that resolves to an object containing the imported modules.
- */
-async function getLighthouseModules() {
-  const lighthouse = (await import("lighthouse")).default;
-  const chromeLauncher = await import("chrome-launcher");
-  return { lighthouse, chromeLauncher };
-}
-
-/**
- * Retrieves the website URL from the database for a given user and website ID.
+ * Fetches a website URL from the database based on user and website IDs.
  * @param user_id - The ID of the user.
  * @param website_id - The ID of the website.
- * @returns A promise that resolves to the website URL.
- * @throws An error if the URL is not found.
+ * @returns The URL of the website.
  */
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
-  // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
     where: {
       user_id_website_id: {
@@ -46,33 +34,59 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-// Example of how you might use the dynamically imported modules in another function
+const mobileFriendlyAudits = ["viewport", "font-size", "tap-targets", "mobile-friendly"];
+
+/**
+ * Runs a Lighthouse audit on a given URL.
+ * This function demonstrates the correct way to import and use the ESM-only 'lighthouse' package.
+ * @param url - The URL to audit.
+ * @returns The Lighthouse report object (lhr).
+ */
 async function runLighthouseAudit(url: string) {
+  let chrome;
   try {
-    const { lighthouse, chromeLauncher } = await getLighthouseModules();
-    const chrome = await chromeLauncher.launch({ chromeFlags: ["--headless"] });
+    // Dynamically import the lighthouse package.
+    // This returns a module, and the main function is the 'default' export.
+    const { default: lighthouse } = await import("lighthouse");
+
+    // Launch a headless Chrome instance.
+    // The '--no-sandbox' flag is often required in containerized/CI environments.
+    chrome = await chromeLauncher.launch({
+      chromeFlags: ["--headless", "--no-sandbox", "--disable-gpu"],
+    });
+
     const options = {
-      logLevel: "info",
-      output: "json",
-      onlyCategories: ["performance", "accessibility", "best-practices", "seo", "pwa"],
+      logLevel: "info" as const, // Use 'as const' for type safety with string literals
+      output: "json" as const,
       port: chrome.port,
     };
+
+    // Run the Lighthouse audit.
     const runnerResult = await lighthouse(url, options);
 
-    // `.report` is the HTML report as a string
-    const reportHtml = runnerResult.report;
-    console.log("Report is done for", runnerResult.lhr.finalUrl);
-    console.log("Performance score was", runnerResult.lhr.categories.performance.score * 100);
+    if (!runnerResult) {
+      throw new Error("Lighthouse audit failed to produce a result.");
+    }
 
-    await chrome.kill();
+    // The full report is in runnerResult.lhr
+    console.log("Lighthouse report is done for:", runnerResult.lhr.finalUrl);
+    // Safely access the performance score, defaulting to 0 if it's null or undefined.
+    const performanceScore = (runnerResult.lhr.categories.performance?.score ?? 0) * 100;
+    console.log("Performance score:", performanceScore);
+
+    // Return the Lighthouse report object.
     return runnerResult.lhr;
   } catch (error) {
-    console.error("Error running Lighthouse audit:", error);
+    console.error("An error occurred during the Lighthouse audit:", error);
+    // Re-throw the error so it can be handled by the calling function.
     throw error;
+  } finally {
+    // IMPORTANT: Ensure the Chrome instance is killed, even if an error occurred.
+    if (chrome) {
+      await chrome.kill();
+    }
   }
 }
-
-const mobileFriendlyAudits = ["viewport", "font-size", "tap-targets", "mobile-friendly"];
 // export async function getPageSpeedData(user_id: string, website_id: string) {
 //   const url = await getWebsiteUrlById(user_id, website_id);
 //   console.log("url fetch",url)
