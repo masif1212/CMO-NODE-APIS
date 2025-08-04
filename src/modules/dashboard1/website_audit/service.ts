@@ -1,12 +1,30 @@
 import axios from "axios";
 import { PrismaClient } from "@prisma/client";
-import lighthouse from "lighthouse";
-import chromeLauncher from "chrome-launcher";
+// Note: We will dynamically import lighthouse and chrome-launcher later
 
 const prisma = new PrismaClient();
 const API_KEY = process.env.PAGESPEED_API_KEY || "YOUR_KEY";
 const API_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 import puppeteer from "puppeteer";
+
+/**
+ * Dynamically imports and returns the lighthouse and chrome-launcher modules.
+ * This is necessary because they are ES Modules and this project uses CommonJS.
+ * @returns A promise that resolves to an object containing the imported modules.
+ */
+async function getLighthouseModules() {
+  const lighthouse = (await import("lighthouse")).default;
+  const chromeLauncher = await import("chrome-launcher");
+  return { lighthouse, chromeLauncher };
+}
+
+/**
+ * Retrieves the website URL from the database for a given user and website ID.
+ * @param user_id - The ID of the user.
+ * @param website_id - The ID of the website.
+ * @returns A promise that resolves to the website URL.
+ * @throws An error if the URL is not found.
+ */
 async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
@@ -28,8 +46,33 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-const mobileFriendlyAudits = ["viewport", "font-size", "tap-targets", "mobile-friendly"];
+// Example of how you might use the dynamically imported modules in another function
+async function runLighthouseAudit(url: string) {
+  try {
+    const { lighthouse, chromeLauncher } = await getLighthouseModules();
+    const chrome = await chromeLauncher.launch({ chromeFlags: ["--headless"] });
+    const options = {
+      logLevel: "info",
+      output: "json",
+      onlyCategories: ["performance", "accessibility", "best-practices", "seo", "pwa"],
+      port: chrome.port,
+    };
+    const runnerResult = await lighthouse(url, options);
 
+    // `.report` is the HTML report as a string
+    const reportHtml = runnerResult.report;
+    console.log("Report is done for", runnerResult.lhr.finalUrl);
+    console.log("Performance score was", runnerResult.lhr.categories.performance.score * 100);
+
+    await chrome.kill();
+    return runnerResult.lhr;
+  } catch (error) {
+    console.error("Error running Lighthouse audit:", error);
+    throw error;
+  }
+}
+
+const mobileFriendlyAudits = ["viewport", "font-size", "tap-targets", "mobile-friendly"];
 // export async function getPageSpeedData(user_id: string, website_id: string) {
 //   const url = await getWebsiteUrlById(user_id, website_id);
 //   console.log("url fetch",url)
