@@ -1,385 +1,287 @@
+// import { PrismaClient } from '@prisma/client';
+// import axios from 'axios';
 
+// const prisma = new PrismaClient();
+// const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY ;
+// const FACEBOOK_PROFILE_ULR = process.env.FACEBOOK_PROFILE_ULR;
+// const FACEBOOK_POST_URL = process.env.FACEBOOK_POST_URL;
+
+// export const getFacebookPostsFromScrapedData = async (facebook_handle: string) => {
+//   const handle = facebook_handle.trim();
+//   const isPageId = /^\d+$/.test(handle); // Checks if only digits
+
+//   const headers = { 'x-api-key': API_KEY };
+//   let allPosts: any[] = [];
+//   let cursor: string | null = null;
+
+//   while (true) {
+//     const queryParam = isPageId
+//       ? `pageId=${handle}`
+//       : `url=https://${handle.replace(/^https?:\/\//, '')}`;
+//     const url : any = `${FACEBOOK_POST_URL}?${queryParam}${cursor ? `&cursor=${cursor}` : ''}`;
+
+//     const response = await axios.get(url, { headers });
+//     const data = response.data;
+
+//     const posts = data.posts || [];
+//     allPosts.push(...posts);
+
+//     // cursor = data.cursor;
+//     // if (!cursor || posts.length === 0) break;
+
+//     await new Promise(resolve => setTimeout(resolve, 1500)); // rate limit
+//   }
+
+//   return allPosts;
+// };
+
+
+
+import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
-import qs from 'querystring';
 
-const FB_BASE = 'https://graph.facebook.com/v19.0';
+const prisma = new PrismaClient();
+const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY;
+const FACEBOOK_PROFILE_URL = process.env.FACEBOOK_PROFILE_ULR;
+const FACEBOOK_POST_URL = process.env.FACEBOOK_POST_URL;
 
-export class FacebookService {
-  private static thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-
-  static getAuthUrl(): string {
-    const params = qs.stringify({
-      client_id: process.env.FACEBOOK_APP_ID,
-      redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
-      scope: 'email,public_profile,pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic,instagram_manage_insights',
-      response_type: 'code',
-
-      auth_type:"rerequest",
-    });
-    return `https://www.facebook.com/v19.0/dialog/oauth?${params}`;
-  }
+const headers = { 'x-api-key': API_KEY };
 
 
 
-  static async getAccessToken(code: string) {
-    try {
-      const params = {
-        client_id: process.env.FACEBOOK_APP_ID!,
-        client_secret: process.env.FACEBOOK_APP_SECRET!,
-        redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
-        // auth_type:"rerequest",
+// export const getFacebookPostsFromScrapedData = async (facebook_handle: string) => {
+//   const handle = facebook_handle.trim();
+//   const isPageId = /^\d+$/.test(handle);
 
-        code,
-      };
-    
-      
-      const res = await axios.get(`${FB_BASE}/oauth/access_token`, { params });
-      return res.data;
-    } catch (err: any) {
-      console.error('Error fetching access token:', err.response?.data || err.message);
-      throw err;
-    }
-  }
+//   const queryParam = isPageId
+//     ? `pageId=${handle}`
+//     : `url=https://${handle.replace(/^https?:\/\//, '')}`;
 
-  static async getProfile(access_token: string) {
-    try {
-      const res = await axios.get(`${FB_BASE}/me`, {
-        params: {
-          fields: 'id,name,email,picture',
-          access_token,
-        },
-      });
-      return res.data;
-    } catch (err: any) {
-      console.error('Error fetching profile:', err.response?.data || err.message);
-      throw err;
-    }
-  }
+//   const url = `${FACEBOOK_POST_URL}?${queryParam}`;
+//   const profile = await getFacebookProfileFromScrapedData(facebook_handle);
 
-  // static async getPages(access_token: string) {
-  //   try {
-  //     const res = await axios.get(`${FB_BASE}/me/accounts`, {
-  //       params: { access_token },
-  //     });
-  //     console.log("res",res)
-  //     const pages = res.data?.data ?? [];
-  //     console.log("pages",pages)
-  //     const enrichedPages = await Promise.all(
-  //       pages.map(async (page: any) => {
-  //         try {
-  //           const [followers, postCount,pageMetrics,instagram_basic] = await Promise.all([
-  //             this.getPageFollowers(page.id, page.access_token),
-  //             this.getPagePostCount(page.id, page.access_token),
-  //             this.getPageMetrics(page.id,page.token),
-  //             this.getInstagramMetrics(page.id,page.token)
-  //           ]);
-  //           return {
-  //             ...page,
-  //             followers,
-  //             postCount,
-  //             postingFrequency: postCount / 30,
-  //             pageMetrics,
-  //             instagram_basic
-  //           };
-  //         } catch (err: any) {
-  //           console.warn(`Failed to fetch analytics for page ${page.name}:`, err.response?.data || err.message);
-  //           return { ...page, followers: null, postCount: null, postingFrequency: null, error: true };
-  //         }
-  //       })
-  //     );
+//   try {
+//     const response = await axios.get(url, { headers });
+//     const posts = response.data?.posts || [];
 
-  //     return { data: enrichedPages,pages };
-  //   } catch (err: any) {
-  //     console.error('Error fetching pages:', err.response?.data || err.message);
-  //     throw err;
-  //   }
-  // }
+//     // Small delay for rate limit handling
+//     await new Promise(resolve => setTimeout(resolve, 1500));
+
+//     const calculateEngagementStats = (posts: any[], followerCount: number) => {
+//       if (!followerCount || followerCount === 0) {
+//         return {
+//           engagementRate: '0.00%',
+//           engagementToFollowerRatio: '0.0000'
+//         };
+//       }
+
+//       let totalEngagement = 0;
+//       let count = 0;
+
+//       for (const post of posts) {
+//         const reactions = Number(post.reactionCount || 0);
+//         const comments = Number(post.commentCount || 0);
+//         const engagement = reactions + comments;
+
+//         totalEngagement += engagement;
+//         count++;
+//       }
+
+//       if (count === 0) {
+//         return {
+//           engagementRate: '0.00%',
+//           engagementToFollowerRatio: '0.0000'
+//         };
+//       }
+
+//       const avgEngagement = totalEngagement / count;
+//       const engagementToFollowerRatio = avgEngagement / followerCount;
+//       const engagementRate = engagementToFollowerRatio * 100;
+
+//       let message = '';
+//       if (engagementRate >= 1.6) {
+//         message = 'High engagement—your content resonates.';
+//       } else if (engagementRate >= 1.1) {
+//         message = 'Better than most in your industry.';
+//       } else if (engagementRate >= 0.6) {
+//         message = 'Standard engagement—room to grow.';
+//       } else if (engagementRate >= 0.0) {
+//         message = 'Minimal engagement for your audience size.';
+//       }
+
+//       return {
+//         engagementRate: engagementRate.toFixed(2) + '%',
+//         engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
+//         message
+//       };
+//     };
+
+//     const followerCount = Number(profile?.followerCount) || 0;
+//     const { engagementRate, engagementToFollowerRatio, message } = calculateEngagementStats(posts, followerCount);
+
+//     return {
+//       profile, 
+//       engagementRate,
+//       message,
+//       engagementToFollowerRatio,
+//       posts,
+//     };
+//   } catch (error: any) {
+//     return { error: `Failed to fetch posts: ${error.message}` };
+//   }
+// };
 
 
-static async getPages(access_token: string) {
+
+
+export const getFacebookPostsFromScrapedData = async (facebook_handle: string) => {
+  const handle = facebook_handle.trim();
+  const isPageId = /^\d+$/.test(handle);
+
+  const queryParam = isPageId
+    ? `pageId=${handle}`
+    : `url=https://${handle.replace(/^https?:\/\//, '')}`;
+
+  const url = `${FACEBOOK_POST_URL}?${queryParam}`;
+  const profile = await getFacebookProfileFromScrapedData(facebook_handle);
+
   try {
-    const res = await axios.get(`${FB_BASE}/me/accounts`, {
-      params: { access_token },
-    });
-    const pages = res.data?.data ?? [];
-    console.log("pages", pages);
+    const response = await axios.get(url, { headers });
+    const posts = response.data?.posts || [];
 
-    const enrichedPages = await Promise.all(
-      pages.map(async (page: any) => {
-        try {
-          const [followers, postCount, pageMetrics, instagram_basic] = await Promise.all([
-            this.getPageFollowers(page.id, page.access_token),
-            this.getPagePostCount(page.id, page.access_token),
-            this.getPageMetrics(page.id, page.access_token),
-            this.getInstagramMetrics(page.id, page.access_token),
-          ]);
+    // Small delay for rate limit handling
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-          return {
-            ...page,
-            followers,
-            postCount,
-            postingFrequency: postCount / 30,
-            pageMetrics,
-            instagram_basic,
-          };
-        } catch (err: any) {
-          const errorMessage = err.response?.data?.error?.message || err.message;
-          if (errorMessage.includes('valid app ID')) {
-            console.warn(`Skipping page ${page.name} due to invalid App ID: ${errorMessage}`);
-            return null; // Skip page with invalid app ID
-          }
-          console.warn(`Failed to fetch analytics for page ${page.name}:`, errorMessage);
-          return { ...page, followers: null, postCount: null, postingFrequency: null, error: true };
+    const calculateEngagementStats = (posts: any[], followerCount: number) => {
+      if (!followerCount || followerCount === 0) {
+        return {
+          engagementRate: '0.00%',
+          engagementToFollowerRatio: '0.0000',
+          perPostEngagement: [],
+        };
+      }
+
+      let totalEngagement = 0;
+      let count = 0;
+      const perPostEngagement = [];
+
+      for (const post of posts) {
+        const reactions = Number(post.reactionCount || 0);
+        const comments = Number(post.commentCount || 0);
+        const engagement = reactions + comments;
+
+        totalEngagement += engagement;
+        count++;
+
+        // Determine post type (video, image, text, etc.)
+        let postType = 'text'; // Default to text
+        if (post.videoDetails && Object.keys(post.videoDetails).length > 0) {
+          postType = 'video';
+        } else if (post.url && post.url.includes('/videos/')) {
+          postType = 'video';
+        } else if (post.thumbnailUrl || (post.attachments && post.attachments.some((a: any) => a.type === 'photo'))) {
+          postType = 'image'; // Adjust based on actual data structure
         }
-      })
-    );
-    await axios.delete(`https://graph.facebook.com/v18.0/me/permissions`, {
-        params: { access_token }
-      });
-      console.log('✅ Permissions revoked.');
 
-    return { data: enrichedPages.filter(page => page !== null), pages };
-  } catch (err: any) {
-    const errorMessage = err.response?.data?.error?.message || err.message;
-    console.error('Error fetching pages:', errorMessage);
-    if (errorMessage.includes('valid app ID')) {
-      throw new Error('Invalid Facebook App ID. Please check your App ID configuration in the Facebook Developer Portal.');
-    }
-    throw err;
-  }
-}
+        // Debugging: Log post details to verify detection
+        console.log(`Post ID: ${post.id}, PostType: ${postType}, VideoDetails: ${JSON.stringify(post.videoDetails)}, URL: ${post.url}`);
 
-
-  static async getPageFollowers(pageId: string, token: string) {
-    try {
-      const res = await axios.get(`${FB_BASE}/${pageId}?fields=fan_count`, {
-        params: { access_token: token },
-      });
-      return res.data.fan_count || 0;
-    } catch (err: any) {
-      console.error(`Error fetching followers for page ${pageId}:`, err.response?.data || err.message);
-      return 0;
-    }
-  }
-
-  static async getPagePostCount(pageId: string, token: string) {
-    try {
-      const res = await axios.get(`${FB_BASE}/${pageId}/posts`, {
-        params: { access_token: token, since: this.thirtyDaysAgo, limit: 100 },
-      });
-      return res.data.data?.length || 0;
-    } catch (err: any) {
-      console.error(`Error fetching post count for page ${pageId}:`, err.response?.data || err.message);
-      return 0;
-    }
-  }
-
-  static async getPageMetrics(pageId: string, token: string) {
-    try {
-      // Fetch followers
-      const followers = await this.getPageFollowers(pageId, token);
-
-      // Fetch posts with likes and comments
-      const res = await axios.get(`${FB_BASE}/${pageId}/posts`, {
-        params: {
-          fields: 'likes.summary(true),comments.summary(true),created_time',
-          access_token: token,
-          since: this.thirtyDaysAgo,
-          limit: 100,
-        },
-      });
-
-      const posts = res.data.data || [];
-      const postCount = posts.length;
-      let totalLikes = 0;
-      let totalComments = 0;
-      const dailyMetrics: { [date: string]: any } = {};
-
-      posts.forEach((post: any) => {
-        const likes = post.likes?.summary?.total_count || 0;
-        const comments = post.comments?.summary?.total_count || 0;
-        totalLikes += likes;
-        totalComments += comments;
-
-        const date = post.created_time.split('T')[0];
-        if (!dailyMetrics[date]) {
-          dailyMetrics[date] = {
-            views: 0, // Impressions not available without insights
-            likes: 0,
-            comments: 0,
-            engagementRate: 0,
-            postCount: 0,
-          };
-        }
-        dailyMetrics[date].likes += likes;
-        dailyMetrics[date].comments += comments;
-        dailyMetrics[date].postCount += 1;
-      });
-
-      Object.keys(dailyMetrics).forEach(date => {
-        const engagement = dailyMetrics[date].likes + dailyMetrics[date].comments;
-        dailyMetrics[date].engagementRate = followers ? (engagement / followers) * 100 : 0;
-      });
-
-      const totalEngagement = totalLikes + totalComments;
-
-      // Try fetching impressions from insights (optional, as it may fail)
-      try {
-        const insightsRes = await axios.get(`${FB_BASE}/${pageId}/insights`, {
-          params: {
-            metric: 'page_impressions',
-            period: 'day',
-            since: this.thirtyDaysAgo,
-            until: Math.floor(Date.now() / 1000),
-            access_token: token,
-          },
+        // Calculate engagement for all posts
+        const postEngagementRate = (engagement / followerCount) * 100;
+        perPostEngagement.push({
+          postId: post.id,
+          postUrl: post.url,
+          publishTime: post.publishTime || null,
+          postType, // Include post type (video, image, text, etc.)
+          engagementRate: postEngagementRate.toFixed(2) + '%',
+          engagementToFollowerRatio: (engagement / followerCount).toFixed(4),
+          reactions,
+          comments,
         });
+      }
 
-        const impressionsData = insightsRes.data.data.find((d: any) => d.name === 'page_impressions');
-        if (impressionsData) {
-          impressionsData.values.forEach((val: any) => {
-            const date = val.end_time.split('T')[0];
-            if (dailyMetrics[date]) {
-              dailyMetrics[date].views = val.value;
-            }
-          });
-        }
-      } catch (insightsErr: any) {
-        console.warn(`Failed to fetch page impressions for ${pageId}:`, insightsErr.response?.data || insightsErr.message);
+      if (count === 0) {
+        return {
+          engagementRate: '0.00%',
+          engagementToFollowerRatio: '0.0000',
+          perPostEngagement: [],
+        };
+      }
+
+      const avgEngagement = totalEngagement / count;
+      const engagementToFollowerRatio = avgEngagement / followerCount;
+      const engagementRate = engagementToFollowerRatio * 100;
+
+      let message = '';
+      if (engagementRate >= 1.6) {
+        message = 'High engagement—your content resonates.';
+      } else if (engagementRate >= 1.1) {
+        message = 'Better than most in your industry.';
+      } else if (engagementRate >= 0.6) {
+        message = 'Standard engagement—room to grow.';
+      } else if (engagementRate >= 0.0) {
+        message = 'Minimal engagement for your audience size.';
       }
 
       return {
-        followers,
-        totalEngagement,
-        engagementToFollowerRatio: followers ? totalEngagement / followers : 0,
-        postingFrequency: postCount / 30,
-        dailyMetrics,
+        engagementRate: engagementRate.toFixed(2) + '%',
+        engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
+        message,
+        perPostEngagement,
       };
-    } catch (err: any) {
-      console.error(`Failed to fetch page metrics for ${pageId}:`, err.response?.data || err.message);
-      const followers = await this.getPageFollowers(pageId, token);
-      const postCount = await this.getPagePostCount(pageId, token);
-      return {
-        followers,
-        totalEngagement: 0,
-        engagementToFollowerRatio: 0,
-        postingFrequency: postCount / 30,
-        dailyMetrics: {},
-        error: err.response?.data?.error?.message || err.message,
-      };
-    }
+    };
+
+    const followerCount = Number(profile?.followerCount) || 0;
+    const { engagementRate, engagementToFollowerRatio, message, perPostEngagement } = calculateEngagementStats(posts, followerCount);
+
+    return {
+      profile,
+      engagementRate,
+      message,
+      engagementToFollowerRatio,
+      perPostEngagement,
+      posts,
+    };
+  } catch (error: any) {
+    return { error: `Failed to fetch posts: ${error.message}` };
   }
+};
 
-  static async getInstagramMetrics(pageId: string, pageToken: string) {
-    try {
-      const instagramAccount = await this.getInstagramBusinessAccount(pageId, pageToken);
-      if (!instagramAccount?.instagram_business_account?.id) {
-        console.warn(`No Instagram business account connected to page ${pageId}`);
-        return null;
-      }
+export const getFacebookProfileFromScrapedData = async (facebook_handle: string) => {
+  const cleanUrl = facebook_handle.trim().replace(/^https?:\/\//, '');
+  const url = `${FACEBOOK_PROFILE_URL}?url=https://${cleanUrl}`;
 
-      const igAccountId = instagramAccount.instagram_business_account.id;
-
-      // Fetch Instagram followers
-      const followersRes = await axios.get(`${FB_BASE}/${igAccountId}`, {
-        params: { fields: 'followers_count', access_token: pageToken },
-      });
-      const followers = followersRes.data.followers_count || 0;
-
-      // Fetch Instagram media
-      const mediaRes = await axios.get(`${FB_BASE}/${igAccountId}/media`, {
-        params: {
-          fields: 'like_count,comments_count,timestamp',
-          access_token: pageToken,
-          limit: 30,
-          since: this.thirtyDaysAgo,
-        },
-      });
-
-      const posts = mediaRes.data.data || [];
-      const postCount = posts.length;
-      let totalLikes = 0;
-      let totalComments = 0;
-      const dailyMetrics: { [date: string]: any } = {};
-
-      posts.forEach((post: any) => {
-        const likes = post.like_count || 0;
-        const comments = post.comments_count || 0;
-        totalLikes += likes;
-        totalComments += comments;
-
-        const date = post.timestamp.split('T')[0];
-        if (!dailyMetrics[date]) {
-          dailyMetrics[date] = {
-            views: 0, // Impressions require insights
-            likes: 0,
-            comments: 0,
-            engagementRate: 0,
-            postCount: 0,
-          };
-        }
-        dailyMetrics[date].likes += likes;
-        dailyMetrics[date].comments += comments;
-        dailyMetrics[date].postCount += 1;
-      });
-
-      Object.keys(dailyMetrics).forEach(date => {
-        const engagement = dailyMetrics[date].likes + dailyMetrics[date].comments;
-        dailyMetrics[date].engagementRate = followers ? (engagement / followers) * 100 : 0;
-      });
-
-      const totalEngagement = totalLikes + totalComments;
-
-      // Try fetching impressions from insights (optional)
-      try {
-        const insightsRes = await axios.get(`${FB_BASE}/${igAccountId}/insights`, {
-          params: {
-            metric: 'impressions',
-            period: 'day',
-            since: this.thirtyDaysAgo,
-            until: Math.floor(Date.now() / 1000),
-            access_token: pageToken,
-          },
-        });
-
-        const impressionsData = insightsRes.data.data.find((d: any) => d.name === 'impressions');
-        if (impressionsData) {
-          impressionsData.values.forEach((val: any) => {
-            const date = val.end_time.split('T')[0];
-            if (dailyMetrics[date]) {
-              dailyMetrics[date].views = val.value;
-            }
-          });
-        }
-      } catch (insightsErr: any) {
-        console.warn(`Failed to fetch Instagram impressions for ${igAccountId}:`, insightsErr.response?.data || insightsErr.message);
-      }
-
-      return {
-        followers,
-        totalEngagement,
-        engagementToFollowerRatio: followers ? totalEngagement / followers : 0,
-        postingFrequency: postCount / 30,
-        dailyMetrics,
-      };
-    } catch (err: any) {
-      console.error(`Failed to fetch Instagram metrics for page ${pageId}:`, err.response?.data || err.message);
-      return null;
-    }
+  try {
+    const response = await axios.get(url, { headers });
+    return extractFacebookProfileInfo(response.data);
+  } catch (error: any) {
+    return { error: `Failed to fetch profile: ${error.message}` };
   }
+};
 
-  static async getInstagramBusinessAccount(pageId: string, pageToken: string) {
-    try {
-      const res = await axios.get(`${FB_BASE}/${pageId}`, {
-        params: {
-          fields: 'instagram_business_account',
-          access_token: pageToken,
-        },
-      });
-      return res.data;
-    } catch (err: any) {
-      console.error(`Error fetching Instagram business account for page ${pageId}:`, err.response?.data || err.message);
-      return null;
-    }
+const extractFacebookProfileInfo = (data: any) => {
+  try {
+    const profileInfo: Record<string, any> = {
+      name: data.name || 'N/A',
+      profileUrl: data.url || 'N/A',
+      likeCount: data.likeCount || 'N/A',
+      followerCount: data.followerCount || 'N/A',
+      rating: data.rating || 'N/A',
+      ratingCount: data.ratingCount || 'N/A',
+      address: data.address || 'N/A',
+      email: data.email || 'N/A',
+      phone: data.phone || 'N/A',
+      website: data.website || 'N/A',
+      profilePhotoUrl: data.profilePhoto?.url || 'No profile photo available',
+      pageIntroduction: data.pageIntro || 'N/A',
+      category: data.category || 'N/A',
+      accountStatus: data.account_status || 'N/A',  
+      adLibrary : data.adLibrary || 'N/A'
+      
+    };
+
+    return profileInfo;
+  } catch (error: any) {
+    return { error: `Error parsing profile info: ${error.message}` };
   }
-}
+};

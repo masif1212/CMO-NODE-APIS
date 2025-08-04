@@ -153,19 +153,6 @@ Format:
 
    
 
-
-// const [traffic, schema] = await Promise.all([
-//   prisma.brand_traffic_analysis.findUnique({
-//     where: { traffic_analysis_id :report?.traffic_analysis_id ?? undefined},
-//     select: { top_sources: true },
-//   }),
-//   prisma.website_scraped_data.findUnique({
-//     where: { scraped_data_id:report?.scraped_data_id?? undefined },
-//     select: { schema_analysis: true },
-//   }),
-// ]);
-   
-
       const [traffic, schema] = await Promise.all([
         report?.traffic_analysis_id
           ? prisma.brand_traffic_analysis.findUnique({
