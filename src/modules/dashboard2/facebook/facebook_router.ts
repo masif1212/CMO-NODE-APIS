@@ -73,6 +73,7 @@ router.post('/save-pages', asyncHandler(async (req: Request, res: Response) => {
         scraped_data_id: pages
         // add any other fields you want to update
       },
+      
       create: {
         website_id: website_id,
         scraped_data_id: pages
