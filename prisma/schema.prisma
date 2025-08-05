@@ -556,6 +556,7 @@ model report {
   recommendationbymo2         String? @db.LongText
 
   dashboard3_data          String? @db.LongText
+  dashboard3_socialmedia    Json?
   recommendationbymo3         String? @db.LongText
 
   dashboard4_data          String? @db.LongText

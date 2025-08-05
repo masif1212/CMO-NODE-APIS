@@ -21,7 +21,16 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
     });
     
   try {
-    const youtube_data = await analyzeYouTubeDataByWebsiteId(existingReport?.scraped_data_id ?? undefined);
+    const scrapedData = await prisma.website_scraped_data.findUnique({
+    where: {scraped_data_id : existingReport?.scraped_data_id?? undefined},
+  });
+
+  if (!scrapedData?.youtube_handle) {
+    return { status: "no-youtube-handle" };
+  }
+
+  const youtube_handle = scrapedData.youtube_handle;
+    const youtube_data = await analyzeYouTubeDataByWebsiteId(youtube_handle);
    
 
 // ✅ Safe check before spreading
@@ -52,6 +61,7 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
       dashboard2_data:  youtube_data 
     }
   });
+  console.log("youtube anaylsis complete")
     return res.status(200).json(youtube_data);
   } catch (error: any) {
     console.error("Error analyzing YouTube data:", error);

@@ -49,12 +49,31 @@ export class CMORecommendationService {
         report_id: { in: report_ids },
       },
     }),
+    
+
   ]);
+
+
 
   if (!website || website.user_id !== user_id) {
     throw new Error('Invalid user_id or website_id');
   }
 
+
+    const firstScrapedDataId = reports[0]?.scraped_data_id;
+  if (!firstScrapedDataId) {
+    throw new Error('No scraped_data_id found in reports');
+  }
+
+  // 🟢 Use the first scraped_data_id in the query
+  const scraped_data = await this.prisma.website_scraped_data.findUnique({
+    where: {
+      scraped_data_id: firstScrapedDataId,
+    },
+    select:{
+      logo_url:true
+    }
+  });
   // Combine multiple report sections (this is just a sample logic)
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
@@ -67,11 +86,12 @@ export class CMORecommendationService {
     requirement,
     website,
     reports,
+    logo_url: scraped_data?.logo_url || null
   };
 }
 
-
   
+
 
   public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
     try {
@@ -81,10 +101,11 @@ export class CMORecommendationService {
         competitor_analysis: competitor_analysis,
         requirement,
         website,
-        reports
+        reports,
+        logo_url
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
 
-
+      
 
       function stripCodeFences(text: string): string {
         // Remove leading and trailing code fences (with optional language)
@@ -364,24 +385,27 @@ NOTE: Never mention a third api like pagespeed , semrush etc
       // rawText = rawText.replace(/^json|$/g, '').trim();
       const responseContent = JSON.parse(rawText2 || '{}');
       console.log('Saving response to database...');
-
+      const cmo_recommendation = {
+        logo_url,
+        ...responseContent
+      }
       
       for (const reportId of input.report_ids) {
           await this.prisma.report.upsert({
             where: { report_id: reportId },
             update: {
-              cmorecommendation: JSON.stringify(responseContent),
+              cmorecommendation: JSON.stringify(cmo_recommendation),
             },
             create: {
               report_id: reportId,
               website_id: input.website_id,
-              cmorecommendation: JSON.stringify(responseContent),
+              cmorecommendation: JSON.stringify(cmo_recommendation),
             },
           });
         }
   
 
-      return { cmo_recommendation: responseContent};
+      return { cmo_recommendation: cmo_recommendation};
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);
       throw new Error('Failed to generate CMO recommendation');

@@ -115,9 +115,11 @@ export const getFacebookPostsFromScrapedData = async (facebook_handle: string) =
 
 
      const facebook_data = {
+      message,
+
+      facebook_handle,
       profile,
       engagementRate,
-      message,
       engagementToFollowerRatio,
       perPostEngagement
     };

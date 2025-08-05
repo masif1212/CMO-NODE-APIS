@@ -195,6 +195,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
       competitors: competitor_data,
       recommendation_by_mo_dashboard3: safeParse(reportData?.recommendationbymo3),
+      competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia),
       dashboard4_data: safeParse(reportData?.dashboard4_data),
       recommendationbycmo: safeParse(reportData?.cmorecommendation),
       
@@ -221,7 +222,7 @@ export const getaudit = async (req: Request, res: Response) => {
   const website_id = req.query.website_id;
 
   if (typeof website_id !== 'string') {
-    return res.status(400).json({ error: 'Invalid or missing user_id' });
+    return res.status(400).json({ error: 'Invalid or missing website_id' });
   }
 
   try {
@@ -267,6 +268,7 @@ export const getaudit = async (req: Request, res: Response) => {
             report_id: true,
             created_at: true,
             updated_at: true,
+            scraped_data_id:true,
             dashboard1_Freedata: true,
             dashboard_paiddata: true,
             strengthandissues_d1: true,
@@ -282,50 +284,106 @@ export const getaudit = async (req: Request, res: Response) => {
       },
     });
     
-    const websites = userWebsites
-      .map(site => {
-        const brandAudit: any[] = [];
-        const socialMedia: any[] = [];
-        const competitorsAnalysis: any[] = [];
+    // const websites = userWebsites
+    //   .map(site => {
+    //     const brandAudit: any[] = [];
+    //     const socialMedia: any[] = [];
+    //     const competitorsAnalysis: any[] = [];
 
-        for (const report of site.report) {
-          const base = {
-            report_id: report.report_id,
-            created_at: report.created_at,
-            updated_at: report.updated_at,
-          };
+    //     for (const report of site.report) {
+    //       const base = {
+    //         report_id: report.report_id,
+    //         created_at: report.created_at,
+    //         updated_at: report.updated_at,
+    //       };
 
-          const hasAnyField = (fields: string[]) =>
-            fields.some(field => report[field as keyof typeof report] != null);
+    //       const hasAnyField = (fields: string[]) =>
+    //         fields.some(field => report[field as keyof typeof report] != null);
 
-          if (hasAnyField(brandFields)) {
-            brandAudit.push(base);
-          }
+    //       if (hasAnyField(brandFields)) {
+    //         brandAudit.push(base);
+    //       }
 
-          if (hasAnyField(socialFields)) {
-            socialMedia.push(base);
-          }
+    //       if (hasAnyField(socialFields)) {
+    //         socialMedia.push(base);
+    //       }
 
-          if (hasAnyField(competitorFields)) {
-            competitorsAnalysis.push(base);
-          }
-        }
+    //       if (hasAnyField(competitorFields)) {
+    //         competitorsAnalysis.push(base);
+    //       }
+    //     }
 
-        if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
-          return {
-            website_url: site.website_url,
-            website_id: site.website_id,
-            reports: {
-              brand_audit: brandAudit,
-              social_media_audit: socialMedia,
-              competitors_analysis: competitorsAnalysis,
-            },
-          };
-        }
+    //     if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
+    //       return {
+    //         website_url: site.website_url,
+    //         website_id: site.website_id,
+    //         reports: {
+    //           brand_audit: brandAudit,
+    //           social_media_audit: socialMedia,
+    //           competitors_analysis: competitorsAnalysis,
+    //         },
+    //       };
+    //     }
 
-        return null;
-      })
-      .filter((site): site is NonNullable<typeof site> => site !== null);
+    //     return null;
+    //   })
+
+    const websites = await Promise.all(userWebsites.map(async (site) => {
+  const brandAudit: any[] = [];
+  const socialMedia: any[] = [];
+  const competitorsAnalysis: any[] = [];
+
+  for (const report of site.report) {
+    const base = {
+      report_id: report.report_id,
+      created_at: report.created_at,
+      updated_at: report.updated_at,
+    };
+
+    const hasAnyField = (fields: string[]) =>
+      fields.some(field => report[field as keyof typeof report] != null);
+
+    // 🔍 Fetch logo_url using scraped_data_id (if present)
+    let logo_url: string | null = null;
+    if (report.scraped_data_id) {
+      const scraped = await prisma.website_scraped_data.findUnique({
+        where: { scraped_data_id: report.scraped_data_id },
+        select: { logo_url: true },
+      });
+      logo_url = scraped?.logo_url || null;
+    }
+
+    const reportWithLogo = {
+      ...base,
+      logo_url,
+    };
+
+    if (hasAnyField(brandFields)) {
+      brandAudit.push(reportWithLogo);
+    }
+
+    if (hasAnyField(socialFields)) {
+      socialMedia.push(reportWithLogo);
+    }
+
+    if (hasAnyField(competitorFields)) {
+      competitorsAnalysis.push(reportWithLogo);
+    }
+  }
+
+  if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
+    return {
+      website_url: site.website_url,
+      website_id: site.website_id,
+      reports: {
+        brand_audit: brandAudit,
+        social_media_audit: socialMedia,
+        competitors_analysis: competitorsAnalysis,
+      },
+    };
+  }
+
+  return null; }) .filter((site): site is NonNullable<typeof site> => site !== null));
 
     res.json({ websites });
   } catch (error) {

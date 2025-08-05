@@ -3,26 +3,18 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function analyzeYouTubeDataByWebsiteId(scraped_data_id: any) {
-  const scrapedData = await prisma.website_scraped_data.findUnique({
-    where: {scraped_data_id },
-  });
-
-  if (!scrapedData?.youtube_handle) {
-    return { status: "no-youtube-handle" };
-  }
-
-  const youtubeUrl = scrapedData.youtube_handle;
-  console.log("youtubeUrl",youtubeUrl)
-  const channelId = await resolveYouTubeChannelId(youtubeUrl);
+export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
+  
+  console.log("youtubeUrl",youtube_handle)
+  const channelId = await resolveYouTubeChannelId(youtube_handle);
   if (!channelId) return { status: "invalid-channel" };
 
   console.log("Resolved Channel ID:", channelId);
 
   const videoIdsAndDates = await fetchVideosLast30Days(channelId);
   if (videoIdsAndDates.length === 0) {
-    // console.log("No videos found for last 30 days");
-    return { status: "no-videos-found" };
+    console.log("No videos found for last 30 days");
+    return { youtube_data: "No videos found for last 30 days"};
   }
 
   const videoIds = videoIdsAndDates.map((v) => v.videoId);
@@ -61,9 +53,11 @@ export async function analyzeYouTubeDataByWebsiteId(scraped_data_id: any) {
 
 
 const youtube_data = {
+  message:"yotube data found",
+  youtube_handle,
  profile : {
   ...safeJson.snippet, // Fix: Remove .Data
-    ...safeJson.statistics
+  ...safeJson.statistics
 },
   engagement_rate: engagementRate,
   engagementToFollowerRatio,
