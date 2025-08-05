@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 export const getFacebookPostsHandler = async (req: Request, res: Response) => {
   try {
     const { report_id } = req.body;
+     const { website_id} = req.body;
 
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
@@ -30,10 +31,48 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     if (!websiteData?.facebook_handle) {
       return res.status(404).json({ success: false, error: 'facebook_handle not found for scraped_data_id' });
     }
+    const facebook_data = await getFacebookPostsFromScrapedData(websiteData.facebook_handle);
 
-    const facebook_data  = await getFacebookPostsFromScrapedData(websiteData.facebook_handle);
+    const existingReport = await prisma.report.findUnique({
+      where: { report_id },
+      select: { dashboard2_data: true }
+    });
 
-    return res.json({ success: true, facebook_data});
+// ✅ Safe check before spreading
+  let mergedDashboard2Data: any;
+
+  if (
+    existingReport?.dashboard2_data &&
+    typeof existingReport.dashboard2_data === 'object' &&
+    !Array.isArray(existingReport.dashboard2_data)
+  ) {
+    mergedDashboard2Data = {
+      ...existingReport.dashboard2_data,
+      
+     
+        ...facebook_data
+      
+      
+    };
+  } else {
+    mergedDashboard2Data = facebook_data ;
+  }
+
+  const record = await prisma.report.upsert({
+    where: { report_id },
+    update: {
+      website_id,
+      dashboard2_data: mergedDashboard2Data
+    },
+    create: {
+      website_id,
+      dashboard2_data:  facebook_data 
+    }
+  });
+
+   
+   
+    return res.json(facebook_data);
 
   } catch (error) {
     console.error("Error in getFacebookPostsHandler:", error);

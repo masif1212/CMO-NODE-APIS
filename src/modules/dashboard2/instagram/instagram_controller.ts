@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 export const getInstagramPostsHandler = async (req: Request, res: Response) => {
   try {
     const { report_id } = req.body;
+    const { website_id} = req.body;
 
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
@@ -32,8 +33,57 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
     }
     console.log("instagram_handle",websiteData.instagram_handle)
     const Instagram_data  = await getInstagramPostsFromScrapedData(websiteData.instagram_handle);
+    
+    // const record = await prisma.report.upsert({
+    //   where: {
+    //     report_id
+    //   },
+    //   update: {
+    //     website_id,
+    //     dashboard2_data: Instagram_data, // existing field
+    //           // new nested object
+    //   },
+    //   create: {
+    //     website_id,
+    //     dashboard2_data: Instagram_data,
+        
+    //   },
+    // });
+        const existingReport = await prisma.report.findUnique({
+      where: { report_id },
+      select: { dashboard2_data: true }
+    });
 
-    return res.json({ success: true, Instagram_data});
+// ✅ Safe check before spreading
+  let mergedDashboard2Data: any;
+
+  if (
+    existingReport?.dashboard2_data &&
+    typeof existingReport.dashboard2_data === 'object' &&
+    !Array.isArray(existingReport.dashboard2_data)
+  ) {
+    mergedDashboard2Data = {
+      ...existingReport.dashboard2_data,
+    ...Instagram_data // flatten inside this key
+  
+    };
+  } else {
+    mergedDashboard2Data = Instagram_data ;
+  }
+
+  const record = await prisma.report.upsert({
+    where: { report_id },
+    update: {
+      website_id,
+      dashboard2_data: mergedDashboard2Data
+    },
+    create: {
+      website_id,
+      dashboard2_data:  Instagram_data 
+    }
+  });
+
+    return res.json(Instagram_data);
 
   } catch (error) {
     console.error("Error in getInstagramPostsHandler:", error);

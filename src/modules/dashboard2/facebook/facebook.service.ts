@@ -1,41 +1,3 @@
-// import { PrismaClient } from '@prisma/client';
-// import axios from 'axios';
-
-// const prisma = new PrismaClient();
-// const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY ;
-// const FACEBOOK_PROFILE_ULR = process.env.FACEBOOK_PROFILE_ULR;
-// const FACEBOOK_POST_URL = process.env.FACEBOOK_POST_URL;
-
-// export const getFacebookPostsFromScrapedData = async (facebook_handle: string) => {
-//   const handle = facebook_handle.trim();
-//   const isPageId = /^\d+$/.test(handle); // Checks if only digits
-
-//   const headers = { 'x-api-key': API_KEY };
-//   let allPosts: any[] = [];
-//   let cursor: string | null = null;
-
-//   while (true) {
-//     const queryParam = isPageId
-//       ? `pageId=${handle}`
-//       : `url=https://${handle.replace(/^https?:\/\//, '')}`;
-//     const url : any = `${FACEBOOK_POST_URL}?${queryParam}${cursor ? `&cursor=${cursor}` : ''}`;
-
-//     const response = await axios.get(url, { headers });
-//     const data = response.data;
-
-//     const posts = data.posts || [];
-//     allPosts.push(...posts);
-
-//     // cursor = data.cursor;
-//     // if (!cursor || posts.length === 0) break;
-
-//     await new Promise(resolve => setTimeout(resolve, 1500)); // rate limit
-//   }
-
-//   return allPosts;
-// };
-
-
 
 import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
@@ -47,89 +9,6 @@ const FACEBOOK_POST_URL = process.env.FACEBOOK_POST_URL;
 
 const headers = { 'x-api-key': API_KEY };
 
-
-
-// export const getFacebookPostsFromScrapedData = async (facebook_handle: string) => {
-//   const handle = facebook_handle.trim();
-//   const isPageId = /^\d+$/.test(handle);
-
-//   const queryParam = isPageId
-//     ? `pageId=${handle}`
-//     : `url=https://${handle.replace(/^https?:\/\//, '')}`;
-
-//   const url = `${FACEBOOK_POST_URL}?${queryParam}`;
-//   const profile = await getFacebookProfileFromScrapedData(facebook_handle);
-
-//   try {
-//     const response = await axios.get(url, { headers });
-//     const posts = response.data?.posts || [];
-
-//     // Small delay for rate limit handling
-//     await new Promise(resolve => setTimeout(resolve, 1500));
-
-//     const calculateEngagementStats = (posts: any[], followerCount: number) => {
-//       if (!followerCount || followerCount === 0) {
-//         return {
-//           engagementRate: '0.00%',
-//           engagementToFollowerRatio: '0.0000'
-//         };
-//       }
-
-//       let totalEngagement = 0;
-//       let count = 0;
-
-//       for (const post of posts) {
-//         const reactions = Number(post.reactionCount || 0);
-//         const comments = Number(post.commentCount || 0);
-//         const engagement = reactions + comments;
-
-//         totalEngagement += engagement;
-//         count++;
-//       }
-
-//       if (count === 0) {
-//         return {
-//           engagementRate: '0.00%',
-//           engagementToFollowerRatio: '0.0000'
-//         };
-//       }
-
-//       const avgEngagement = totalEngagement / count;
-//       const engagementToFollowerRatio = avgEngagement / followerCount;
-//       const engagementRate = engagementToFollowerRatio * 100;
-
-//       let message = '';
-//       if (engagementRate >= 1.6) {
-//         message = 'High engagement—your content resonates.';
-//       } else if (engagementRate >= 1.1) {
-//         message = 'Better than most in your industry.';
-//       } else if (engagementRate >= 0.6) {
-//         message = 'Standard engagement—room to grow.';
-//       } else if (engagementRate >= 0.0) {
-//         message = 'Minimal engagement for your audience size.';
-//       }
-
-//       return {
-//         engagementRate: engagementRate.toFixed(2) + '%',
-//         engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
-//         message
-//       };
-//     };
-
-//     const followerCount = Number(profile?.followerCount) || 0;
-//     const { engagementRate, engagementToFollowerRatio, message } = calculateEngagementStats(posts, followerCount);
-
-//     return {
-//       profile, 
-//       engagementRate,
-//       message,
-//       engagementToFollowerRatio,
-//       posts,
-//     };
-//   } catch (error: any) {
-//     return { error: `Failed to fetch posts: ${error.message}` };
-//   }
-// };
 
 
 
@@ -234,13 +113,16 @@ export const getFacebookPostsFromScrapedData = async (facebook_handle: string) =
     const followerCount = Number(profile?.followerCount) || 0;
     const { engagementRate, engagementToFollowerRatio, message, perPostEngagement } = calculateEngagementStats(posts, followerCount);
 
-    return {
+
+     const facebook_data = {
       profile,
       engagementRate,
       message,
       engagementToFollowerRatio,
-      perPostEngagement,
-      posts,
+      perPostEngagement
+    };
+    return {
+      facebook_data 
     };
   } catch (error: any) {
     return { error: `Failed to fetch posts: ${error.message}` };
