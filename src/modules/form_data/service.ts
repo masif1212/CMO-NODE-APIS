@@ -24,6 +24,10 @@ export const createBrandProfile = async (
     website_id,
   };
 
+
+
+
+  
   if (data.industry) saveData.industry = data.industry;
   if (data.location) {
     saveData.region_of_operation = data.location;
