@@ -140,6 +140,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       ...dashboardCounts,
       data: {
         brand_audit: brandAudit,
+
         social_media: socialMedia,
         competitors_analysis: competitorsAnalysis,
         recommendation_by_cmo: finalRecommendationByCMO,
@@ -150,8 +151,6 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-
 
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {

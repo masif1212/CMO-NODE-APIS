@@ -105,15 +105,15 @@ model user_websites {
   website_url  String
   website_type String?
   website_name String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
-
+  domain        String? 
   users                       users                         @relation(fields: [user_id], references: [user_id])
 
   user_requirements  user_requirements[]
   analysis_status    analysis_status[]
   report             report[]
-
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+  @@unique([user_id, domain]) 
   @@unique([user_id, website_id], name: "user_id_website_id")
 }
 

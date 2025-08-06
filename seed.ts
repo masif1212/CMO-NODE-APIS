@@ -190,7 +190,7 @@ const prisma = new PrismaClient();
    {
     type: 'ta',
     name :"Traffic Anaylsis",
-    report: 'traffic_anaylsis',
+    report: 'traffic_analysis_id',
     price: 4.0,
     description: 'Recommendations by MO 1',
   },
