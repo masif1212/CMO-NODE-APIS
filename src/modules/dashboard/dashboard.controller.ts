@@ -283,49 +283,7 @@ export const getaudit = async (req: Request, res: Response) => {
       },
     });
     
-    // const websites = userWebsites
-    //   .map(site => {
-    //     const brandAudit: any[] = [];
-    //     const socialMedia: any[] = [];
-    //     const competitorsAnalysis: any[] = [];
-
-    //     for (const report of site.report) {
-    //       const base = {
-    //         report_id: report.report_id,
-    //         created_at: report.created_at,
-    //         updated_at: report.updated_at,
-    //       };
-
-    //       const hasAnyField = (fields: string[]) =>
-    //         fields.some(field => report[field as keyof typeof report] != null);
-
-    //       if (hasAnyField(brandFields)) {
-    //         brandAudit.push(base);
-    //       }
-
-    //       if (hasAnyField(socialFields)) {
-    //         socialMedia.push(base);
-    //       }
-
-    //       if (hasAnyField(competitorFields)) {
-    //         competitorsAnalysis.push(base);
-    //       }
-    //     }
-
-    //     if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
-    //       return {
-    //         website_url: site.website_url,
-    //         website_id: site.website_id,
-    //         reports: {
-    //           brand_audit: brandAudit,
-    //           social_media_audit: socialMedia,
-    //           competitors_analysis: competitorsAnalysis,
-    //         },
-    //       };
-    //     }
-
-    //     return null;
-    //   })
+  
 
     const websites = await Promise.all(userWebsites.map(async (site) => {
   const brandAudit: any[] = [];

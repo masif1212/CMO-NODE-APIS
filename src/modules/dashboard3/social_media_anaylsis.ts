@@ -53,21 +53,21 @@ export async function fetchSocialMediaData(
     const tasks: Promise<any>[] = [];
     const results: Record<string, any> = {};
 
-    // if (facebookHandle != null) {
-    //   tasks.push(
-    //     getFacebookPostsFromScrapedData(facebookHandle).then(data => {
-    //       results.facebook_data = data;
-    //     })
-    //   );
-    // }
+    if (facebookHandle != null) {
+      tasks.push(
+        getFacebookPostsFromScrapedData(facebookHandle).then(data => {
+          results.facebook_data = data;
+        })
+      );
+    }
 
-    // if (instagramHandle != null) {
-    //   tasks.push(
-    //     getInstagramPostsFromScrapedData(instagramHandle).then(data => {
-    //       results.instagram_data = data;
-    //     })
-    //   );
-    // }
+    if (instagramHandle != null) {
+      tasks.push(
+        getInstagramPostsFromScrapedData(instagramHandle).then(data => {
+          results.instagram_data = data;
+        })
+      );
+    }
 
     if (youtubeHandle != null) {
       
