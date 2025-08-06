@@ -16,6 +16,7 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       user_id,
       website_id,
     } = req.body;
+    console.log("reqiremnts req.body",req.body)
     console.log("user:id", user_id, "website_id:", website_id)
     if (!user_id || !website_id) {
       res.status(400).json({
