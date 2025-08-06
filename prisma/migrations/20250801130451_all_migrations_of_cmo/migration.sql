@@ -1,35 +1,84 @@
 -- CreateTable
 CREATE TABLE `users` (
     `user_id` VARCHAR(191) NOT NULL,
-    `email` VARCHAR(191) NOT NULL,
+    `email` VARCHAR(191) NULL,
     `first_name` VARCHAR(191) NULL,
     `last_name` VARCHAR(191) NULL,
     `user_type` VARCHAR(191) NULL,
     `is_email_verified` BOOLEAN NOT NULL DEFAULT false,
     `is_mfa_enabled` BOOLEAN NOT NULL DEFAULT false,
-    `account_status` VARCHAR(191) NOT NULL DEFAULT 'active',
+    `account_status` VARCHAR(191) NULL DEFAULT 'active',
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `last_login` DATETIME(3) NULL,
     `deletion_requested_at` DATETIME(3) NULL,
+    `checkout_customer_id` VARCHAR(191) NULL,
 
     UNIQUE INDEX `users_email_key`(`email`),
+    UNIQUE INDEX `users_checkout_customer_id_key`(`checkout_customer_id`),
     PRIMARY KEY (`user_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `user_websites` (
+CREATE TABLE `analysisServices` (
+    `id` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NULL,
+    `name` VARCHAR(191) NULL,
+    `price` DECIMAL(65, 30) NOT NULL,
+    `report` VARCHAR(191) NULL,
+    `description` VARCHAR(191) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `analysisServices_type_key`(`type`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `paymentMethods` (
+    `method_id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
+    `checkout_source_id` VARCHAR(191) NULL,
+    `card_type` VARCHAR(191) NULL,
+    `last4` VARCHAR(191) NULL,
+    `is_default` BOOLEAN NOT NULL DEFAULT false,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `paymentMethods_checkout_source_id_key`(`checkout_source_id`),
+    PRIMARY KEY (`method_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `payments` (
+    `payment_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
+    `amount` DECIMAL(65, 30) NOT NULL,
+    `currency` VARCHAR(191) NOT NULL,
+    `payment_method` VARCHAR(191) NOT NULL,
+    `payment_status` VARCHAR(191) NOT NULL,
+    `transaction_id` VARCHAR(191) NULL,
+    `subscription_id` VARCHAR(191) NULL,
+    `website_id` VARCHAR(191) NULL,
+    `analysis_type` VARCHAR(191) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`payment_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `user_websites` (
     `website_id` VARCHAR(191) NOT NULL,
+    `user_id` VARCHAR(191) NOT NULL,
     `website_url` VARCHAR(191) NOT NULL,
     `website_type` VARCHAR(191) NULL,
     `website_name` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `user_websites_website_id_key`(`website_id`),
     UNIQUE INDEX `user_websites_user_id_website_id_key`(`user_id`, `website_id`),
-    PRIMARY KEY (`user_id`, `website_id`)
+    PRIMARY KEY (`website_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -64,7 +113,7 @@ CREATE TABLE `magic_links` (
 -- CreateTable
 CREATE TABLE `roles` (
     `role_id` VARCHAR(191) NOT NULL,
-    `role_name` VARCHAR(191) NOT NULL,
+    `role_name` VARCHAR(191) NULL,
     `description` VARCHAR(191) NULL,
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -75,7 +124,7 @@ CREATE TABLE `roles` (
 -- CreateTable
 CREATE TABLE `permissions` (
     `permission_id` VARCHAR(191) NOT NULL,
-    `permission_name` VARCHAR(191) NOT NULL,
+    `permission_name` VARCHAR(191) NULL,
     `description` VARCHAR(191) NULL,
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -103,7 +152,7 @@ CREATE TABLE `user_roles` (
 CREATE TABLE `sessions` (
     `session_id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
-    `token` LONGTEXT NOT NULL,
+    `token` LONGTEXT NULL,
     `device_info` JSON NULL,
     `ip_address` VARCHAR(191) NULL,
     `expires_at` DATETIME(3) NOT NULL,
@@ -182,7 +231,7 @@ CREATE TABLE `api_keys` (
 -- CreateTable
 CREATE TABLE `system_settings` (
     `setting_id` VARCHAR(191) NOT NULL,
-    `setting_key` VARCHAR(191) NOT NULL,
+    `setting_key` VARCHAR(191) NULL,
     `setting_value` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -206,10 +255,8 @@ CREATE TABLE `data_retention_policies` (
 -- CreateTable
 CREATE TABLE `brand_website_analysis` (
     `website_analysis_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
     `performance_score` DOUBLE NULL,
     `seo_score` DOUBLE NULL,
-    `missing_image_alts` INTEGER NULL,
     `first_contentful_paint` VARCHAR(191) NULL,
     `largest_contentful_paint` VARCHAR(191) NULL,
     `accessibility_score` DOUBLE NULL,
@@ -222,7 +269,6 @@ CREATE TABLE `brand_website_analysis` (
     `time_to_interactive` VARCHAR(191) NULL,
     `total_broken_links` INTEGER NULL,
     `broken_links` JSON NULL,
-    `schema_analysis` JSON NULL,
     `audit_details` JSON NULL,
     `revenue_loss_percent` DOUBLE NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -234,7 +280,6 @@ CREATE TABLE `brand_website_analysis` (
 -- CreateTable
 CREATE TABLE `brand_traffic_analysis` (
     `traffic_analysis_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
     `total_visitors` INTEGER NULL,
     `organic_search` INTEGER NULL,
     `direct` INTEGER NULL,
@@ -262,7 +307,6 @@ CREATE TABLE `brand_traffic_analysis` (
 -- CreateTable
 CREATE TABLE `brand_social_media_analysis` (
     `social_media_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
     `platform_name` VARCHAR(191) NOT NULL,
     `followers` INTEGER NULL,
     `likes` INTEGER NULL,
@@ -271,7 +315,9 @@ CREATE TABLE `brand_social_media_analysis` (
     `videos_count` INTEGER NULL,
     `posts_count` INTEGER NULL,
     `postingFrequency` DOUBLE NULL,
+    `dailyPostingGraph` JSON NULL,
     `engagement_rate` DOUBLE NULL,
+    `engagementToFollowerRatio` DOUBLE NULL,
     `data` JSON NULL,
     `graph_data` JSON NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -281,77 +327,13 @@ CREATE TABLE `brand_social_media_analysis` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `competitor_analysis` (
-    `competitor_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `domain_authority` INTEGER NULL,
-    `organic_traffic` INTEGER NULL,
-    `top_keywords` JSON NULL,
-    `backlink_profile` JSON NULL,
-    `social_media_engagement` JSON NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    PRIMARY KEY (`competitor_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `website_scraped_data` (
     `scraped_data_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `website_url` VARCHAR(191) NOT NULL,
-    `page_title` VARCHAR(191) NULL,
-    `meta_description` LONGTEXT NULL,
-    `meta_keywords` LONGTEXT NULL,
-    `og_title` LONGTEXT NULL,
-    `og_description` LONGTEXT NULL,
-    `og_image` VARCHAR(191) NULL,
-    `twitter_handle` VARCHAR(191) NULL,
-    `facebook_handle` VARCHAR(191) NULL,
-    `instagram_handle` VARCHAR(191) NULL,
-    `linkedin_handle` VARCHAR(191) NULL,
-    `youtube_handle` VARCHAR(191) NULL,
-    `ctr_loss_percent` JSON NULL,
-    `sitemap_pages` JSON NULL,
-    `tiktok_handle` VARCHAR(191) NULL,
-    `other_links` JSON NULL,
-    `raw_html` LONGTEXT NULL,
-    `ai_response` LONGTEXT NULL,
-    `status_code` INTEGER NULL,
-    `ip_address` VARCHAR(191) NULL,
-    `response_time_ms` INTEGER NULL,
-    `status_message` VARCHAR(191) NULL,
-    `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `website_scraped_data_website_id_key`(`website_id`),
-    PRIMARY KEY (`scraped_data_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `competitor_details` (
-    `competitor_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `name` VARCHAR(191) NOT NULL,
-    `website_url` VARCHAR(191) NOT NULL,
-    `industry` LONGTEXT NULL,
-    `region` LONGTEXT NULL,
-    `target_audience` LONGTEXT NULL,
-    `primary_offering` LONGTEXT NULL,
-    `usp` LONGTEXT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    PRIMARY KEY (`competitor_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `competitor_scraped_data` (
-    `competitor_scraped_id` VARCHAR(191) NOT NULL,
-    `competitor_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `website_url` VARCHAR(191) NOT NULL,
+    `website_url` VARCHAR(191) NULL,
+    `isCrawlable` BOOLEAN NULL,
+    `headingAnalysis` JSON NULL,
     `page_title` LONGTEXT NULL,
+    `logo_url` LONGTEXT NULL,
     `meta_description` LONGTEXT NULL,
     `meta_keywords` LONGTEXT NULL,
     `og_title` LONGTEXT NULL,
@@ -362,38 +344,82 @@ CREATE TABLE `competitor_scraped_data` (
     `instagram_handle` LONGTEXT NULL,
     `linkedin_handle` LONGTEXT NULL,
     `youtube_handle` LONGTEXT NULL,
+    `ctr_loss_percent` JSON NULL,
+    `homepage_alt_text_coverage` INTEGER NULL,
+    `sitemap_pages` JSON NULL,
+    `schema_analysis` JSON NULL,
+    `tiktok_handle` VARCHAR(191) NULL,
+    `other_links` JSON NULL,
+    `raw_html` LONGTEXT NULL,
+    `ai_response` LONGTEXT NULL,
+    `status_code` INTEGER NULL,
+    `ip_address` VARCHAR(191) NULL,
+    `response_time_ms` INTEGER NULL,
+    `status_message` LONGTEXT NULL,
+    `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`scraped_data_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `competitor_details` (
+    `competitor_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `report_id` VARCHAR(191) NOT NULL,
+    `scraped_data_id` VARCHAR(191) NULL,
+    `name` VARCHAR(191) NULL,
+    `competitor_website_url` LONGTEXT NULL,
+    `industry` LONGTEXT NULL,
+    `region` LONGTEXT NULL,
+    `target_audience` LONGTEXT NULL,
+    `primary_offering` LONGTEXT NULL,
+    `usp` LONGTEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `order_index` INTEGER NULL,
+
+    INDEX `competitor_details_website_id_idx`(`website_id`),
+    INDEX `competitor_details_website_id_order_index_idx`(`website_id`, `order_index`),
+    INDEX `competitor_details_scraped_data_id_idx`(`scraped_data_id`),
+    PRIMARY KEY (`competitor_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `competitor_data` (
+    `competitor_scraped_id` VARCHAR(191) NOT NULL,
+    `competitor_id` VARCHAR(191) NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `report_id` VARCHAR(191) NOT NULL,
+    `isCrawlable` BOOLEAN NULL,
+    `website_url` VARCHAR(191) NOT NULL,
+    `page_title` LONGTEXT NULL,
+    `logo_url` LONGTEXT NULL,
+    `meta_description` LONGTEXT NULL,
+    `meta_keywords` LONGTEXT NULL,
+    `og_title` LONGTEXT NULL,
+    `headingAnalysis` JSON NULL,
+    `og_description` LONGTEXT NULL,
+    `og_image` LONGTEXT NULL,
+    `twitter_handle` LONGTEXT NULL,
+    `facebook_handle` LONGTEXT NULL,
+    `instagram_handle` LONGTEXT NULL,
+    `linkedin_handle` LONGTEXT NULL,
+    `homepage_alt_text_coverage` INTEGER NULL,
+    `youtube_handle` LONGTEXT NULL,
     `tiktok_handle` LONGTEXT NULL,
+    `ctr_loss_percent` JSON NULL,
+    `revenue_loss_percent` INTEGER NULL,
+    `sitemap_pages` JSON NULL,
+    `schema_analysis` JSON NULL,
     `page_speed` JSON NULL,
     `other_links` JSON NULL,
     `raw_html` LONGTEXT NULL,
     `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `competitor_scraped_data_competitor_id_key`(`competitor_id`),
+    UNIQUE INDEX `competitor_data_competitor_id_key`(`competitor_id`),
     PRIMARY KEY (`competitor_scraped_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `llm_responses` (
-    `id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `dashboard1_what_working` LONGTEXT NULL,
-    `recommendation_by_mo_dashboard1` LONGTEXT NULL,
-    `recommendation_by_mo_dashboard2` LONGTEXT NULL,
-    `recommendation_by_mo_dashboard3` LONGTEXT NULL,
-    `recommendation_by_cmo` LONGTEXT NULL,
-    `pagespeed_report` LONGTEXT NULL,
-    `traffic_report` LONGTEXT NULL,
-    `broken_links_report` LONGTEXT NULL,
-    `brand_audit` LONGTEXT NULL,
-    `geo_llm` LONGTEXT NULL,
-    `competitor_analysis_ps_report` LONGTEXT NULL,
-    `competitor_analysis_social_media_report` LONGTEXT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `llm_responses_website_id_key`(`website_id`),
-    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -401,15 +427,15 @@ CREATE TABLE `user_requirements` (
     `requirement_id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
     `website_id` VARCHAR(191) NOT NULL,
-    `property_id` VARCHAR(191) NOT NULL,
-    `access_token` LONGTEXT NOT NULL,
+    `property_id` VARCHAR(191) NULL,
+    `access_token` LONGTEXT NULL,
     `refresh_token` LONGTEXT NULL,
     `profile` JSON NULL,
     `session_id` LONGTEXT NULL,
     `fetched_properties` JSON NULL,
     `summary_status` VARCHAR(191) NULL,
     `summary_data` JSON NULL,
-    `competitor_urls` LONGTEXT NULL,
+    `competitor_urls` JSON NULL,
     `ip_address` LONGTEXT NULL,
     `user_agent` LONGTEXT NULL,
     `industry` LONGTEXT NULL,
@@ -428,17 +454,21 @@ CREATE TABLE `user_requirements` (
 CREATE TABLE `analysis_status` (
     `id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
-    `website_id` VARCHAR(191) NOT NULL,
-    `competitor_analysis` BOOLEAN NOT NULL DEFAULT false,
-    `pagespeed_analysis` BOOLEAN NOT NULL DEFAULT false,
-    `social_media_analysis` BOOLEAN NOT NULL DEFAULT false,
-    `brand_audit` BOOLEAN NOT NULL DEFAULT false,
-    `traffic_analysis` BOOLEAN NOT NULL DEFAULT false,
-    `broken_links` BOOLEAN NOT NULL DEFAULT false,
+    `website_id` VARCHAR(191) NULL,
+    `report_id` VARCHAR(191) NULL,
+    `website_audit` BOOLEAN NULL,
+    `trafficanaylsis` BOOLEAN NULL,
+    `onpageoptimization` BOOLEAN NULL,
+    `offpageoptimization` BOOLEAN NULL,
+    `social_media_anaylsis` BOOLEAN NULL,
+    `competitors_identification` BOOLEAN NULL,
+    `recommendationbymo1` BOOLEAN NULL,
+    `recommendationbymo2` BOOLEAN NULL,
+    `recommendationbymo3` BOOLEAN NULL,
+    `cmo_recommendation` BOOLEAN NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `analysis_status_user_id_website_id_key`(`user_id`, `website_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -471,22 +501,43 @@ CREATE TABLE `subscriptions` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `payments` (
-    `payment_id` VARCHAR(191) NOT NULL,
-    `user_id` VARCHAR(191) NOT NULL,
-    `amount` DECIMAL(65, 30) NOT NULL,
-    `currency` VARCHAR(191) NOT NULL,
-    `payment_method` VARCHAR(191) NOT NULL,
-    `payment_status` VARCHAR(191) NOT NULL,
-    `transaction_id` VARCHAR(191) NULL,
-    `subscription_id` VARCHAR(191) NULL,
-    `website_id` VARCHAR(191) NULL,
-    `analysis_type` VARCHAR(191) NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE `report` (
+    `report_id` VARCHAR(191) NOT NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `website_analysis_id` LONGTEXT NULL,
+    `traffic_analysis_id` LONGTEXT NULL,
+    `onpageoptimization_id` LONGTEXT NULL,
+    `social_media_id` LONGTEXT NULL,
+    `competitor_scraped_id` LONGTEXT NULL,
+    `competitor_id` LONGTEXT NULL,
+    `geo_llm` LONGTEXT NULL,
+    `scraped_data_id` VARCHAR(191) NULL,
+    `dashboard1_Freedata` LONGTEXT NULL,
+    `dashboard_paiddata` LONGTEXT NULL,
+    `strengthandissues_d1` LONGTEXT NULL,
+    `recommendationbymo1` LONGTEXT NULL,
+    `dashboard2_data` LONGTEXT NULL,
+    `strengthandissues_d2` LONGTEXT NULL,
+    `recommendationbymo2` LONGTEXT NULL,
+    `dashboard3_data` LONGTEXT NULL,
+    `recommendationbymo3` LONGTEXT NULL,
+    `dashboard4_data` LONGTEXT NULL,
+    `cmorecommendation` LONGTEXT NULL,
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    PRIMARY KEY (`payment_id`)
+    INDEX `report_website_id_updated_at_idx`(`website_id`, `updated_at`),
+    PRIMARY KEY (`report_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `paymentMethods` ADD CONSTRAINT `paymentMethods_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `payments` ADD CONSTRAINT `payments_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `payments` ADD CONSTRAINT `payments_subscription_id_fkey` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions`(`subscription_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `user_websites` ADD CONSTRAINT `user_websites_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -528,31 +579,10 @@ ALTER TABLE `email_verifications` ADD CONSTRAINT `email_verifications_user_id_fk
 ALTER TABLE `api_keys` ADD CONSTRAINT `api_keys_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `brand_website_analysis` ADD CONSTRAINT `brand_website_analysis_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `competitor_details` ADD CONSTRAINT `competitor_details_scraped_data_id_fkey` FOREIGN KEY (`scraped_data_id`) REFERENCES `website_scraped_data`(`scraped_data_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `brand_traffic_analysis` ADD CONSTRAINT `brand_traffic_analysis_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `brand_social_media_analysis` ADD CONSTRAINT `brand_social_media_analysis_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `competitor_analysis` ADD CONSTRAINT `competitor_analysis_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `website_scraped_data` ADD CONSTRAINT `website_scraped_data_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `competitor_details` ADD CONSTRAINT `competitor_details_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `website_scraped_data`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_competitor_id_fkey` FOREIGN KEY (`competitor_id`) REFERENCES `competitor_details`(`competitor_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `competitor_scraped_data` ADD CONSTRAINT `competitor_scraped_data_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `llm_responses` ADD CONSTRAINT `llm_responses_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `competitor_data` ADD CONSTRAINT `competitor_data_competitor_id_fkey` FOREIGN KEY (`competitor_id`) REFERENCES `competitor_details`(`competitor_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `user_requirements` ADD CONSTRAINT `user_requirements_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -561,10 +591,10 @@ ALTER TABLE `user_requirements` ADD CONSTRAINT `user_requirements_user_id_fkey` 
 ALTER TABLE `user_requirements` ADD CONSTRAINT `user_requirements_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `analysis_status` ADD CONSTRAINT `analysis_status_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `analysis_status` ADD CONSTRAINT `analysis_status_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `analysis_status` ADD CONSTRAINT `analysis_status_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `analysis_status` ADD CONSTRAINT `analysis_status_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `subscriptions` ADD CONSTRAINT `subscriptions_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -573,10 +603,4 @@ ALTER TABLE `subscriptions` ADD CONSTRAINT `subscriptions_user_id_fkey` FOREIGN 
 ALTER TABLE `subscriptions` ADD CONSTRAINT `subscriptions_plan_id_fkey` FOREIGN KEY (`plan_id`) REFERENCES `plans`(`plan_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `payments` ADD CONSTRAINT `payments_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `payments` ADD CONSTRAINT `payments_subscription_id_fkey` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions`(`subscription_id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `payments` ADD CONSTRAINT `payments_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `report` ADD CONSTRAINT `report_website_id_fkey` FOREIGN KEY (`website_id`) REFERENCES `user_websites`(`website_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
