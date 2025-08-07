@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
-import { getFacebookPostsFromScrapedData } from './facebook.service';
+import { getInstagramPostsFromScrapedData } from './instagram.service';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getFacebookPostsHandler = async (req: Request, res: Response) => {
+export const getInstagramPostsHandler = async (req: Request, res: Response) => {
   try {
     const { report_id } = req.body;
-     const { website_id} = req.body;
+    const { website_id} = req.body;
 
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
@@ -22,18 +22,34 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'scraped_data_id not found for report_id' });
     }
 
-    // Get facebook_handle using scraped_data_id
+    // Get Instagram_handle using scraped_data_id
     const websiteData = await prisma.website_scraped_data.findUnique({
       where: { scraped_data_id: report.scraped_data_id },
-      select: { facebook_handle: true }
+      select: { instagram_handle: true }
     });
 
-    if (!websiteData?.facebook_handle) {
-      return res.status(404).json({ success: false, error: 'facebook_handle not found for scraped_data_id' });
+    if (!websiteData?.instagram_handle) {
+      return res.status(404).json({ success: false, message: 'Instagram_handle not found' });
     }
-    const facebook_data = await getFacebookPostsFromScrapedData(websiteData.facebook_handle);
-
-    const existingReport = await prisma.report.findUnique({
+    console.log("instagram_handle",websiteData.instagram_handle)
+    const Instagram_data  = await getInstagramPostsFromScrapedData(websiteData.instagram_handle);
+    
+    // const record = await prisma.report.upsert({
+    //   where: {
+    //     report_id
+    //   },
+    //   update: {
+    //     website_id,
+    //     dashboard2_data: Instagram_data, // existing field
+    //           // new nested object
+    //   },
+    //   create: {
+    //     website_id,
+    //     dashboard2_data: Instagram_data,
+        
+    //   },
+    // });
+        const existingReport = await prisma.report.findUnique({
       where: { report_id },
       select: { dashboard2_data: true }
     });
@@ -48,14 +64,11 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
   ) {
     mergedDashboard2Data = {
       ...existingReport.dashboard2_data,
-      
-     
-        ...facebook_data
-      
-      
+    ...Instagram_data // flatten inside this key
+  
     };
   } else {
-    mergedDashboard2Data = facebook_data ;
+    mergedDashboard2Data = Instagram_data ;
   }
 
   const record = await prisma.report.upsert({
@@ -66,16 +79,14 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     },
     create: {
       website_id,
-      dashboard2_data:  facebook_data 
+      dashboard2_data:  Instagram_data 
     }
   });
 
-   
-   
-    return res.json(facebook_data);
+    return res.json(Instagram_data);
 
   } catch (error) {
-    console.error("Error in getFacebookPostsHandler:", error);
+    console.error("Error in getInstagramPostsHandler:", error);
     return res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 };

@@ -1,0 +1,11 @@
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 400","timestamp":"2025-08-04T10:49:20.913Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 400","timestamp":"2025-08-04T10:53:21.762Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Cannot read properties of undefined (reading 'get')","timestamp":"2025-08-04T11:27:14.861Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.raise_for_status is not a function","timestamp":"2025-08-04T11:30:40.962Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.json is not a function","timestamp":"2025-08-04T12:28:23.164Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.get is not a function","timestamp":"2025-08-04T12:29:40.928Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.get is not a function","timestamp":"2025-08-04T12:32:46.545Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.get is not a function","timestamp":"2025-08-04T12:45:23.793Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: response.get is not a function","timestamp":"2025-08-05T05:26:08.129Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-05T05:54:35.829Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-05T06:00:09.242Z"}

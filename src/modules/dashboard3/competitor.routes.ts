@@ -60,6 +60,33 @@ if (existing) {
   }
 });
 
+competitorRouter.post('/social_media', async (req, res, next) => {
+  try {
+    console.log(" competitors social media anyalsis started ")
+    const { user_id,website_id,report_id  } = req.body;
+    const data = await CompetitorService.social_media(user_id,website_id,report_id);
+    
+    console.log("competitors social media  complete ")
+     const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+let update;
+if (existing) {
+  update = await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: { website_id, competitors_identification: true }
+  });
+} else {
+  update = await prisma.analysis_status.create({
+    data: { report_id, website_id, competitors_identification: true ,user_id}
+  });
+}
+    res.status(200).json({ competitors: data });
+  } catch (e) {
+    next(e);
+  }
+});
 
 competitorRouter.post('/recommendations', async (req, res, next) => {
   try {

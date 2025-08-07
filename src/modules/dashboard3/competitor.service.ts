@@ -9,7 +9,7 @@ import "dotenv/config";
 import * as cheerio from "cheerio";
 import { performance } from "perf_hooks";
 import puppeteer from "puppeteer";
-
+import { fetchSocialMediaData } from "./social_media_anaylsis";
 import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
 import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
 import { UserRequirement, ProcessedResult, LlmCompetitor } from "./brandprofile_interface";
@@ -105,7 +105,7 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   if (!website?.website_url) {
     throw new Error(`No URL found for user_id: ${user_id} and website_id: ${website_id}`);
   }
-
+  // console.log("website_url",website.website_url)
   return website.website_url;
 }
 
@@ -128,10 +128,11 @@ export class CompetitorService {
       where: { report_id: report_id }, // You must have 'report_id' from req.body
       select: { scraped_data_id: true },
     });
+    console.log("report?.scraped_data_id", report?.scraped_data_id);
     const [scrapedMain, userRequirementRaw] = await Promise.all([prisma.website_scraped_data.findUnique({ where: { scraped_data_id: report?.scraped_data_id ?? undefined } }), prisma.user_requirements.findFirst({ where: { website_id } })]);
 
-    if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for website_id=${website_id}`);
-    console.log(`[brandprofile] Loaded scraped main website data`);
+    if (!scrapedMain) throw new Error(`[brandprofile] No scraped data found for report_id=${report_id}`);
+    console.log(`[brandprofile] Loaded scraped main website data : `, scrapedMain, "scraped_id", scrapedMain.scraped_data_id, "report?.scraped_data_id", report?.scraped_data_id);
 
     const userRequirement: UserRequirement = {
       industry: userRequirementRaw?.industry ?? "Unknown",
@@ -208,6 +209,7 @@ export class CompetitorService {
         const competitor_id = uuidv4();
         await prisma.competitor_details.create({
           data: {
+            website_url,
             competitor_id,
             website_id,
             report_id,
@@ -263,6 +265,7 @@ export class CompetitorService {
           const competitor_id = uuidv4();
           await prisma.competitor_details.create({
             data: {
+              website_url,
               competitor_id,
               website_id,
               report_id,
@@ -481,7 +484,7 @@ export class CompetitorService {
           ctr_loss_percent: scraped.ctr_loss_percent || null,
         };
 
-        await prisma.competitor_data.upsert({
+        await prisma.competitor_details.upsert({
           where: { competitor_id },
           update: {
             ...scraped,
@@ -519,8 +522,8 @@ export class CompetitorService {
   }
 
   static async website_audit(user_id: string, website_id: string, report_id: string) {
-    if (!website_id || !user_id) {
-      throw new Error("website_id and user_id are required");
+    if (!website_id || !user_id || !report_id) {
+      throw new Error("website_id report_id,and user_id are required");
     }
 
     console.log(`competitors website_audit-Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
@@ -574,15 +577,7 @@ export class CompetitorService {
 
     const competitors = await prisma.competitor_details.findMany({
       where: { report_id },
-      select: {
-        competitor_id: true,
-        name: true,
-        competitor_website_url: true,
-        usp: true,
-        primary_offering: true,
-        industry: true,
-        order_index: true,
-      },
+
       orderBy: { order_index: "asc" },
       take: 7,
     });
@@ -594,12 +589,7 @@ export class CompetitorService {
         .join(", ")}`
     );
 
-    const competitors_data = await prisma.competitor_data.findMany({
-      where: { report_id },
-      take: 7,
-    });
-
-    const competitorDataMap = new Map(competitors_data.map((item) => [item.competitor_id, item]));
+    const competitorDataMap = new Map(competitors.map((item) => [item.competitor_id, item]));
     interface CompetitorResult {
       competitor_id: any;
       brand_profile: {
@@ -663,7 +653,7 @@ export class CompetitorService {
             throw new Error("Site is taking too long to respond");
           }
 
-          await prisma.competitor_data.update({
+          await prisma.competitor_details.update({
             where: { competitor_id },
             data: {
               page_speed: JSON.parse(JSON.stringify(pageSpeedData)),
@@ -779,7 +769,6 @@ export class CompetitorService {
     );
 
     await Promise.all(competitorTasks);
-    // 1. Extract preferred competitor URLs from user_requirements
     let preferredUrls: string[] = [];
 
     try {
@@ -928,6 +917,176 @@ export class CompetitorService {
     });
 
     return dashboarddata;
+  }
+
+  // static async social_media(user_id: string, website_id: string,report_id:string) {
+  //     if (!website_id || !user_id || !report_id) {
+  //       throw new Error("website_id report_id,and user_id are required");
+  //     }
+
+  //     console.log(`competitors website_audit-Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
+  //     const website_url = await getWebsiteUrlById(user_id, website_id);
+  //     if (!website_url) {
+  //       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  //     }
+
+  // const report = await prisma.report.findUnique({
+  //       where: { report_id: report_id }, // You must have 'report_id' from req.body
+  //       select: { scraped_data_id: true }
+  //     });
+  //     const [websiteScraped] = await Promise.all([
+
+  //       prisma.website_scraped_data.findUnique({ where: {scraped_data_id:report?.scraped_data_id?? undefined }}),
+
+  //     ]);
+  //     const main_website= fetchSocialMediaData(websiteScraped?.facebook_handle,websiteScraped?.instagram_handle,websiteScraped?.youtube_handle),
+
+  //     const competitors = await prisma.competitor_details.findMany({
+  //       where: { report_id},
+
+  //       orderBy: { order_index: "asc" },
+  //       take: 7,
+  //     });
+
+  //     console.log(
+  //       `competitors website_audit - Fetched ${competitors.length} competitors for website_id: ${website_id}, URLs: ${competitors
+  //         .map((c) => c.competitor_website_url)
+  //         .filter(Boolean)
+  //         .join(", ")}`
+  //     );
+
+  //     const competitorDataMap = new Map(competitors.map((item) => [item.competitor_id, item]));
+
+  //     // const competitorResults: CompetitorResult[] = [];
+  //     const processedUrls = new Set<string>([website_url]);
+
+  //     // const pLimit = require("p-limit");
+  //     // const limit = pLimit(7); // Now this works
+  //     const limit = createLimiter(7); // Use our new helper function
+  //     const competitorTasks = competitors.map((competitor) =>
+  //       limit(async () => {
+  //         const { competitor_id, name, competitor_website_url, usp, primary_offering, industry,facebook_handle,instagram_handle,youtube_handle } = competitor;
+  //         if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
+  //           console.log(`Skipping competitor ${competitor_id} due to duplicate URL: ${competitor_website_url}`);
+  //           return;
+  //         }
+  //         processedUrls.add(competitor_website_url);
+
+  //         try {
+  //           console.log(`Fetching PageSpeed data for ${competitor_website_url}`);
+  //           const social_media = await fetchSocialMediaData(facebook_handle,instagram_handle,youtube_handle);
+
+  //           await prisma.competitor_details.update({
+  //             where: { competitor_id },
+  //             data: {
+  //               social_media_data: social_media,
+  //             },
+  //           });
+
+  //           console.warn(`⚠️ Fallback for ${competitor_website_url}`);
+
+  //       )
+  //     );
+
+  //     const socila_media = {
+  //   main_website: main_website,
+  //   competitordata: social_media,
+
+  //     return dashboarddata;
+
+  //     }
+
+  //   }
+
+  static async social_media(user_id: string, website_id: string, report_id: string) {
+    if (!website_id || !user_id || !report_id) {
+      throw new Error("website_id, report_id, and user_id are required");
+    }
+
+    console.log(`Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
+    const website_url = await getWebsiteUrlById(user_id, website_id);
+    if (!website_url) {
+      throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+    }
+
+    const report = await prisma.report.findUnique({
+      where: { report_id },
+      select: { scraped_data_id: true },
+    });
+
+    const websiteScraped = await prisma.website_scraped_data.findUnique({
+      where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+      select: {
+        facebook_handle: true,
+        instagram_handle: true,
+        youtube_handle: true,
+      },
+    });
+    console.log("main_website handles", websiteScraped);
+    const main_website = await fetchSocialMediaData(websiteScraped?.facebook_handle, websiteScraped?.instagram_handle, websiteScraped?.youtube_handle);
+
+    const competitors = await prisma.competitor_details.findMany({
+      where: { report_id },
+      orderBy: { order_index: "asc" },
+      take: 7,
+    });
+
+    console.log(`Fetched ${competitors.length} competitors.`);
+
+    const processedUrls = new Set<string>([website_url]);
+    const limit = createLimiter(7);
+
+    const competitorResults = await Promise.all(
+      competitors.map((competitor) =>
+        limit(async () => {
+          const { competitor_id, competitor_website_url, facebook_handle, instagram_handle, youtube_handle } = competitor;
+
+          if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
+            console.log(`Skipping competitor ${competitor_id} due to duplicate URL.`);
+            return { competitor_id, social_media: null };
+          }
+
+          processedUrls.add(competitor_website_url);
+
+          try {
+            const social_media = await fetchSocialMediaData(facebook_handle, instagram_handle, youtube_handle);
+
+            await prisma.competitor_details.update({
+              where: { competitor_id },
+              data: {
+                social_media_data: social_media,
+              },
+            });
+
+            return { competitor_id, social_media };
+          } catch (error) {
+            console.error(`Error fetching social data for ${competitor_id}`, error);
+            return { competitor_id, social_media: null };
+          }
+        })
+      )
+    );
+
+    // Convert array to ID-based object
+    const competitorsData: Record<string, any> = {};
+    for (const item of competitorResults) {
+      if (item?.competitor_id) {
+        competitorsData[item.competitor_id] = item.social_media;
+      }
+    }
+
+    const social_mediaData = {
+      main_website,
+      competitors: competitorsData,
+    };
+
+    await prisma.report.upsert({
+      where: { report_id },
+      update: { dashboard3_socialmedia: social_mediaData },
+      create: { website_id, report_id, dashboard3_socialmedia: social_mediaData },
+    });
+
+    return social_mediaData;
   }
 
   static async getComparisonRecommendations(website_id: string, report_id: string) {

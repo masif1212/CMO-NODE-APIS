@@ -232,6 +232,7 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
 
   // Try PageSpeed API first
   try {
+    console.log("pagespeed api called");
     const response = await axios.get(`${API_URL}?${params}`);
     const data = response.data;
     const lighthouseResult = data?.lighthouseResult;
@@ -240,11 +241,11 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
   } catch (err: any) {
     console.error(`PageSpeed fetch failed for ${url}:`, err.message);
     const mode = process.env.MODE;
+    console.log("");
 
     // Fallback to direct Lighthouse run
     try {
-      // **FIX**: Dynamically import lighthouse here, within this scope.
-      const { default: lighthouse } = await import("lighthouse");
+      console.log("falling back to lighthouse");
       let browser;
 
       if (mode === "production") {

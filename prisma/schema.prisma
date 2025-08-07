@@ -105,15 +105,15 @@ model user_websites {
   website_url  String
   website_type String?
   website_name String?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
-
+  domain        String? 
   users                       users                         @relation(fields: [user_id], references: [user_id])
 
   user_requirements  user_requirements[]
   analysis_status    analysis_status[]
   report             report[]
-
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+  @@unique([user_id, domain]) 
   @@unique([user_id, website_id], name: "user_id_website_id")
 }
 
@@ -382,6 +382,8 @@ model competitor_details {
   report_id              String
   scraped_data_id        String?
   name                   String?
+  website_url            String?
+
   competitor_website_url String?  @db.LongText
   industry               String?  @db.LongText
   region                 String?  @db.LongText
@@ -391,20 +393,7 @@ model competitor_details {
   created_at             DateTime @default(now())
   updated_at             DateTime @default(now()) @updatedAt
   order_index            Int?
-  competitor_data        competitor_data?
-  website_scraped_data   website_scraped_data? @relation("SiteCompetitors", fields: [scraped_data_id], references: [scraped_data_id])
-  @@index([website_id])
-  @@index([website_id, order_index])
-  @@index([scraped_data_id])
-}
-
-model competitor_data {
-  competitor_scraped_id String   @id @default(uuid())
-  competitor_id         String?  @unique
-  website_id            String
-  report_id             String
   isCrawlable           Boolean?
-  website_url           String
   page_title            String?  @db.LongText
   logo_url              String?  @db.LongText
   meta_description      String?  @db.LongText
@@ -418,6 +407,7 @@ model competitor_data {
   instagram_handle      String?  @db.LongText
   linkedin_handle       String?  @db.LongText
   homepage_alt_text_coverage Int?
+  social_media_data      Json?
   youtube_handle        String?  @db.LongText
   tiktok_handle         String?  @db.LongText
   ctr_loss_percent      Json?
@@ -427,10 +417,45 @@ model competitor_data {
   page_speed            Json?
   other_links           Json?
   raw_html              String?  @db.LongText
-  scraped_at            DateTime @default(now())
-  updated_at            DateTime @default(now()) @updatedAt
-  competitor_details    competitor_details? @relation(fields: [competitor_id], references: [competitor_id]) // Made optional
+  website_scraped_data   website_scraped_data? @relation("SiteCompetitors", fields: [scraped_data_id], references: [scraped_data_id])
+  @@index([website_id])
+  @@index([website_id, order_index])
+  @@index([scraped_data_id])
 }
+
+// model competitor_data {
+//   competitor_scraped_id String   @id @default(uuid())
+//   competitor_id         String?  @unique
+//   website_id            String
+//   report_id             String
+//   isCrawlable           Boolean?
+//   website_url           String
+//   page_title            String?  @db.LongText
+//   logo_url              String?  @db.LongText
+//   meta_description      String?  @db.LongText
+//   meta_keywords         String?  @db.LongText
+//   og_title              String?  @db.LongText
+//   headingAnalysis       Json?
+//   og_description        String?  @db.LongText
+//   og_image              String?  @db.LongText
+//   twitter_handle        String?  @db.LongText
+//   facebook_handle       String?  @db.LongText
+//   instagram_handle      String?  @db.LongText
+//   linkedin_handle       String?  @db.LongText
+//   homepage_alt_text_coverage Int?
+//   youtube_handle        String?  @db.LongText
+//   tiktok_handle         String?  @db.LongText
+//   ctr_loss_percent      Json?
+//   revenue_loss_percent  Int?
+//   sitemap_pages         Json?
+//   schema_analysis       Json?
+//   page_speed            Json?
+//   other_links           Json?
+//   raw_html              String?  @db.LongText
+//   scraped_at            DateTime @default(now())
+//   updated_at            DateTime @default(now()) @updatedAt
+//   // competitor_details    competitor_details? @relation(fields: [competitor_id], references: [competitor_id]) // Made optional
+// }
 
 model user_requirements {
   requirement_id      String     @id @default(uuid())
@@ -528,11 +553,12 @@ model report {
   strengthandissues_d1         String?  @db.LongText
   recommendationbymo1         String? @db.LongText
 
-  dashboard2_data          String? @db.LongText
+  dashboard2_data          Json?
   strengthandissues_d2         String?  @db.LongText
   recommendationbymo2         String? @db.LongText
 
   dashboard3_data          String? @db.LongText
+  dashboard3_socialmedia    Json?
   recommendationbymo3         String? @db.LongText
 
   dashboard4_data          String? @db.LongText

@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
 import OpenAI from 'openai';
-import * as cheerio from "cheerio";
-import { analytics } from 'googleapis/build/src/apis/analytics';
-import { technical_seo } from '../dashboard1/technical_seo/tech_controller';
 
 
 interface CMORecommendationInput {
@@ -28,49 +24,7 @@ export class CMORecommendationService {
     this.model = model;
   }
 
-  // private async fetchRecommendations(user_id: string, website_id: string,report_id:string) {
-  //   const [website, requirement,report] = await Promise.all([
-      
-  //     this.prisma.user_websites.findUnique({
-  //       where: { website_id },
-  //       select: {
-  //         user_id: true,
-  //         website_url: true,
-  //       },
-  //     }),
-  //     this.prisma.user_requirements.findFirst({
-  //       where: { website_id },
-  //       select: {
-  //         industry: true,
-  //         region_of_operation: true,
-  //         target_location: true,
-  //         target_audience: true,
-  //         primary_offering: true,
-  //         USP: true,
-  //       },
-  //     }),
-     
-  //     this.prisma.report.findUnique({
-  //       where: { report_id:  report_id  },
-       
 
-  //     }),
-  //   ]);
-
-  //   if (!website || website.user_id !== user_id) {
-  //     throw new Error('Invalid user_id or website_id');
-  //   }
-
-  //   return {
-  //     website_audit_data: report?.dashboard1_Freedata || null,
-  //     seo_audit: report?.dashboard_paiddata || undefined,
-  //     competitor_analysis: report?.dashboard3_data || null,
-  //     requirement,
-  //     website,
-  //     report
-
-  //   };
-  // }
 
 
   private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
@@ -95,12 +49,31 @@ export class CMORecommendationService {
         report_id: { in: report_ids },
       },
     }),
+    
+
   ]);
+
+
 
   if (!website || website.user_id !== user_id) {
     throw new Error('Invalid user_id or website_id');
   }
 
+
+    const firstScrapedDataId = reports[0]?.scraped_data_id;
+  if (!firstScrapedDataId) {
+    throw new Error('No scraped_data_id found in reports');
+  }
+
+  // 🟢 Use the first scraped_data_id in the query
+  const scraped_data = await this.prisma.website_scraped_data.findUnique({
+    where: {
+      scraped_data_id: firstScrapedDataId,
+    },
+    select:{
+      logo_url:true
+    }
+  });
   // Combine multiple report sections (this is just a sample logic)
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
@@ -113,11 +86,12 @@ export class CMORecommendationService {
     requirement,
     website,
     reports,
+    logo_url: scraped_data?.logo_url || null
   };
 }
 
-
   
+
 
   public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
     try {
@@ -127,19 +101,28 @@ export class CMORecommendationService {
         competitor_analysis: competitor_analysis,
         requirement,
         website,
-        reports
+        reports,
+        logo_url
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
 
+      
 
-
-
+      function stripCodeFences(text: string): string {
+        // Remove leading and trailing code fences (with optional language)
+        return text
+          .replace(/^\s*```(?:json)?\s*/i, '') // Remove opening
+          .replace(/\s*```\s*$/i, '')          // Remove closing
+          .trim();
+      }
+      
 
 
 let fullreportseo: any = {};
 for (const entry of seo_audit) {
   try {
     const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
-    fullreportseo = { ...fullreportseo, ...parsed }; // shallow merge
+    fullreportseo = { ...seo_audit, ...parsed }; // shallow merge
+    console.log("fullreportseo",fullreportseo)
   } catch (err) {
     console.warn("Invalid JSON in dashboard_paiddata entry", err);
   }
@@ -147,10 +130,8 @@ for (const entry of seo_audit) {
 
 
 const datafor_llm = fullreportseo?.datafor_llm;
-// console.log("datafor_llm", datafor_llm)
-if (!datafor_llm) {
-  throw new Error("Missing `datafor_llm` in dashboard_paiddata");
-}
+console.log("datafor_llm", datafor_llm)
+
 
 
 // Utility function to safely parse and merge multiple JSON entries
@@ -179,73 +160,82 @@ let fullcompetitor_data: any = parseFirstValidJSON(competitor_analysis);
 
 const competitor_data = fullcompetitor_data?.llmData;
 
-if (!webdatafor_llm) {
-  throw new Error("Missing `data_for_llm` in dashboard1_Freedata");
-}
+// if (!webdatafor_llm) {
+//   throw new Error("Missing data_for_llm in dashboard1_Freedata");
+// }
 
-    const allData: any = {
-      Analytics: {
-        website_revenue_loss: `*Formula:*
 
-1.  *Average Revenue Conversion Loss (Percentage):*
+const allData: any = {};
+
+// 🧠 Analytics block with LLM-based formula and explanations
+if (webdatafor_llm) {
+  allData.Analytics = {
+    website_revenue_loss: `*Formula:*
+
+1.  Average Revenue Conversion Loss (Percentage):
     website_revenue_loss% = ((LCP - 2.5) × 7) + (((TBT - 200) / 100) × 3) + (CLS × 10)
 
-*Assumptions and Metric Impacts:*
+Assumptions and Metric Impacts:
 
-* *LCP (Largest Contentful Paint):*
-    * *Threshold:* 2.5 seconds (s)
-    * *Impact:* For every 1 second (s) that LCP exceeds 2.5s, there is an estimated 7% drop in conversions.
-* *TBT (Total Blocking Time):*
-    * *Threshold:* 200 milliseconds (ms)
-    * *Impact:* For every 100 milliseconds (ms) that TBT exceeds 200ms, there is an estimated 3% drop in conversions.
-* *CLS (Cumulative Layout Shift):*
-    * *Threshold:* 0.1 units
-    * *Impact:* For every 1.0 unit increase in CLS, there is an estimated 10% drop in conversions.
+* LCP (Largest Contentful Paint):
+    * Threshold: 2.5s → Estimated 7% drop per extra second
+* TBT (Total Blocking Time):
+    * Threshold: 200ms → Estimated 3% drop per 100ms over
+* CLS (Cumulative Layout Shift):
+    * Threshold: 0.1 → Estimated 10% drop per 1.0 unit
 
-*Interpretation of Results:*
+Interpretation:
+Positive = projected revenue loss.  
+Negative = better-than-threshold performance.
 
-* *Positive RevenueLoss%:*
-    * A positive result indicates a *projected revenue loss* due to the current performance metrics exceeding the defined thresholds. The higher the positive number, the greater the anticipated negative impact on conversion rates, and by extension, revenue.
-* *Negative RevenueLoss%:*
-    * A negative result indicates that the current performance metrics are *better than the defined thresholds*.
-    * This suggests that these specific performance aspects are not contributing to conversion loss, and may even be positively impacting user experience, leading to potentially higher conversions. In essence, a negative value signifies a "good" or "optimal" performance state relative to these thresholds, indicating no estimated revenue loss from these factors. 
-       
+Current value: ${webdatafor_llm.revenueLossPercent ?? "N/A"}%`,
 
-Current value: ${webdatafor_llm?.revenueLossPercent ?? "N/A"}%`,
-        ctr_loss_percent_oR_SeoRevenueLoss: webdatafor_llm.seo_revenue_loss_percentage ?? "N/A",
-      },
-     
-      website_audit: {
-        websiite_details: webdatafor_llm ?? "N/A",
-  } ,
-    };
+    ctr_loss_percent_oR_SeoRevenueLoss: webdatafor_llm.seo_revenue_loss_percentage ?? "N/A",
+  };
 
-    
-      allData.traffic = datafor_llm.traffic_anaylsis
-       
-    ;
+  allData.website_audit = {
+    websiite_details: webdatafor_llm,
+  };
+}
 
-      allData.onpage_opptimization = datafor_llm.onpage_opptimization
-        
-        
-      
+// 🧠 Traffic analysis
+if (datafor_llm?.traffic_anaylsis) {
+  allData.traffic = datafor_llm.traffic_anaylsis;
+}
 
-      allData.technical_seo = datafor_llm.technical_seo
-       
+// 🧠 On-page optimization
+if (datafor_llm?.onpage_opptimization) {
+  allData.onpage_opptimization = datafor_llm.onpage_opptimization;
+}
 
-      allData.Geo = datafor_llm.geo
-        
-      
-      allData.user_industry_and_target_location={
-       industry: requirement?.industry,
-       Target_location:requirement?.industry
-      };
-      
-      allData.competitor_comparison = competitor_data;
-    
+// 🧠 Technical SEO
+if (datafor_llm?.technical_seo) {
+  allData.technical_seo = datafor_llm.technical_seo;
+}
 
-  console.log("allData",allData)
+// 🧠 Geo insights
+if (datafor_llm?.geo) {
+  allData.Geo = datafor_llm.geo;
+}
 
+// 🧠 Industry and location, optional fields
+if (requirement?.industry || requirement?.target_location) {
+  allData.user_industry_and_target_location = {
+    industry: requirement?.industry ?? "N/A",
+    Target_location: requirement?.target_location ?? "N/A",
+  };
+}
+
+// 🧠 Competitor comparison
+if (competitor_data) {
+  allData.competitor_comparison = competitor_data;
+}
+
+console.log("✅ allData prepared:", allData);
+function extractFirstJSONObject(text: string): string | null {
+  const match = text.match(/\{[\s\S]*\}/);
+  return match ? match[0] : null;
+}
 
 
 const executiveCMOPrompt = `
@@ -264,15 +254,15 @@ const executiveCMOPrompt = `
 S${allData ? '-' : ''}
 
 
-Your task is to generate a **structured JSON report** based on the given input data. The output must help executive stakeholders understand the brand’s position, performance risks, and growth levers.
+Your task is to generate a *structured JSON report* based on the given input data. The output must help executive stakeholders understand the brand’s position, performance risks, and growth levers.
 
 ---
 
-🧠 **Output Format**
+🧠 *Output Format*
 The following JSON structure is strictly required.
 
-Return a **valid JSON object** with the following keys in this exact order:
-\`\`\`json
+Return a *valid JSON object* with the following keys in this exact order:
+\\\`json
 {
   "brand": {
     "name": "Example Brand",
@@ -344,27 +334,27 @@ Return a **valid JSON object** with the following keys in this exact order:
       
   
 }
-\`\`\`json
+\\\`json
 ---
 
- **Special Instructions for Bottom-of-Funnel Fixes**
+ *Special Instructions for Bottom-of-Funnel Fixes*
 - The 'priority_fixes_bottom_funnel' section should have 3 tags website_revenue_loss, seo_revenue_loss and what_to_prioritize_first**
        -website_revenue_loss: it is 
 - These must come from either:
-  - **SEO drop-offs** (e.g., keyword cannibalization, poor SERP CTR, missing schema, etc.)
-  - **Website performance issues** (e.g., broken forms, slow mobile load, friction in lead gen UX)
+  - *SEO drop-offs* (e.g., keyword cannibalization, poor SERP CTR, missing schema, etc.)
+  - *Website performance issues* (e.g., broken forms, slow mobile load, friction in lead gen UX)
 - For each issue:
   - Use the 'source' field to flag whether the issue is "seo", "website", or "both"
   - Make sure the fix is specific and implementable (no vague suggestions)
 
 ---
 
- **General Formatting & Style**
-- Use **markdown-style bold headings** only inside the JSON values where helpful
-- Start with **brand name and website URL** in the 'brand' object
+ *General Formatting & Style*
+- Use *markdown-style bold headings* only inside the JSON values where helpful
+- Start with *brand name and website URL* in the 'brand' object
 - Use bullet lists or arrays where specified
-- Write in a **concise, executive tone** for brand leadership and growth teams
-- If data is unavailable, use inferred logic — **never skip a section or say “no data”**
+- Write in a *concise, executive tone* for brand leadership and growth teams
+- If data is unavailable, use inferred logic — *never skip a section or say “no data”*
 - Do not mention or rely on external tools, platforms, or vendors
 
 ---
@@ -388,29 +378,34 @@ NOTE: Never mention a third api like pagespeed , semrush etc
       });
       console.log("open ai response fetch")
       let rawText = response.choices[0]?.message?.content || 'No response generated.';
+      rawText = stripCodeFences(rawText);
+      const rawText2 = extractFirstJSONObject(rawText);
       console.log("rawText",rawText)
 
-      rawText = rawText.replace(/^```json|```$/g, '').trim();
-      const responseContent = JSON.parse(rawText);
+      // rawText = rawText.replace(/^json|$/g, '').trim();
+      const responseContent = JSON.parse(rawText2 || '{}');
       console.log('Saving response to database...');
-
+      const cmo_recommendation = {
+        logo_url,
+        ...responseContent
+      }
       
       for (const reportId of input.report_ids) {
           await this.prisma.report.upsert({
             where: { report_id: reportId },
             update: {
-              cmorecommendation: JSON.stringify(responseContent),
+              cmorecommendation: JSON.stringify(cmo_recommendation),
             },
             create: {
               report_id: reportId,
               website_id: input.website_id,
-              cmorecommendation: JSON.stringify(responseContent),
+              cmorecommendation: JSON.stringify(cmo_recommendation),
             },
           });
         }
   
 
-      return { cmo_recommendation: responseContent};
+      return { cmo_recommendation: cmo_recommendation};
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);
       throw new Error('Failed to generate CMO recommendation');

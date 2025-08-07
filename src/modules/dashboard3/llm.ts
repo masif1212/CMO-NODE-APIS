@@ -32,9 +32,10 @@ You are an expert market research assistant specializing in competitor analysis.
 
 **Main Website **:
 - Website URL: ${scrapedMain.website_url ?? 'Unknown'}
+**main website title: ${scrapedMain.page_title ?? 'Unknown'}
 **main website meta description: ${scrapedMain.meta_description ?? 'Unknown'}
 **main website meta keywords: ${scrapedMain.meta_keywords ?? 'Unknown'}
-**main website title: ${scrapedMain.meta_title ?? 'Unknown'}
+
 
 
 
