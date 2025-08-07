@@ -95,15 +95,6 @@ export const getFacebookPostsFromScrapedData = async (facebook_handle: string) =
         message = "Minimal engagement for your audience size.";
       }
 
-      // Final engagementRate calculation
-      Object.entries(dailyMetrics).forEach(([date, metrics]) => {
-        const { likes, comments, views } = metrics;
-        const engagement = likes + comments;
-        metrics.engagementRate = views > 0 ? (engagement / views) * 100 : 0;
-      });
-
-      const totalEngagement = followers > 0 ? ((totalLikes + totalComments) / followers) * 100 : 0;
-
       return {
         engagementRate: engagementRate.toFixed(2) + "%",
         engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),

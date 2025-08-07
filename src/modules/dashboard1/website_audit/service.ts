@@ -245,7 +245,8 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
 
     // Fallback to direct Lighthouse run
     try {
-      console.log("falling back to lighthouse");
+      // **FIX**: Dynamically import lighthouse here, within this scope.
+      const { default: lighthouse } = await import("lighthouse");
       let browser;
 
       if (mode === "production") {
