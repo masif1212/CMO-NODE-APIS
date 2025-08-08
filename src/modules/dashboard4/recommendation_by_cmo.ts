@@ -268,28 +268,61 @@ Return a *valid JSON object* with the following keys in this exact order:
     "name": "Example Brand",
     "website": "https://example.com"
   },
-  "executive_summary": {
+ "executive_summary": {
   
                "High-level overview":"High-level overview of current brand performance" ,
                "challenges_opportunities" :"Key challenges & growth opportunities in plain English",
                "A one-liner verdict" :" Here’s what you need to fix now to grow faster""
                 },
   
-                        
+                      
                        
-  "brand_health_overview": {"
-  "Website performance metrics are strong:
-- *Speed Index:* 0.8s (score: 0.99) – Exceptional, far ahead of competitors (e.g., Cakeshop.ae at 1.8s, Artisan Bakers at 6.6s).
-- *First Contentful Paint (FCP):* 0.3s (score: 1) – Best-in-class, ensuring fast visual feedback.
-- *Largest Contentful Paint (LCP):* 1.2s (score: 0.9) – Well below the 2.5s threshold, indicating fast main content delivery.
-- *Total Blocking Time (TBT):* 540ms (score: 0.25) – Needs improvement; higher than ideal (competitors range from 0ms to 440ms).
-- *Cumulative Layout Shift (CLS):* 0.029 (score: 1) – Excellent visual stability.
-- *SEO Health:* 100/100 – Technical SEO is robust, outperforming most peers.
-- *Accessibility:* 99/100 – Industry-leading, with only minor alt text redundancy issues.
-- *Best Practices:* 96/100 – High compliance, exceeding most competitors.
-summary of key metrics:
-Overall, First Crust leads in speed, SEO, and accessibility, but TBT and on-page SEO require targeted fixes."
-  "},
+
+  "brand_health_overview": {
+    "overview": "Website performance metrics are strong",
+    "metrics": {
+      "Speed Index": {
+        "value": "0.8s",
+        "score": 0.99,
+        "comment": "Exceptional, far ahead of competitors (e.g., Cakeshop.ae at 1.8s, Artisan Bakers at 6.6s)"
+      },
+      "First Contentful Paint (FCP)": {
+        "value": "0.3s",
+        "score": 1,
+        "comment": "Best-in-class, ensuring fast visual feedback"
+      },
+      "Largest Contentful Paint (LCP)": {
+        "value": "1.2s",
+        "score": 0.9,
+        "comment": "Well below the 2.5s threshold, indicating fast main content delivery"
+      },
+      "Total Blocking Time (TBT)": {
+        "value": "540ms",
+        "score": 0.25,
+        "comment": "Needs improvement; higher than ideal (competitors range from 0ms to 440ms)"
+      },
+      "Cumulative Layout Shift (CLS)": {
+        "value": 0.029,
+        "score": 1,
+        "comment": "Excellent visual stability"
+      },
+      "SEO Health": {
+        "value": "100/100",
+        "comment": "Technical SEO is robust, outperforming most peers"
+      },
+      "Accessibility": {
+        "value": "99/100",
+        "comment": "Industry-leading, with only minor alt text redundancy issues"
+      },
+      "Best Practices": {
+        "value": "96/100",
+        "comment": "High compliance, exceeding most competitors"
+      }
+    },
+    "summary": "Overall, First Crust leads in speed, SEO, and accessibility, but TBT and on-page SEO require targeted fixes"
+  }
+
+
 
   "swot_analysis": {
     "strengths": ["..."],
@@ -426,7 +459,28 @@ NOTE: Never mention a third api like pagespeed , semrush etc
           });
         }
   
+        for (const reportId of input.report_ids) {
+                const existing = await this.prisma.analysis_status.findFirst({
+            where: { report_id: reportId }
+          });
 
+          if (existing) {
+            await this.prisma.analysis_status.update({
+              where: { id: existing.id },
+              data: { cmo_recommendation: true },
+            });
+          } else {
+            await this.prisma.analysis_status.create({
+              data: {
+                user_id: input.user_id,
+                report_id: reportId,
+                website_id: input.website_id,
+                cmo_recommendation: true,
+              },
+            });
+          }
+        }
+  
       return { cmo_recommendation: cmo_recommendation};
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);

@@ -20,7 +20,29 @@ export const dashboard2_Recommendation = async (req: Request, res: Response) => 
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-   
+      
+  const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+if (existing) {
+  await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: {
+      website_id,
+      recommendationbymo2: true
+    }
+  });
+} else {
+  await prisma.analysis_status.create({
+    data: {
+      report_id,
+      website_id,
+      recommendationbymo2: true,
+      user_id
+    }
+  });
+}
 
     return res.status(200).json(llm_response);
   } catch (error: any) {

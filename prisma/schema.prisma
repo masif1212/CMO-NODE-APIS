@@ -117,6 +117,7 @@ model user_websites {
   @@unique([user_id, website_id], name: "user_id_website_id")
 }
 
+
 model authentication_methods {
   auth_id                String   @id @default(uuid())
   user_id                String

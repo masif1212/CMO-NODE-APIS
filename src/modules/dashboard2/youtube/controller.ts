@@ -88,7 +88,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export const analyzeYouTubeController = async (req: Request, res: Response) => {
-  const { website_id, report_id } = req.body;
+  const { website_id, report_id ,user_id} = req.body;
 
   if (!website_id || !report_id) {
     return res.status(400).json({ error: "website_id and report_id are required" });
@@ -151,7 +151,29 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
         dashboard2_data: youtube_data
       }
     });
+      
+  const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
 
+if (existing) {
+  await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: {
+      website_id,
+      social_media_anaylsis: true
+    }
+  });
+} else {
+  await prisma.analysis_status.create({
+    data: {
+      report_id,
+      website_id,
+      social_media_anaylsis: true,
+      user_id
+    }
+  });
+}
     console.log("YouTube analysis complete");
     return res.status(200).json(youtube_data);
 
