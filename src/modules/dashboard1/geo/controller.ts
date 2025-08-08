@@ -224,7 +224,7 @@ const fullreport = {
 };
 
 // Save to DB under one JSON column
-const record = await prisma.report.upsert({
+await prisma.report.upsert({
   where: {
     report_id: report?.report_id,
   },

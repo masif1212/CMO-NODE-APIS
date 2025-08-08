@@ -14,12 +14,12 @@ import geo_llm from "./modules/dashboard1/geo/router";
 import userRequirementsRouter from "./modules/form_data/router";
 import mainDashboard from "./modules/dashboard/dashboard.router";
 import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
-// import dashboard4Router from "./modules/dashboard4/router";
 import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
 import facebookRoutes from './modules/dashboard2/facebook/facebook_router';
 import instagramRoutes from './modules/dashboard2/instagram/instagram_router';
 import { dashboardRouter2 } from "./modules/dashboard2/llm_suggestions/router";
+import  getUserdata  from "./modules/admin_dashboard/admin_router";
 
 const app = express();
 
@@ -53,6 +53,9 @@ app.use(
   })
 );
 
+//admin dashboard routes
+
+app.use("/api/admin", getUserdata);
 
 // Main dashboard route
 app.use("/api/main_dashboard", mainDashboard);

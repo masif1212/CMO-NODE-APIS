@@ -10,6 +10,7 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
   try {
     const { report_id } = req.body;
      const { website_id} = req.body;
+     const { user_id } = req.body;
 
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
@@ -60,7 +61,7 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     mergedDashboard2Data = facebook_data ;
   }
 
-  const record = await prisma.report.upsert({
+  await prisma.report.upsert({
     where: { report_id },
     update: {
       website_id,
@@ -71,6 +72,30 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
       dashboard2_data:  facebook_data 
     }
   });
+       
+  
+  const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+if (existing) {
+  await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: {
+      website_id,
+      social_media_anaylsis: true
+    }
+  });
+} else {
+  await prisma.analysis_status.create({
+    data: {
+      report_id,
+      website_id,
+      social_media_anaylsis: true,
+      user_id
+    }
+  });
+}
 
     console.log("facebook anaylsis complete")
    

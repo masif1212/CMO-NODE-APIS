@@ -8,6 +8,7 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
   try {
     const { report_id } = req.body;
     const { website_id} = req.body;
+    const { user_id } = req.body;
 
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
@@ -71,7 +72,7 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
     mergedDashboard2Data = Instagram_data ;
   }
 
-  const record = await prisma.report.upsert({
+  await prisma.report.upsert({
     where: { report_id },
     update: {
       website_id,
@@ -83,6 +84,29 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
     }
   });
 
+    
+  const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+if (existing) {
+  await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: {
+      website_id,
+      social_media_anaylsis: true
+    }
+  });
+} else {
+  await prisma.analysis_status.create({
+    data: {
+      report_id,
+      website_id,
+      social_media_anaylsis: true,
+      user_id
+    }
+  });
+}
     return res.json(Instagram_data);
 
   } catch (error) {
