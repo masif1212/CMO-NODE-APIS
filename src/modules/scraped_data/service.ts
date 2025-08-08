@@ -570,7 +570,6 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       }
       }
     
-
     };
 
 
