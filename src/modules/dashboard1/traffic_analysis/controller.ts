@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
-import { generateLLMTrafficReport } from "../llm_dashboard1";
+import { generate_d1_recommendation ,generated1_strengthandIssue} from "../llm_dashboard1";
 
 import * as cheerio from "cheerio";
 
@@ -257,7 +257,31 @@ export const dashboard1_Recommendation = async (req: Request, res: Response) => 
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
-    const llm_response = await generateLLMTrafficReport(website_id, user_id, report_id);
+    const llm_response = await generate_d1_recommendation(website_id, user_id, report_id);
+    // console.log("llm_res",llm_response)
+    if (!llm_response) {
+      return res.status(404).json({ message: "No recommendations found" });
+    }
+   
+
+    return res.status(200).json(llm_response);
+  } catch (error: any) {
+    console.error("Analytics save error:", error);
+    return res.status(500).json({ error: "Failed to save analytics summary", detail: error.message });
+  }
+};
+
+
+export const dashboard1_strengthandIssue = async (req: Request, res: Response) => {
+  // console.log("dashboard1_Recommendation called");
+  const { website_id, user_id ,report_id} = req.body;
+
+  console.log("Request Body:", req.body);
+  // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
+  if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
+
+  try {
+    const llm_response = await generated1_strengthandIssue(website_id, user_id, report_id);
     // console.log("llm_res",llm_response)
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });

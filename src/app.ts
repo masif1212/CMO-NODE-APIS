@@ -78,7 +78,8 @@ app.use("/api/technical_seo", technicalSeoRouter);
 
 app.use("/api/geo", geo_llm);
 
-app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for dashboard 1
+app.use("/api/dashboard1/", dashboardRouter1); // recommendation by mo for dashboard 1
+app.use("/api/dashboard1/", dashboardRouter1); 
 //dashboard2 routes
 
 app.use('/api/facebook', facebookRoutes);
