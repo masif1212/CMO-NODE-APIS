@@ -8,7 +8,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
 
-export const generateLLMTrafficReport = async (website_id: string, user_id: string, report_id:string) => {
+export const generate_d1_recommendation= async (website_id: string, user_id: string, report_id:string) => {
   if (!website_id || !user_id) {
     return ({ error: "Missing website_id or user_id" });
   }
@@ -51,51 +51,7 @@ try {
 } catch (e) {
   console.error("Failed to parse dashboard data:", e);
 }
-    const allDataforstrength: any = {
-      website_audit: {
-        // Site_Speedcore_Web_Vitals_and_mobile_Experience: report?.dashboard1_Freedata?.combinedata?.data_for_llm ?? "N/A",
-        // Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.data_for_llm ?? "N/A",
-        siteSpeedAndMobileExperience: {
-  speedHealth: parsedData?.data_for_llm?.speed_health ?? {},
-  mobileFriendliness: parsedData?.data_for_llm?.categories?.mobileFriendliness ?? [],
-}
 
-      },
-      traffic: {
-        avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
-        engagement_rate: traffic?.engagement_rate ?? "N/A",
-        engaged_sessions: traffic?.engaged_sessions ?? "N/A",
-        total_visitors: traffic?.total_visitors ?? "N/A",
-        unique_visitors: traffic?.unassigned ?? "N/A",
-        new_vs_returning: traffic?.new_vs_returning ?? "N/A",
-        top_countries: traffic?.top_countries ?? "N/A",
-        top_devices: traffic?.top_devices ?? "N/A",
-      },
-      OnPage_Optimization: {
-        title: scraped?.page_title ?? "N/A",
-        description: scraped?.meta_description ?? "N/A",
-        heading_hierarchy: scraped?.headingAnalysis ?? "N/A",
-        keywords: scraped?.meta_keywords ?? "N/A",
-        h1: h1Text,
-        og: {
-          title: scraped?.og_title ?? "N/A",
-          description: scraped?.og_description ?? "N/A",
-          image: scraped?.og_image ? "Present" : "Missing",
-        },
-        homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
-      },
-      technical_seo: {
-        no_of_broken_links: analysis?.total_broken_links ?? "N/A",
-        broken_links: analysis?.broken_links ?? "N/A",
-        schema: scraped?.schema_analysis ?? "None",
-      },
-      GEO: {
-        schema: scraped?.schema_analysis ?? "None",
-        AI_discovilibilty: report?.geo_llm ?? "None",
-        appears_accross_bing: traffic?.top_sources ?? "N/A",
-      },
-    };
-    // console.log("allDataforstrength",allDataforstrength)
     const allDataforrecommendation: any = {
       top_of_funnel: {
         Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.dashboard_summary?.data_for_llm ?? "N/A",
@@ -140,28 +96,18 @@ try {
       },
     };
 
-    console.log("Generating LLM response (what working, what needs to be fixed)...");
-    const llmResponse = await openai.chat.completions.create({
-      model: model,
-      temperature: 0.5,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: prompt_web_and_seo },
-        { role: "user", content: JSON.stringify(allDataforstrength) },
-      ],
-    });
+    // console.log("Generating LLM response (what working, what needs to be fixed)...");
+    // const llmResponse = await openai.chat.completions.create({
+    //   model: model,
+    //   temperature: 0.5,
+    //   response_format: { type: "json_object" },
+    //   messages: [
+    //     { role: "system", content: prompt_web_and_seo },
+    //     { role: "user", content: JSON.stringify(allDataforstrength) },
+    //   ],
+    // });
     console.log("allDataforrecommendation",allDataforrecommendation)
-    // console.log("Raw LLM Response:", llmResponse.choices[0].message.content);
-    let llmContent;
-    try {
-      llmContent = llmResponse.choices[0].message.content
-        ? JSON.parse(llmResponse.choices[0].message.content)
-        : { whats_working: {}, what_needs_fixing: {} };
-      // console.log("Parsed LLM Content:", JSON.stringify(llmContent, null, 2));
-    } catch (parseError) {
-      console.error("Failed to parse LLM response:", parseError);
-      llmContent = { whats_working: {}, what_needs_fixing: {}};
-    }
+  
 
     console.log("Generating LLM response (funnel recommendation)…");
     const funnelLLMResponse = await openai.chat.completions.create({
@@ -187,7 +133,6 @@ try {
 
     // const combinedOutput = normalizeAuditOutput(llmContent);
     const fullLLMResponse = {
-      strengths_and_weaknness: llmContent,
       recommendations: funnelRecommendations,
     };
     console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
@@ -197,11 +142,167 @@ try {
   where: { report_id },
   update: {
     recommendationbymo1: JSON.stringify(funnelRecommendations),
-    strengthandissues_d1:JSON.stringify(llmContent),
   },
   create: {
     report_id,
     recommendationbymo1: JSON.stringify(funnelRecommendations),
+    user_websites: {
+      connect: {
+        website_id: website_id, 
+           },
+    },
+  },
+});
+     
+   const existing = await prisma.analysis_status.findFirst({
+  where: { report_id }
+});
+
+if (existing) {
+await prisma.analysis_status.update({
+    where: { id: existing.id },
+    data: { website_id, recommendationbymo1: true }
+  });
+} else {
+await prisma.analysis_status.create({
+    data: { report_id, website_id, recommendationbymo1: true ,user_id}
+  });
+}
+
+    console.log("LLM response saved successfully for website_id:", website_id);
+
+    return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
+  } catch (err) {
+    console.error("LLM Audit Error:", err);
+    return ({ error: "Internal Server Error" });
+  }
+};
+
+export const generated1_strengthandIssue = async (website_id: string, user_id: string, report_id:string) => {
+  if (!website_id || !user_id) {
+    return ({ error: "Missing website_id or user_id" });
+  }
+  console.log("Report generation started for website_id:", website_id);
+  const report = await prisma.report.findUnique({
+        where: { report_id }
+      })
+      console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
+  try {
+   
+  const [scraped, analysis, traffic] = await Promise.all([
+  prisma.website_scraped_data.findUnique({
+    where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+  
+  }),
+  prisma.brand_website_analysis.findUnique({
+    where: { website_analysis_id: report?.website_analysis_id ?? undefined },
+    select: {
+      audit_details: true,
+      broken_links: true,
+      total_broken_links: true,
+    },
+  }),
+  report?.traffic_analysis_id
+    ? prisma.brand_traffic_analysis.findUnique({
+        where: { traffic_analysis_id: report.traffic_analysis_id },
+      })
+    : null,
+]);
+
+    let h1Text = "Not Found";
+    if (scraped?.raw_html) {
+      const $ = cheerio.load(scraped.raw_html);
+      h1Text = $("h1").first().text().trim() || "Not Found";
+    }
+    let parsedData: any = {};
+try {
+  parsedData = JSON.parse(report?.dashboard1_Freedata || '{}');
+  // console.log("parsedData",parsedData)
+} catch (e) {
+  console.error("Failed to parse dashboard data:", e);
+}
+    const allDataforstrength: any = {
+      website_audit: {
+        
+        siteSpeedAndMobileExperience: {
+  speedHealth: parsedData?.data_for_llm?.speed_health ?? {},
+  mobileFriendliness: parsedData?.data_for_llm?.categories?.mobileFriendliness ?? [],
+}
+
+      },
+      traffic: {
+        avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
+        engagement_rate: traffic?.engagement_rate ?? "N/A",
+        engaged_sessions: traffic?.engaged_sessions ?? "N/A",
+        total_visitors: traffic?.total_visitors ?? "N/A",
+        unique_visitors: traffic?.unassigned ?? "N/A",
+        new_vs_returning: traffic?.new_vs_returning ?? "N/A",
+        top_countries: traffic?.top_countries ?? "N/A",
+        top_devices: traffic?.top_devices ?? "N/A",
+      },
+      OnPage_Optimization: {
+        title: scraped?.page_title ?? "N/A",
+        description: scraped?.meta_description ?? "N/A",
+        heading_hierarchy: scraped?.headingAnalysis ?? "N/A",
+        keywords: scraped?.meta_keywords ?? "N/A",
+        h1: h1Text,
+        og: {
+          title: scraped?.og_title ?? "N/A",
+          description: scraped?.og_description ?? "N/A",
+          image: scraped?.og_image ? "Present" : "Missing",
+        },
+        homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
+      },
+      technical_seo: {
+        no_of_broken_links: analysis?.total_broken_links ?? "N/A",
+        broken_links: analysis?.broken_links ?? "N/A",
+        schema: scraped?.schema_analysis ?? "None",
+      },
+      GEO: {
+        schema: scraped?.schema_analysis ?? "None",
+        AI_discovilibilty: report?.geo_llm ?? "None",
+        appears_accross_bing: traffic?.top_sources ?? "N/A",
+      },
+    };
+    // console.log("allDataforstrength",allDataforstrength)
+  
+    console.log("Generating LLM response (what working, what needs to be fixed)...");
+    const llmResponse = await openai.chat.completions.create({
+      model: model,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: prompt_web_and_seo },
+        { role: "user", content: JSON.stringify(allDataforstrength) },
+      ],
+    });
+    // console.log("Raw LLM Response:", llmResponse.choices[0].message.content);
+    let llmContent;
+    try {
+      llmContent = llmResponse.choices[0].message.content
+        ? JSON.parse(llmResponse.choices[0].message.content)
+        : { whats_working: {}, what_needs_fixing: {} };
+    } catch (parseError) {
+      console.error("Failed to parse LLM response:", parseError);
+      llmContent = { whats_working: {}, what_needs_fixing: {}};
+    }
+
+ 
+    const fullLLMResponse = {
+      strengths_and_weaknness: llmContent,
+    };
+    console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
+
+    console.log("Saving LLM response to database...");
+    await prisma.report.upsert({
+  where: { report_id },
+  update: {
+    // recommendationbymo1: JSON.stringify(funnelRecommendations),
+    strengthandissues_d1:JSON.stringify(llmContent),
+  },
+  create: {
+    report_id,
+    // recommendationbymo1: JSON.stringify(funnelRecommendations),
     strengthandissues_d1:JSON.stringify(llmContent),
     user_websites: {
       connect: {
@@ -219,11 +320,11 @@ let update;
 if (existing) {
   update = await prisma.analysis_status.update({
     where: { id: existing.id },
-    data: { website_id, recommendationbymo1: true }
+    data: { website_id, strengthandissues_d1: true }
   });
 } else {
   update = await prisma.analysis_status.create({
-    data: { report_id, website_id, recommendationbymo1: true ,user_id}
+    data: { report_id, website_id, strengthandissues_d1: true ,user_id}
   });
 }
 
@@ -235,7 +336,6 @@ if (existing) {
     return ({ error: "Internal Server Error" });
   }
 };
-
 
 const prompt_web_and_seo = `
 You are a senior technical SEO expert with extensive experience in metadata, accessibility, structured data, web vitals, and analytics. You are generating output for a self-contained SEO audit and web audit tool that must provide actionable, technical solutions without relying on external tools or services (e.g., PageSpeed Insights, SEMrush, Lighthouse, or similar).

@@ -221,10 +221,6 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-
-
-
-
 export async function scrapeWebsite(user_id: string, website_id:string ,report_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
@@ -571,9 +567,6 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       }
     
     };
-
-
-
     console.log("Returning result:", result); // Debug log
     return result;
   } catch (error: any) {

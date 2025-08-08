@@ -495,7 +495,8 @@ model analysis_status {
   offpageoptimization   Boolean?
   social_media_anaylsis Boolean?
   competitors_identification Boolean?
-   recommendationbymo1  Boolean?
+  recommendationbymo1  Boolean?
+  strengthandissues_d1 Boolean?
   recommendationbymo2  Boolean?
   recommendationbymo3  Boolean? 
   cmo_recommendation   Boolean?  
