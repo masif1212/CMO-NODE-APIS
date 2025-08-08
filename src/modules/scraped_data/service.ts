@@ -489,7 +489,30 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
           }
         }
       }
+    } 
+    let h1Text = "Not Found";
+
+    if (html) {
+      try {
+        console.log("parsing HTML...");
+        // console.log("Raw HTML Length:", scrapedMeta.raw_html);
+        const $ = cheerio.load(html);
+
+        h1Text = $("h1").first().text().trim() || "Not Found";
+        console.log("H1 Text:", h1Text);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.warn("Cheerio failed to parse HTML:", err.message);
+        } else {
+          console.warn("Cheerio failed to parse HTML:", err);
+        }
+        // Skips setting h1Text if error happens
+      }
+    } else {
+      console.warn("Cheerio.load not available or raw_html missing");
     }
+
+    
 
     const record = await prisma.website_scraped_data.create({
       data: {
@@ -533,6 +556,18 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       instagram_handle:record.instagram_handle,
       youtube_handle:record.youtube_handle,
       tiktok_handle:record.tiktok_handle,
+      onpage_opptimization:{
+        h1_text: h1Text,
+        metaDataWithoutRawHtml: {
+        meta_description: record.meta_description,
+        meta_keywords: record.meta_keywords,
+        page_title: record.page_title,
+      ctr_loss_percent: record.ctr_loss_percent,
+      og_title: record.og_title,
+      og_description: record.og_description,
+      og_image: record.og_image,
+    }
+      }
       }
     
 
