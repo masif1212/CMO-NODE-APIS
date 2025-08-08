@@ -14,6 +14,7 @@ export const createBrandProfile = async (
     
   
   }
+  
 ) => {
   const existing = await prisma.user_requirements.findFirst({
     where: { user_id, website_id },
@@ -27,7 +28,7 @@ export const createBrandProfile = async (
 
 
 
-  
+
   if (data.industry) saveData.industry = data.industry;
   if (data.location) {
     saveData.region_of_operation = data.location;

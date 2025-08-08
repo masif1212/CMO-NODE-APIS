@@ -18,17 +18,7 @@ export const generateLLMTrafficReport = async (website_id: string, user_id: stri
       })
       console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
   try {
-    // const [scraped, analysis, traffic] = await Promise.all([
-    //   prisma.website_scraped_data.findUnique({ where: { scraped_data_id : report?.scraped_data_id ?? undefined } }),
-    //   prisma.brand_website_analysis.findUnique({
-    //     where: { website_analysis_id :report?.website_analysis_id ?? undefined },
-    //   }),
-    //   prisma.brand_traffic_analysis.findUnique({
-    //     where: { traffic_analysis_id : report?.traffic_analysis_id?? undefined},
-    //   }),
-      
-     
-    // ]);
+   
   const [scraped, analysis, traffic] = await Promise.all([
   prisma.website_scraped_data.findUnique({
     where: { scraped_data_id: report?.scraped_data_id ?? undefined },

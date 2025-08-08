@@ -278,8 +278,17 @@ Return a *valid JSON object* with the following keys in this exact order:
                         
                        
   "brand_health_overview": {"
-  camparison of website anaylsis data like lcp /fcp etc ,
-  campare each of the matrix and explain it also , each matrix should be in a specific and new line
+  "Website performance metrics are strong:
+- *Speed Index:* 0.8s (score: 0.99) – Exceptional, far ahead of competitors (e.g., Cakeshop.ae at 1.8s, Artisan Bakers at 6.6s).
+- *First Contentful Paint (FCP):* 0.3s (score: 1) – Best-in-class, ensuring fast visual feedback.
+- *Largest Contentful Paint (LCP):* 1.2s (score: 0.9) – Well below the 2.5s threshold, indicating fast main content delivery.
+- *Total Blocking Time (TBT):* 540ms (score: 0.25) – Needs improvement; higher than ideal (competitors range from 0ms to 440ms).
+- *Cumulative Layout Shift (CLS):* 0.029 (score: 1) – Excellent visual stability.
+- *SEO Health:* 100/100 – Technical SEO is robust, outperforming most peers.
+- *Accessibility:* 99/100 – Industry-leading, with only minor alt text redundancy issues.
+- *Best Practices:* 96/100 – High compliance, exceeding most competitors.
+summary of key metrics:
+Overall, First Crust leads in speed, SEO, and accessibility, but TBT and on-page SEO require targeted fixes."
   "},
 
   "swot_analysis": {
@@ -297,7 +306,20 @@ Return a *valid JSON object* with the following keys in this exact order:
   "what_to_prioritize_first": "what to prioritize first and why "
   }
 
-  
+   "priority_fixes_bottom_funnel": {
+  "website_revenue_loss":
+  { 
+  issue :"Is your website revenue being impacted by slow loading times? Are large Total Blocking Time (TBT) or poor Largest Contentful Paint (LCP) causing users to drop off before converting? Are your product and checkout pages optimized for speed and interaction?",
+  fix: "Improve LCP to under 2.5s by optimizing images and reducing server response times.",
+  source: "website"
+}
+  "seo_revenue_loss": {
+  issue :"Is the seo revenue loss optimize ?Are you losing organic traffic due to missing keyword opportunities or underperforming landing pages? Are your high-intent keywords ranking well? Are technical SEO issues like crawl delays or poor Core Web Vitals limiting your visibility?"
+  fix: "Target high-value keywords with low competition to improve organic traffic.",
+  source: "seo"
+}
+  "what_to_prioritize_first": "what to prioritize first and why "
+  }
 
   "brand_positioning_messaging_review": 
   {

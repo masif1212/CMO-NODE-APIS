@@ -527,7 +527,15 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       logo_url: record.logo_url ?? undefined,
       status_code: statusCode,
       status_message: message,
-      scraped_data_id:record.scraped_data_id
+      scraped_data_id:record.scraped_data_id,
+      social_media_handlers:{
+      facebook_handle:record.facebook_handle,
+      instagram_handle:record.instagram_handle,
+      youtube_handle:record.youtube_handle,
+      tiktok_handle:record.tiktok_handle,
+      }
+    
+
     };
 
 

@@ -3,30 +3,166 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
+// export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
   
-  console.log("youtubeUrl",youtube_handle)
+//   console.log("youtubeUrl",youtube_handle)
+//   const channelId = await resolveYouTubeChannelId(youtube_handle);
+//   if (!channelId) return { status: "invalid-channel" };
+
+//   console.log("Resolved Channel ID:", channelId);
+
+//   const videoIdsAndDates = await fetchVideosLast30Days(channelId);
+//   if (videoIdsAndDates.length === 0) {
+//     console.log("No videos found for last 30 days");
+//     return { youtube_data: "No videos found for last 30 days"};
+//   }
+
+//   const videoIds = videoIdsAndDates.map((v) => v.videoId);
+//   const videoStats = await fetchVideoMetrics(videoIds);
+
+//   const videoMetrics = videoStats.map((v) => {
+//     const match = videoIdsAndDates.find((x) => x.videoId === v.id);
+//     return { ...v, publishedAt: match?.publishedAt };
+//   });
+
+//   const engagementRate = calculateEngagementRate(videoMetrics);
+
+//   const youtubeData = await fetchYouTubeChannelData(channelId);
+//   if (!youtubeData) return { status: "api-failure" };
+
+//   const stats = youtubeData.statistics;
+//   const followers = parseInt(stats?.subscriberCount || "0", 10);
+//   const comments = parseInt(stats?.commentCount || "0", 10);
+//   const videosCount = parseInt(stats?.videoCount || "0", 10);
+//   const safeJson = JSON.parse(JSON.stringify(youtubeData));
+
+//   const weeklyPostingGraph = getWeeklyPostingFrequencyWithLabels(videoIdsAndDates);
+//   const dailyPostingGraph = getDailyPostingFrequencyWithLabels(videoIdsAndDates);
+
+//   const engagementToFollowerRatio = engagementRate / 100;
+//   const postingFrequency = calculatePostingFrequency(videoIdsAndDates);
+//   const perPostEngagement = {
+//     dailyMetrics: aggregateDailyMetrics(videoMetrics),
+//     dailyFrequency: dailyPostingGraph,
+//     weeklyFrequency: weeklyPostingGraph,
+//   };
+
+
+
+
+
+//  let message = '';
+
+// function getRandomMessage(messages: string[]): string {
+//   return messages[Math.floor(Math.random() * messages.length)];
+// }
+
+// function getEngagementMessage(rate: number): string {
+//   if (rate >= 90) {
+//     return getRandomMessage([
+//       "🚀 Viral-level engagement — your content is dominating the platform and creating real buzz!",
+//       "🔥 You’re going viral — keep capitalizing on this momentum with strategic uploads.",
+//       "🌟 Top-tier engagement — this level of traction is rare. Consider boosting with collaborations."
+//     ]);
+//   } else if (rate >= 75) {
+//     return getRandomMessage([
+//       "🔥 Exceptional engagement — your audience is clearly loving your content.",
+//       "💥 Fantastic performance — your videos are striking a chord with viewers.",
+//       "🎉 Engagement is off the charts — now’s the time to double down on your best formats."
+//     ]);
+//   } else if (rate >= 50) {
+//     return getRandomMessage([
+//       "🎯 Great engagement — your audience is active and connected.",
+//       "📊 Strong signals — your content is generating quality interactions.",
+//       "🙌 Engagement levels are impressive — build on this with storytelling or series content."
+//     ]);
+//   } else if (rate >= 30) {
+//     return getRandomMessage([
+//       "📈 Solid performance — your videos are getting noticed.",
+//       "✅ Good traction — engagement is strong, but there’s room to grow.",
+//       "⚡ You’re building momentum — optimize content length and posting time to go further."
+//     ]);
+//   } else if (rate >= 20) {
+//     return getRandomMessage([
+//       "👍 Decent engagement — your content is starting to resonate.",
+//       "🧠 You're on the right path — refine your targeting and keep experimenting.",
+//       "🎥 Viewers are responding — consider boosting visibility with optimized titles and tags."
+//     ]);
+//   } else if (rate >= 10) {
+//     return getRandomMessage([
+//       "🧐 Moderate engagement — try strengthening your hooks and intros.",
+//       "🤔 Not bad, but it could be better — analyze high-performing posts for insights.",
+//       "👀 There’s interest — now focus on converting casual viewers into loyal followers."
+//     ]);
+//   } else if (rate >= 5) {
+//     return getRandomMessage([
+//       "⚠️ Low engagement — rethink your format or niche positioning.",
+//       "📉 Performance is underwhelming — test different content angles or visuals.",
+//       "😕 Engagement needs a lift — maybe your thumbnails or intros need work."
+//     ]);
+//   } else if (rate >= 1) {
+//     return getRandomMessage([
+//       "🔍 Minimal interaction — time to assess content quality and audience fit.",
+//       "❓ Not reaching the audience — audit your recent posts for improvement points.",
+//       "🛠️ Try something new — the current approach isn't resonating."
+//     ]);
+//   } else {
+//     return getRandomMessage([
+//       "❗ Almost no engagement — consider a major strategy shift.",
+//       "🧯 Zero traction — research your audience deeply and start fresh.",
+//       "⛔ Content is not connecting — look at what's trending and redefine your approach."
+//     ]);
+//   }
+// }
+
+
+
+// const youtube_data = {
+//   message: getEngagementMessage(engagementRate),
+//   youtube_handle,
+//   profile: {
+//     ...safeJson.snippet,
+//     ...safeJson.statistics
+//   },
+//   engagement_rate: engagementRate,
+//   engagementToFollowerRatio,
+//   postingFrequency,
+//   perPostEngagement,
+//   comments,
+// };
+ 
+
+// // const youtube_data = {
+// //   message:"yotube data found",
+// //   youtube_handle,
+// //  profile : {
+// //   ...safeJson.snippet, // Fix: Remove .Data
+// //   ...safeJson.statistics
+// // },
+// //   engagement_rate: engagementRate,
+// //   engagementToFollowerRatio,
+// //   postingFrequency,
+// //   perPostEngagement,
+// //   comments,
+  
+// // };
+  
+
+
+// return { youtube_data };
+// }
+
+
+
+export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
+  console.log("youtubeUrl", youtube_handle);
+
   const channelId = await resolveYouTubeChannelId(youtube_handle);
   if (!channelId) return { status: "invalid-channel" };
 
   console.log("Resolved Channel ID:", channelId);
 
   const videoIdsAndDates = await fetchVideosLast30Days(channelId);
-  if (videoIdsAndDates.length === 0) {
-    console.log("No videos found for last 30 days");
-    return { youtube_data: "No videos found for last 30 days"};
-  }
-
-  const videoIds = videoIdsAndDates.map((v) => v.videoId);
-  const videoStats = await fetchVideoMetrics(videoIds);
-
-  const videoMetrics = videoStats.map((v) => {
-    const match = videoIdsAndDates.find((x) => x.videoId === v.id);
-    return { ...v, publishedAt: match?.publishedAt };
-  });
-
-  const engagementRate = calculateEngagementRate(videoMetrics);
-
   const youtubeData = await fetchYouTubeChannelData(channelId);
   if (!youtubeData) return { status: "api-failure" };
 
@@ -36,41 +172,125 @@ export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
   const videosCount = parseInt(stats?.videoCount || "0", 10);
   const safeJson = JSON.parse(JSON.stringify(youtubeData));
 
-  const weeklyPostingGraph = getWeeklyPostingFrequencyWithLabels(videoIdsAndDates);
-  const dailyPostingGraph = getDailyPostingFrequencyWithLabels(videoIdsAndDates);
+  // 🔧 Define frequency type explicitly
+  type Frequency = { label: string; count: number };
 
-  const engagementToFollowerRatio = engagementRate / 100;
-  const postingFrequency = calculatePostingFrequency(videoIdsAndDates);
-  const perPostEngagement = {
-    dailyMetrics: aggregateDailyMetrics(videoMetrics),
-    dailyFrequency: dailyPostingGraph,
-    weeklyFrequency: weeklyPostingGraph,
+  // Set defaults in case no videos exist
+  let videoMetrics: any[] = [];
+  let engagementRate = 0;
+  let postingFrequency = 0;
+  let perPostEngagement: {
+    dailyMetrics: Record<string, any>;
+    dailyFrequency: Frequency[];
+    weeklyFrequency: Frequency[];
+  } = {
+    dailyMetrics: {},
+    dailyFrequency: [],
+    weeklyFrequency: [],
   };
 
+  if (videoIdsAndDates.length > 0) {
+    const videoIds = videoIdsAndDates.map((v) => v.videoId);
+    const videoStats = await fetchVideoMetrics(videoIds);
 
+    videoMetrics = videoStats.map((v) => {
+      const match = videoIdsAndDates.find((x) => x.videoId === v.id);
+      return { ...v, publishedAt: match?.publishedAt };
+    });
 
+    engagementRate = calculateEngagementRate(videoMetrics);
+    postingFrequency = calculatePostingFrequency(videoIdsAndDates);
 
+    perPostEngagement = {
+      dailyMetrics: aggregateDailyMetrics(videoMetrics),
+      dailyFrequency: getDailyPostingFrequencyWithLabels(videoIdsAndDates),
+      weeklyFrequency: getWeeklyPostingFrequencyWithLabels(videoIdsAndDates),
+    };
+  }
 
+  function getRandomMessage(messages: string[]): string {
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
 
-const youtube_data = {
-  message:"yotube data found",
-  youtube_handle,
- profile : {
-  ...safeJson.snippet, // Fix: Remove .Data
-  ...safeJson.statistics
-},
-  engagement_rate: engagementRate,
-  engagementToFollowerRatio,
-  postingFrequency,
-  perPostEngagement,
-  comments,
-  
-};
-  
+  function getEngagementMessage(rate: number): string {
+    if (videoIdsAndDates.length === 0) {
+      return "⚠️ No videos posted in the last 30 days";
+    }
+    if (rate >= 90) {
+      return getRandomMessage([
+        "🚀 Viral-level engagement — your content is dominating the platform and creating real buzz!",
+        "🔥 You’re going viral — keep capitalizing on this momentum with strategic uploads.",
+        "🌟 Top-tier engagement — this level of traction is rare. Consider boosting with collaborations."
+      ]);
+    } else if (rate >= 75) {
+      return getRandomMessage([
+        "🔥 Exceptional engagement — your audience is clearly loving your content.",
+        "💥 Fantastic performance — your videos are striking a chord with viewers.",
+        "🎉 Engagement is off the charts — now’s the time to double down on your best formats."
+      ]);
+    } else if (rate >= 50) {
+      return getRandomMessage([
+        "🎯 Great engagement — your audience is active and connected.",
+        "📊 Strong signals — your content is generating quality interactions.",
+        "🙌 Engagement levels are impressive — build on this with storytelling or series content."
+      ]);
+    } else if (rate >= 30) {
+      return getRandomMessage([
+        "📈 Solid performance — your videos are getting noticed.",
+        "✅ Good traction — engagement is strong, but there’s room to grow.",
+        "⚡ You’re building momentum — optimize content length and posting time to go further."
+      ]);
+    } else if (rate >= 20) {
+      return getRandomMessage([
+        "👍 Decent engagement — your content is starting to resonate.",
+        "🧠 You're on the right path — refine your targeting and keep experimenting.",
+        "🎥 Viewers are responding — consider boosting visibility with optimized titles and tags."
+      ]);
+    } else if (rate >= 10) {
+      return getRandomMessage([
+        "🧐 Moderate engagement — try strengthening your hooks and intros.",
+        "🤔 Not bad, but it could be better — analyze high-performing posts for insights.",
+        "👀 There’s interest — now focus on converting casual viewers into loyal followers."
+      ]);
+    } else if (rate >= 5) {
+      return getRandomMessage([
+        "⚠️ Low engagement — rethink your format or niche positioning.",
+        "📉 Performance is underwhelming — test different content angles or visuals.",
+        "😕 Engagement needs a lift — maybe your thumbnails or intros need work."
+      ]);
+    } else if (rate >= 1) {
+      return getRandomMessage([
+        "🔍 Minimal interaction — time to assess content quality and audience fit.",
+        "❓ Not reaching the audience — audit your recent posts for improvement points.",
+        "🛠️ Try something new — the current approach isn't resonating."
+      ]);
+    } else {
+      return getRandomMessage([
+        "❗ Almost no engagement — consider a major strategy shift.",
+        "🧯 Zero traction — research your audience deeply and start fresh.",
+        "⛔ Content is not connecting — look at what's trending and redefine your approach."
+      ]);
+    }
+  }
 
+  const youtube_data = {
+    message: getEngagementMessage(engagementRate),
+    youtube_handle,
+    profile: {
+      ...safeJson.snippet,
+      ...safeJson.statistics,
+    },
+    engagement_rate: engagementRate,
+    engagementToFollowerRatio: engagementRate / 100,
+    postingFrequency,
+    perPostEngagement,
+    comments,
+  };
 
-return { youtube_data };
+  return { youtube_data };
 }
+
+
 
 async function resolveYouTubeChannelId(url: string): Promise<string | null> {
   const channelMatch = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]{24})/);

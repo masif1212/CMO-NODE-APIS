@@ -4,6 +4,7 @@ import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 import * as cheerio from "cheerio";
+
 export const getLegalAIBrandsController = async (req: Request, res: Response) => {
   try {
     const { user_id, website_id, report_id } = req.body;
@@ -190,28 +191,16 @@ console.log("data fetch")
 
 
    
-const dashboard_paiddata = {
-  traffic_anaylsis: traffic,
-  onpage_opptimization,
-  technical_seo,
-  geo,
-};
+    const dashboard_paiddata = {
+      traffic_anaylsis: traffic,
+      onpage_opptimization,
+      technical_seo,
+      geo,
+    };
 
 // Create a deep copy and remove technical_seo.user_access_readiness
 const datafor_llm = JSON.parse(JSON.stringify(dashboard_paiddata));
-// if (datafor_llm?.technical_seo) {
-//   delete datafor_llm.technical_seo.user_access_readiness;
-//   delete datafor_llm.traffic_analysis.traffic_analysis_id;
-//   delete datafor_llm.traffic_analysis.daily_active_users;
-//   if (datafor_llm?.traffic_analysis?.top_sources) {
-//     datafor_llm.traffic_analysis.top_sources = datafor_llm.traffic_analysis.top_sources.slice(0, 5);
-//   }
-//    if (datafor_llm?.traffic_analysis?.high_bonce_pages) {
-//     datafor_llm.traffic_analysis.high_bounce_pages = datafor_llm.traffic_analysis.high_bounce_pages.slice(0, 5);
-//   }
 
-
-// }
 
 if (datafor_llm?.traffic_anaylsis) {
   delete datafor_llm.technical_seo.user_access_readiness;
