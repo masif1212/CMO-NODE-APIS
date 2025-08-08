@@ -19,6 +19,7 @@ import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
 import facebookRoutes from './modules/dashboard2/facebook/facebook_router';
 import instagramRoutes from './modules/dashboard2/instagram/instagram_router';
+import { dashboardRouter2 } from "./modules/dashboard2/llm_suggestions/router";
 
 const app = express();
 
@@ -75,18 +76,17 @@ app.use("/api/technical_seo", technicalSeoRouter);
 app.use("/api/geo", geo_llm);
 
 app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for dashboard 1
-
 //dashboard2 routes
 
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use("/api/youtube", youtubeRouter);
+app.use("/api/dashboardRouter2", dashboardRouter2); 
 
 //dashboard3 routes
 app.use("/api/competitors", competitorRouter);
 
 //dashboard4 routes
-// app.use("/api/recommendationbycmo", dashboard4Router);
 app.use("/api/cmo-recommendation", cmoRecommendationRouter);
 
 // Global error handler

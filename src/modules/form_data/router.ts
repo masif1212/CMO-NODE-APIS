@@ -8,4 +8,3 @@ const userRequirementsRouter = Router();
 userRequirementsRouter.post("/brand-profile", handleBrandProfileForm);
 
 export default userRequirementsRouter;
-``

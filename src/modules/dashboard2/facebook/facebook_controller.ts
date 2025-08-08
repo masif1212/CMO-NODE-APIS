@@ -5,6 +5,8 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export const getFacebookPostsHandler = async (req: Request, res: Response) => {
+    console.log("starting facebook anaylsis ...")
+
   try {
     const { report_id } = req.body;
      const { website_id} = req.body;
@@ -70,7 +72,7 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     }
   });
 
-   
+    console.log("facebook anaylsis complete")
    
     return res.json(facebook_data);
 

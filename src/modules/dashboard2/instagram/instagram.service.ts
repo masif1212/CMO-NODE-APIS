@@ -228,7 +228,7 @@ export const getInstagramPostsFromScrapedData = async (
           publishTime: post.timestamp,
           postType: post.post_type,
           engagementRate: postEngagementRate.toFixed(2) + '%',
-          engagementToFollowerRatio: (engagement / followerCount).toFixed(4),
+          engagementToFollowerRatio: (engagement / followerCount).toFixed(2),
           likes: post.likes,
           comments: post.comments,
           shares: post.shares, // Include shares in perPostEngagement
@@ -243,22 +243,73 @@ export const getInstagramPostsFromScrapedData = async (
       const engagementRate = engagementToFollowerRatio * 100;
       // console.log('Engagement stats calculated: avgEngagement:', avgEngagement, 'engagementToFollowerRatio:', engagementToFollowerRatio, 'engagementRate:', engagementRate);
 
-      let message = '';
-      if (engagementRate >= 1.6) {
-        message = 'High engagement—your content resonates.';
-      } else if (engagementRate >= 1.1) {
-        message = 'Better than most in your industry.';
-      } else if (engagementRate >= 0.6) {
-        message = 'Standard engagement—room to grow.';
-      } else if (engagementRate >= 0.0) {
-        message = 'Minimal engagement for your audience size.';
-      }
+    let message = '';
+
+// if (engagementRate >= 50) {
+//   message = 'Exceptional engagement — your content is deeply resonating with your audience.';
+// } else if (engagementRate >= 30) {
+//   message = 'Strong engagement — your posts are driving meaningful interactions.';
+// } else if (engagementRate >= 20) {
+//   message = 'Solid performance — consider leveraging reels or interactive stories to boost further.';
+// } else if (engagementRate >= 10) {
+//   message = 'Moderate engagement — consistent posting and trend alignment could enhance reach.';
+// } else if (engagementRate >= 5) {
+//   message = 'Low engagement — review your content strategy, post timing, or visual appeal.';
+// } else {
+//   message = 'Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.';
+// }
+function getRandomMessage(messages: string[]): string {
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
+
+function getRandomInstagramMessage(rate: number): string {
+  if (rate >= 50) {
+    return getRandomMessage([
+      "Exceptional engagement — your content is deeply resonating with your audience.",
+      " You're crushing it! Your posts are driving major visibility and reactions.",
+      "Your audience is locked in — keep delivering this level of consistency and value."
+    ]);
+  } else if (rate >= 30) {
+    return getRandomMessage([
+      "Strong engagement — your posts are driving meaningful interactions.",
+      "You’re gaining traction — your content is catching attention across the platform.",
+      "Great momentum — consider doubling down on what’s working in your top posts."
+    ]);
+  } else if (rate >= 20) {
+    return getRandomMessage([
+      "Solid performance — try leveraging reels or interactive stories to boost further.",
+      "Good effort — short-form video or carousel content might amplify reach.",
+      "You're on the radar — step it up with better CTAs and time-based engagement tactics."
+    ]);
+  } else if (rate >= 10) {
+    return getRandomMessage([
+      "Moderate engagement — consistent posting and trend alignment could enhance reach.",
+      "Fair performance — post timing and content hooks need refinement.",
+      "You're on the edge — try remixing existing formats or adding more emotion-driven content."
+    ]);
+  } else if (rate >= 5) {
+    return getRandomMessage([
+      "Low engagement — review your content strategy, post timing, or visual appeal.",
+      "Your reach is limited — try fresh themes or storytelling elements.",
+      "Not much happening — maybe test different hashtags or audience segments."
+    ]);
+  } else {
+    return getRandomMessage([
+      "Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.",
+      "Almost no engagement — try a bold pivot in content type, tone, or aesthetic.",
+      "You're missing visibility — consider auditing your profile and top content structure."
+    ]);
+  }
+}
+
+
       // console.log('Engagement message:', message);
 
       return {
         engagementRate: engagementRate.toFixed(2) + '%',
-        engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
-        message,
+        engagementToFollowerRatio: engagementToFollowerRatio.toFixed(2),
+        message: getRandomInstagramMessage(engagementRate),
         perPostEngagement,
       };
     };
@@ -271,10 +322,10 @@ export const getInstagramPostsFromScrapedData = async (
     console.log('Returning final result');
 
     const instagram_data = {
+       message,
       handle,
       profile,
       engagementRate,
-      message,
       engagementToFollowerRatio,
       perPostEngagement
     };
