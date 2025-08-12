@@ -22,21 +22,21 @@ const extractInstagramUsername = (input: string): string => {
 };
 
 export const getInstagramPostsFromScrapedData = async (
-  handle: string,
+  instagram_handle: string,
   max_posts: number = 3,
   retry_attempts: number = 0,
   delay: number = 2
 ) => {
   // Validate environment variables
-  console.log('Starting getInstagramPostsFromScrapedData with handle:', handle, 'max_posts:', max_posts);
+  console.log('Starting getInstagramPostsFromScrapedData with handle:', instagram_handle, 'max_posts:', max_posts);
   if (!API_KEY) {
     console.log('API_KEY is missing');
     return { error: 'SCRAPPER_CREATOR_APIKEY environment variable is not set' };
   }
 
-  console.log('Extracting Instagram username from handle:', handle);
-  handle = extractInstagramUsername(handle);
-  console.log('Extracted handle:', handle);
+  console.log('Extracting Instagram username from handle:', instagram_handle);
+  let handle = extractInstagramUsername(instagram_handle);
+  console.log('Extracted handle:', instagram_handle);
 
   const headers = { 'x-api-key': API_KEY };
   console.log('Headers set:', headers);
@@ -306,7 +306,7 @@ export const getInstagramPostsFromScrapedData = async (
 
     const instagram_data = {
       message,
-      handle,
+      instagram_handle,
       profile,
       engagementRate,
       engagementToFollowerRatio,

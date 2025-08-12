@@ -24,27 +24,26 @@ export const technical_seo = async (req: Request, res: Response) => {
 
   const totalBroken = brokenLinksResult.length;
   console.log("report_id", report_id)
-  const report = await prisma.report.findUnique({
-    where: { report_id: report_id }, // You must have 'record_id' from req.body
-    select: {
-      scraped_data_id: true,
-      website_analysis_id: true,
-    }
-  });
+  // const report = await prisma.report.findUnique({
+  //   where: { report_id: report_id }, // You must have 'record_id' from req.body
+  //   select: {
+  //     scraped_data_id: true,
+  //     website_analysis_id: true,
+  //   }
+  // });
   // Step 3: Save analysis to DB
   console.log("Saving broken link analysis to database...");
   const analysis = await prisma.brand_website_analysis.upsert({
     where: {
-      website_analysis_id: report?.website_analysis_id ?? undefined, // must be unique or PK
+      report_id, // must be unique or PK
     },
     update: {
-      // website_id,
+      report_id,
       total_broken_links: totalBroken,
       broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
     },
     create: {
-      website_analysis_id: report?.website_analysis_id ?? undefined, // required here if PK
-      // website_id,
+      report_id ,
       total_broken_links: totalBroken,
       broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
     },
@@ -57,9 +56,6 @@ export const technical_seo = async (req: Request, res: Response) => {
       created_at: true,
     },
   });
-
-
-
 
 
   let user_access_readiness: any = "None";
@@ -81,7 +77,7 @@ export const technical_seo = async (req: Request, res: Response) => {
 
   const schema = await prisma.website_scraped_data.findUnique(
     {
-      where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+      where: { report_id },
       select: {
         schema_analysis: true
       }

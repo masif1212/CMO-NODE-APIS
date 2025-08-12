@@ -139,7 +139,6 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 
     return true;
   } catch {
-    // If robots.txt is missing or can't be fetched, assume crawlable
     return true;
   }
 }
@@ -452,7 +451,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     total_key_pages: totalKeyPages,
     total_affected_pages: affectedPagesCount,
     CTR_Loss_Percent: totalKeyPages > 0
-      ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4))
+      ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2))
       : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
@@ -509,7 +508,27 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     }
 
     
-
+  await prisma.user_requirements.upsert({
+    where: {
+      website_id,
+    },
+    update: {
+      facebook_handle: facebook,
+      instagram_handle: instagram,
+      youtube_handle: youtube,
+      tiktok_handle: tiktok,
+      twitter_handle: twitter
+    },
+    create: {
+      user_id,
+      website_id,
+      facebook_handle: facebook,
+      instagram_handle: instagram,
+      youtube_handle: youtube,
+      tiktok_handle: tiktok,
+      twitter_handle: twitter
+    },
+  });
     const record = await prisma.website_scraped_data.create({
       data: {
         report_id,
@@ -552,23 +571,31 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       facebook_handle:record.facebook_handle,
       instagram_handle:record.instagram_handle,
       youtube_handle:record.youtube_handle,
-      // tiktok_handle:record.tiktok_handle,
+      tiktok_handle:record.tiktok_handle,
+     
+      },
       onpage_opptimization:{
         h1_text: h1Text,
         metaDataWithoutRawHtml: {
         homepage_alt_text_coverage: record.homepage_alt_text_coverage,
+        // other_links: record.other_links,
         meta_description: record.meta_description,
         meta_keywords: record.meta_keywords,
         page_title: record.page_title,
-        ctr_loss_percent: record.ctr_loss_percent,
-        og_title: record.og_title,
-        og_description: record.og_description,
-        og_image: record.og_image,
+      ctr_loss_percent: record.ctr_loss_percent,
+      og_title: record.og_title,
+      og_description: record.og_description,
+      og_image: record.og_image,
+      
     }
-      }
       }
     
     };
+
+  
+
+  
+
     console.log("Returning result:", result); // Debug log
     return result;
   } catch (error: any) {
@@ -584,6 +611,9 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     return result;
   }
 }
+
+
+
 
 
 

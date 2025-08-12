@@ -217,13 +217,11 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
     }
 
 
-    // Combine both into one structure under a new param
     const fullreport = {
       dashboard_paiddata,
       datafor_llm,
     };
 
-    // Save to DB under one JSON column
     await prisma.report.upsert({
       where: {
         report_id: report?.report_id,

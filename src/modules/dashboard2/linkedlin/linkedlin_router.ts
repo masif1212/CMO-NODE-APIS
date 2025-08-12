@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { getlinkedlinPostsHandler } from './linkedlin_controller';
+import { getLinkedinPostsHandler } from './linkedlin_controller';
 import { asyncHandler } from "../../../utils/asyncHandler";
 
 const router = Router();
 
-router.post('/',asyncHandler(getlinkedlinPostsHandler));
+router.post('/',asyncHandler(getLinkedinPostsHandler));
 
 export default router;

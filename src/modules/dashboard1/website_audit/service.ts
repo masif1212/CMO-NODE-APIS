@@ -607,7 +607,7 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
     const lcpSeconds = LCP / 1000;
     const rawRevenueLoss =
       (lcpSeconds - 2.5) * 7 + ((TBT - 200) / 100) * 3 + (CLS * 10);
-    const revenueLossPercent = Number(rawRevenueLoss.toFixed(4));
+    const revenueLossPercent = Number(rawRevenueLoss.toFixed(2));
     const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
 
     console.log("Revenue Loss Formula:", fullExpression);

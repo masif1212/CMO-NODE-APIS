@@ -2,14 +2,9 @@ import { getFacebookPostsFromScrapedData } from "../dashboard2/facebook/facebook
 import { getInstagramPostsFromScrapedData } from "../dashboard2/instagram/instagram.service";
 import {analyzeYouTubeDataByWebsiteId} from "../dashboard2/youtube/youtubeAnalysis"
 
-import { getlinkedlinProfileFromScrapedData } from '../dashboard2/linkedlin/linkedlin_service';
+import { getlinkedinProfileFromScrapedData } from '../dashboard2/linkedlin/linkedlin_service';
 import { getgoogleAds } from '../dashboard2/google_ads/google_ads_service';
 import { getfacebookAds } from '../dashboard2/facebook_ads/facebook_ads_service';
-
-
-
-
-
 
 export async function fetchSocialMediaData(
   facebookHandle: any,
@@ -53,7 +48,7 @@ export async function fetchSocialMediaData(
 
     if (linkedlin_handle != null){
       tasks.push(
-        getlinkedlinProfileFromScrapedData(linkedlin_handle).then(data => {
+        getlinkedinProfileFromScrapedData(linkedlin_handle).then(data => {
           results.linkedlin_data = data;
         })
       );

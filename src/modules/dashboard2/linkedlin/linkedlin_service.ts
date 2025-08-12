@@ -14,7 +14,7 @@ const headers = { 'x-api-key': API_KEY };
 
 
 
-export const getlinkedlinProfileFromScrapedData = async (linkedlin_handle: string) => {
+export const getlinkedinProfileFromScrapedData = async (linkedlin_handle: any) => {
   const cleanUrl = linkedlin_handle.trim().replace(/^https?:\/\//, '');
   console.log("cleanUrl", cleanUrl);
   const url = `${linkedlin_PROFILE_URL}?url=https://${cleanUrl}`;

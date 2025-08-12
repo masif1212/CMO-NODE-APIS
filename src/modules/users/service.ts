@@ -76,31 +76,113 @@ function extractDomain(url: string): string {
   return parsed.domain;
 }
 
+// export async function add_userwebsite(user_id: string, rawUrl: string) {
+//   const websiteUrl = normalizeUrl(rawUrl);
+//   const domain = extractDomain(websiteUrl);
+//   console.log("domain",domain)
+//   // Step 1: Check if website with same domain exists for this user
+//   let existingWebsite = await prisma.user_websites.findFirst({
+//     where: {
+//       domain: domain,
+//       user_id,
+//     },
+//   });
+
+//   let website_id: string;
+
+//   if (existingWebsite) {
+//     // 🔹 Skip adding, reuse existing website
+//     website_id = existingWebsite.website_id;
+//     console.log("website exits already..")
+//   } else {
+//     console.log("website does not exits already..")
+//     // 🔹 Create new website if not already added
+//     const newWebsite = await prisma.user_websites.create({
+//       data: {
+//         website_url: websiteUrl,
+//         domain: domain,
+//         user_id,
+//         website_type: null,
+//         website_name: null,
+//       },
+//     });
+//     website_id = newWebsite.website_id;
+//   }
+
+//   // Step 2: Optionally fetch matching requirement (optional logic preserved)
+//   let Requirement = await prisma.user_requirements.findUnique({
+//     where: { website_id },
+//     select: {
+//       target_location: true,
+//       USP: true,
+//       primary_offering: true,
+//       industry: true,
+//       competitor_urls: true,
+//       target_audience: true,
+//       facebook_handle: true,
+//       instagram_handle: true,
+//       twitter_handle: true,
+//       youtube_handle: true,
+//       linkedin_handle: true,
+//       tiktok_handle: true,
+//     },
+//   });
+//   const matchingRequirement={
+//      target_location:Requirement?.target_location,
+//       USP: Requirement?.USP,
+//       primary_offering: Requirement?.primary_offering,
+//       industry: Requirement?.industry,
+//       competitor_urls: Requirement?.competitor_urls,
+//       target_audience: Requirement?.target_audience,
+      
+    
+    
+
+//   }
+
+//   const social_media_handlers = {
+//     facebook_handle: Requirement?.facebook_handle,
+//       instagram_handle: Requirement?.instagram_handle,
+//       twitter_handle: Requirement?.twitter_handle,
+//       youtube_handle: Requirement?.youtube_handle,
+//       linkedin_handle: Requirement?.linkedin_handle,
+//       tiktok_handle: Requirement?.tiktok_handle}
+//   // Step 3: Always create new report
+//   const newReport = await prisma.report.create({
+//     data: {
+//       website_id,
+//     },
+//   });
+
+//   return { report_id: newReport.report_id, website_id, matchingRequirement ,social_media_handlers};
+// }
+
 export async function add_userwebsite(user_id: string, rawUrl: string) {
   const websiteUrl = normalizeUrl(rawUrl);
   const domain = extractDomain(websiteUrl);
-  console.log("domain",domain)
+  console.log("domain", domain);
+
   // Step 1: Check if website with same domain exists for this user
   let existingWebsite = await prisma.user_websites.findFirst({
     where: {
-      domain: domain,
+      domain,
       user_id,
     },
   });
 
   let website_id: string;
+  let website_exists = false;
 
   if (existingWebsite) {
-    // 🔹 Skip adding, reuse existing website
+    website_exists = true;
     website_id = existingWebsite.website_id;
-    console.log("website exits already..")
+    console.log("website exists already..");
   } else {
-    console.log("website does not exits already..")
-    // 🔹 Create new website if not already added
+    console.log("website does not exist already..");
     const newWebsite = await prisma.user_websites.create({
       data: {
         website_url: websiteUrl,
-        domain: domain,
+        domain,
         user_id,
         website_type: null,
         website_name: null,
@@ -109,8 +191,8 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
     website_id = newWebsite.website_id;
   }
 
-  // Step 2: Optionally fetch matching requirement (optional logic preserved)
-  const matchingRequirement = await prisma.user_requirements.findFirst({
+  // Step 2: Optionally fetch matching requirement
+  const Requirement = await prisma.user_requirements.findUnique({
     where: { website_id },
     select: {
       target_location: true,
@@ -119,15 +201,46 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
       industry: true,
       competitor_urls: true,
       target_audience: true,
+      facebook_handle: true,
+      instagram_handle: true,
+      twitter_handle: true,
+      youtube_handle: true,
+      linkedin_handle: true,
+      tiktok_handle: true,
     },
   });
+
+  const matchingRequirement = {
+    target_location: Requirement?.target_location,
+    USP: Requirement?.USP,
+    primary_offering: Requirement?.primary_offering,
+    industry: Requirement?.industry,
+    competitor_urls: Requirement?.competitor_urls,
+    target_audience: Requirement?.target_audience,
+  };
+
+  const social_media_handlers = {
+    facebook_handle: Requirement?.facebook_handle,
+    instagram_handle: Requirement?.instagram_handle,
+    twitter_handle: Requirement?.twitter_handle,
+    youtube_handle: Requirement?.youtube_handle,
+    linkedin_handle: Requirement?.linkedin_handle,
+    tiktok_handle: Requirement?.tiktok_handle,
+  };
 
   // Step 3: Always create new report
   const newReport = await prisma.report.create({
-    data: {
-      website_id,
-    },
+    data: { website_id },
   });
 
-  return { report_id: newReport.report_id, website_id, matchingRequirement };
+  return {
+    message: website_exists
+      ? "Website already exists for this user."
+      : "New website successfully added.",
+    website_exists,
+    report_id: newReport.report_id,
+    website_id,
+    matchingRequirement,
+    social_media_handlers,
+  };
 }

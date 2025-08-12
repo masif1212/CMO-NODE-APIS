@@ -369,13 +369,33 @@
 //   }
 // };
 
-
-
-
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+type FeatureKey =
+  | 'website_audit'
+  | 'trafficanalysis'
+  | 'seo_audit'
+  | 'social_media_analysis'
+  | 'competitors_analysis'
+  | 'recommendationbymo1'
+  | 'recommendationbymo2'
+  | 'recommendationbymo3'
+  | 'cmo_recommendation';
+
+const featureKeys: FeatureKey[] = [
+  'website_audit',
+  'trafficanalysis',
+  'seo_audit',
+  'social_media_analysis',
+  'competitors_analysis',
+  'recommendationbymo1',
+  'recommendationbymo2',
+  'recommendationbymo3',
+  'cmo_recommendation'
+];
  
 
 export const getUserDashboard = async (req: Request, res: Response) => {
@@ -524,6 +544,11 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+
+
+
 
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
