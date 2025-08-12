@@ -274,8 +274,7 @@ Return a *valid JSON object* with the following keys in this exact order:
                "challenges_opportunities" :"Key challenges & growth opportunities in plain English",
                "A one-liner verdict" :" Here’s what you need to fix now to grow faster""
                 },
-  
-                      
+                
                        
 
   "brand_health_overview": {

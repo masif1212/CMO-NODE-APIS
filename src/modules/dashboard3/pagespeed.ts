@@ -104,11 +104,11 @@ const mobileFriendlyAudits = [
 //   const CLS = lighthouse?.audits["cumulative-layout-shift"]?.numericValue;
 
 //   const lcpSeconds = LCP / 1000;
-//   // const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10).toFixed(2);
+//   // const revenueLossPercent = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10).toFixed(4);
 
 
 //     const rawRevenueLoss = ((lcpSeconds - 2.5) * 7) + (((TBT - 200) / 100) * 3) + (CLS * 10);
-// const revenueLossPercent = Number(rawRevenueLoss.toFixed(2));
+// const revenueLossPercent = Number(rawRevenueLoss.toFixed(4));
 //   const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
 
 //     console.log("Revenue Loss Formula:");
@@ -725,7 +725,7 @@ export async function getPageSpeedData(url: string) {
     const lcpSeconds = LCP / 1000;
     const rawRevenueLoss =
       (lcpSeconds - 2.5) * 7 + ((TBT - 200) / 100) * 3 + (CLS * 10);
-    const revenueLossPercent = Number(rawRevenueLoss.toFixed(2));
+    const revenueLossPercent = Number(rawRevenueLoss.toFixed(4));
     const fullExpression = `((${lcpSeconds} - 2.5) * 7) + (((${TBT} - 200) / 100) * 3) + (${CLS} * 10) = ${revenueLossPercent}`;
 
     console.log("Revenue Loss Formula:", fullExpression);

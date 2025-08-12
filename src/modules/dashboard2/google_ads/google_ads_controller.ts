@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
-import { getInstagramPostsFromScrapedData } from './instagram.service';
+import { getgoogleAds } from './google_ads_service';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getInstagramPostsHandler = async (req: Request, res: Response) => {
+export const getgoogleAdsHandler = async (req: Request, res: Response) => {
+  console.log("starting googleAds anaylsis ...")
+
   try {
     const { report_id } = req.body;
     const { website_id } = req.body;
@@ -14,42 +16,16 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
     }
 
-    const report = await prisma.report.findUnique({
-      where: { report_id },
-      select: { scraped_data_id: true }
+    const website_url = await prisma.user_websites.findUnique({
+      where: { website_id },
+      select: { website_url: true }
     });
 
-    if (!report?.scraped_data_id) {
+    if (!website_url?.website_url) {
       return res.status(404).json({ success: false, error: 'scraped_data_id not found for report_id' });
     }
+    const google_ads_data = await getgoogleAds(website_url.website_url);
 
-    // Get Instagram_handle using scraped_data_id
-    const websiteData = await prisma.website_scraped_data.findUnique({
-      where: { scraped_data_id: report.scraped_data_id },
-      select: { instagram_handle: true }
-    });
-
-    if (!websiteData?.instagram_handle) {
-      return res.status(404).json({ success: false, message: 'Instagram_handle not found' });
-    }
-    console.log("instagram_handle", websiteData.instagram_handle)
-    const Instagram_data = await getInstagramPostsFromScrapedData(websiteData.instagram_handle);
-
-    // const record = await prisma.report.upsert({
-    //   where: {
-    //     report_id
-    //   },
-    //   update: {
-    //     website_id,
-    //     dashboard2_data: Instagram_data, // existing field
-    //           // new nested object
-    //   },
-    //   create: {
-    //     website_id,
-    //     dashboard2_data: Instagram_data,
-
-    //   },
-    // });
     const existingReport = await prisma.report.findUnique({
       where: { report_id },
       select: { dashboard2_data: true }
@@ -65,11 +41,14 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
     ) {
       mergedDashboard2Data = {
         ...existingReport.dashboard2_data,
-        ...Instagram_data // flatten inside this key
+
+
+        ...google_ads_data
+
 
       };
     } else {
-      mergedDashboard2Data = Instagram_data;
+      mergedDashboard2Data = google_ads_data;
     }
 
     await prisma.report.upsert({
@@ -80,7 +59,7 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
       },
       create: {
         website_id,
-        dashboard2_data: Instagram_data
+        dashboard2_data: google_ads_data
       }
     });
 
@@ -107,10 +86,13 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
         }
       });
     }
-    return res.json(Instagram_data);
+
+    console.log("googleAds anaylsis complete")
+
+    return res.json(google_ads_data);
 
   } catch (error) {
-    console.error("Error in getInstagramPostsHandler:", error);
+    console.error("Error in getgoogleAdsHandler:", error);
     return res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 };

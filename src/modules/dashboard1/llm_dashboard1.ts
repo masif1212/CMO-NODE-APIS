@@ -70,7 +70,7 @@ try {
           },
         },
       },
-      mid_funnel: {
+      middle_of_funnel: {
         Messaging_Content_Clarity: {
           h1: h1Text,
           heading_hierarchy: scraped?.headingAnalysis ?? "N/A", 
@@ -124,11 +124,11 @@ try {
     try {
       funnelRecommendations = funnelLLMResponse.choices[0].message.content
         ? JSON.parse(funnelLLMResponse.choices[0].message.content)
-        : { top_of_funnel: {}, mid_funnel: {}, bottom_of_funnel: {} };
+        : { top_of_funnel: {}, middle_of_funnel: {}, bottom_of_funnel: {} };
       // console.log("Parsed Funnel Recommendations:", JSON.stringify(funnelRecommendations, null, 2));
     } catch (parseError) {
       console.error("Failed to parse funnel LLM response:", parseError);
-      funnelRecommendations = { top_of_funnel: {}, mid_funnel: {}, bottom_of_funnel: {} };
+      funnelRecommendations = { top_of_funnel: {}, middle_of_funnel: {}, bottom_of_funnel: {} };
     }
 
     // const combinedOutput = normalizeAuditOutput(llmContent);
@@ -264,7 +264,7 @@ try {
         appears_accross_bing: traffic?.top_sources ?? "N/A",
       },
     };
-    // console.log("allDataforstrength",allDataforstrength)
+    console.log("allDataforstrength",allDataforstrength)
   
     console.log("Generating LLM response (what working, what needs to be fixed)...");
     const llmResponse = await openai.chat.completions.create({
@@ -480,7 +480,7 @@ Each recommendation must follow this format:
     },
     "sample_insight": "Your homepage takes over 5 seconds to load on mobile — that’s likely causing drop-offs before the content even renders."
   },
-  "mid_funnel": {
+  "middle_of_funnel": {
     "focus": "Help visitors quickly understand what you offer and why it matters.",
     "categories": {
       "Messaging & Content Clarity": [

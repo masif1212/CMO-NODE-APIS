@@ -3,17 +3,14 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import logging from './logger'; 
+import logging from './logger';
 const prisma = new PrismaClient();
 const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY;
-const INSTAGRAM_PROFILE_URL = process.env.Instagram_PROFILE_ULR;
-const INSTAGRAM_POST_URL = process.env.Instagram_POST_URL;
+const INSTAGRAM_PROFILE_URL = 'https://api.scrapecreators.com/v1/instagram/profile';
+const INSTAGRAM_POST_URL = 'https://api.scrapecreators.com/v2/instagram/user/posts';
 
 
-const headers = {
-  accept: 'application/json',
-  'x-api-key': API_KEY,
-};
+
 
 const extractInstagramUsername = (input: string): string => {
   try {
@@ -220,95 +217,81 @@ export const getInstagramPostsFromScrapedData = async (
       for (const post of posts) {
         const engagement = post.likes + post.comments + post.shares; // Include shares in engagement
         const postEngagementRate = (engagement / followerCount) * 100;
-        // console.log(`Post ID: ${post.post_id}, PostType: ${post.post_type}, Likes: ${post.likes}, Comments: ${post.comments}, Shares: ${post.shares}, Engagement: ${engagement}, PostEngagementRate: ${postEngagementRate.toFixed(2)}%`);
+        // console.log(`Post ID: ${post.post_id}, PostType: ${post.post_type}, Likes: ${post.likes}, Comments: ${post.comments}, Shares: ${post.shares}, Engagement: ${engagement}, PostEngagementRate: ${postEngagementRate.toFixed(4)}%`);
 
         perPostEngagement.push({
           postId: post.post_id,
           postUrl: post.shortcode ? `https://www.instagram.com/p/${post.shortcode}/` : '',
           publishTime: post.timestamp,
           postType: post.post_type,
-          engagementRate: postEngagementRate.toFixed(2) + '%',
-          engagementToFollowerRatio: (engagement / followerCount).toFixed(2),
+          engagementRate: postEngagementRate.toFixed(4) + '%',
+          engagementToFollowerRatio: (engagement / followerCount).toFixed(4),
           likes: post.likes,
           comments: post.comments,
           shares: post.shares, // Include shares in perPostEngagement
         });
 
         count++;
-        // console.log('Processed post engagement:', perPostEngagement[perPostEngagement.length - 1]);
       }
 
       const avgEngagement = count > 0 ? total_engagement / count : 0;
       const engagementToFollowerRatio = avgEngagement / followerCount;
       const engagementRate = engagementToFollowerRatio * 100;
-      // console.log('Engagement stats calculated: avgEngagement:', avgEngagement, 'engagementToFollowerRatio:', engagementToFollowerRatio, 'engagementRate:', engagementRate);
-
-    let message = '';
-
-// if (engagementRate >= 50) {
-//   message = 'Exceptional engagement — your content is deeply resonating with your audience.';
-// } else if (engagementRate >= 30) {
-//   message = 'Strong engagement — your posts are driving meaningful interactions.';
-// } else if (engagementRate >= 20) {
-//   message = 'Solid performance — consider leveraging reels or interactive stories to boost further.';
-// } else if (engagementRate >= 10) {
-//   message = 'Moderate engagement — consistent posting and trend alignment could enhance reach.';
-// } else if (engagementRate >= 5) {
-//   message = 'Low engagement — review your content strategy, post timing, or visual appeal.';
-// } else {
-//   message = 'Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.';
-// }
-function getRandomMessage(messages: string[]): string {
-  return messages[Math.floor(Math.random() * messages.length)];
-}
 
 
-function getRandomInstagramMessage(rate: number): string {
-  if (rate >= 50) {
-    return getRandomMessage([
-      "Exceptional engagement — your content is deeply resonating with your audience.",
-      " You're crushing it! Your posts are driving major visibility and reactions.",
-      "Your audience is locked in — keep delivering this level of consistency and value."
-    ]);
-  } else if (rate >= 30) {
-    return getRandomMessage([
-      "Strong engagement — your posts are driving meaningful interactions.",
-      "You’re gaining traction — your content is catching attention across the platform.",
-      "Great momentum — consider doubling down on what’s working in your top posts."
-    ]);
-  } else if (rate >= 20) {
-    return getRandomMessage([
-      "Solid performance — try leveraging reels or interactive stories to boost further.",
-      "Good effort — short-form video or carousel content might amplify reach.",
-      "You're on the radar — step it up with better CTAs and time-based engagement tactics."
-    ]);
-  } else if (rate >= 10) {
-    return getRandomMessage([
-      "Moderate engagement — consistent posting and trend alignment could enhance reach.",
-      "Fair performance — post timing and content hooks need refinement.",
-      "You're on the edge — try remixing existing formats or adding more emotion-driven content."
-    ]);
-  } else if (rate >= 5) {
-    return getRandomMessage([
-      "Low engagement — review your content strategy, post timing, or visual appeal.",
-      "Your reach is limited — try fresh themes or storytelling elements.",
-      "Not much happening — maybe test different hashtags or audience segments."
-    ]);
-  } else {
-    return getRandomMessage([
-      "Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.",
-      "Almost no engagement — try a bold pivot in content type, tone, or aesthetic.",
-      "You're missing visibility — consider auditing your profile and top content structure."
-    ]);
-  }
-}
+
+
+      function getRandomMessage(messages: string[]): string {
+        return messages[Math.floor(Math.random() * messages.length)];
+      }
+
+
+      function getRandomInstagramMessage(rate: number): string {
+        if (rate >= 50) {
+          return getRandomMessage([
+            "Exceptional engagement — your content is deeply resonating with your audience.",
+            " You're crushing it! Your posts are driving major visibility and reactions.",
+            "Your audience is locked in — keep delivering this level of consistency and value."
+          ]);
+        } else if (rate >= 30) {
+          return getRandomMessage([
+            "Strong engagement — your posts are driving meaningful interactions.",
+            "You’re gaining traction — your content is catching attention across the platform.",
+            "Great momentum — consider doubling down on what’s working in your top posts."
+          ]);
+        } else if (rate >= 20) {
+          return getRandomMessage([
+            "Solid performance — try leveraging reels or interactive stories to boost further.",
+            "Good effort — short-form video or carousel content might amplify reach.",
+            "You're on the radar — step it up with better CTAs and time-based engagement tactics."
+          ]);
+        } else if (rate >= 10) {
+          return getRandomMessage([
+            "Moderate engagement — consistent posting and trend alignment could enhance reach.",
+            "Fair performance — post timing and content hooks need refinement.",
+            "You're on the edge — try remixing existing formats or adding more emotion-driven content."
+          ]);
+        } else if (rate >= 5) {
+          return getRandomMessage([
+            "Low engagement — review your content strategy, post timing, or visual appeal.",
+            "Your reach is limited — try fresh themes or storytelling elements.",
+            "Not much happening — maybe test different hashtags or audience segments."
+          ]);
+        } else {
+          return getRandomMessage([
+            "Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.",
+            "Almost no engagement — try a bold pivot in content type, tone, or aesthetic.",
+            "You're missing visibility — consider auditing your profile and top content structure."
+          ]);
+        }
+      }
 
 
       // console.log('Engagement message:', message);
 
       return {
-        engagementRate: engagementRate.toFixed(2) + '%',
-        engagementToFollowerRatio: engagementToFollowerRatio.toFixed(2),
+        engagementRate: engagementRate.toFixed(4) + '%',
+        engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
         message: getRandomInstagramMessage(engagementRate),
         perPostEngagement,
       };
@@ -322,7 +305,7 @@ function getRandomInstagramMessage(rate: number): string {
     console.log('Returning final result');
 
     const instagram_data = {
-       message,
+      message,
       handle,
       profile,
       engagementRate,
@@ -330,8 +313,8 @@ function getRandomInstagramMessage(rate: number): string {
       perPostEngagement
     };
     return {
-      instagram_data 
-    
+      instagram_data
+
     };
   } catch (error: any) {
     console.log('Error in main try block:', error.message, 'Stack:', error.stack);

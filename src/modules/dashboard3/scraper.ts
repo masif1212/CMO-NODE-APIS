@@ -394,7 +394,7 @@ const keyPages = await Promise.all(
   const CTR_Loss_Percent = {
     total_key_pages: totalKeyPages,
     total_affected_pages: affectedPagesCount,
-    CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+    CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4)) : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
 

@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { getInstagramPostsHandler } from './instagram_controller';
+import { getfacebookAdsHandler } from './facebook_ads_controller';
 import { asyncHandler } from "../../../utils/asyncHandler";
 
 const router = Router();
 
-router.post('/', asyncHandler(getInstagramPostsHandler));
+router.post('/',asyncHandler(getfacebookAdsHandler));
 
 export default router;

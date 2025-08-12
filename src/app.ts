@@ -9,6 +9,9 @@ import authRouter, { dashboardRouter1 } from "./modules/dashboard1/traffic_analy
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/dashboard2/youtube/router";
+import  linkledinRouter from "./modules/dashboard2/linkedlin/linkedlin_router";
+import googleAdsRouter  from "./modules/dashboard2/google_ads/google_ads_router";
+import  getfacebookAdsRouter from "./modules/dashboard2/facebook_ads/facebook_ads_router";
 import { competitorRouter } from "./modules/dashboard3/competitor.routes";
 import geo_llm from "./modules/dashboard1/geo/router";
 import userRequirementsRouter from "./modules/form_data/router";
@@ -78,13 +81,15 @@ app.use("/api/technical_seo", technicalSeoRouter);
 
 app.use("/api/geo", geo_llm);
 
-app.use("/api/dashboard1/", dashboardRouter1); // recommendation by mo for dashboard 1
-app.use("/api/dashboard1/", dashboardRouter1); 
+app.use("/api/dashboard1", dashboardRouter1); // recommendation by mo for dashboard 1
 //dashboard2 routes
 
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use("/api/youtube", youtubeRouter);
+app.use("/api/linkedlin", linkledinRouter);
+app.use("/api/google_ads", googleAdsRouter);
+app.use("/api/facebook_ads", getfacebookAdsRouter); // Note: This is a function, not a router
 app.use("/api/dashboardRouter2", dashboardRouter2); 
 
 //dashboard3 routes

@@ -7,6 +7,4 @@ const router = Router();
 
 router.post("/check-pagespeed", asyncHandler(handlePageSpeed));
 
-// router.post("/llm-pagespeed", asyncHandler(generateLLMAuditReportforpagespeed)); 
-// router.post("/llm-broken_links", asyncHandler(generateLLMAuditReportForBrokenLinks)); 
 export default router;

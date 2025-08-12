@@ -452,7 +452,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     total_key_pages: totalKeyPages,
     total_affected_pages: affectedPagesCount,
     CTR_Loss_Percent: totalKeyPages > 0
-      ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2))
+      ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4))
       : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
@@ -512,6 +512,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
 
     const record = await prisma.website_scraped_data.create({
       data: {
+        report_id,
         website_url,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
@@ -551,17 +552,18 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       facebook_handle:record.facebook_handle,
       instagram_handle:record.instagram_handle,
       youtube_handle:record.youtube_handle,
-      tiktok_handle:record.tiktok_handle,
+      // tiktok_handle:record.tiktok_handle,
       onpage_opptimization:{
         h1_text: h1Text,
         metaDataWithoutRawHtml: {
+        homepage_alt_text_coverage: record.homepage_alt_text_coverage,
         meta_description: record.meta_description,
         meta_keywords: record.meta_keywords,
         page_title: record.page_title,
-      ctr_loss_percent: record.ctr_loss_percent,
-      og_title: record.og_title,
-      og_description: record.og_description,
-      og_image: record.og_image,
+        ctr_loss_percent: record.ctr_loss_percent,
+        og_title: record.og_title,
+        og_description: record.og_description,
+        og_image: record.og_image,
     }
       }
       }

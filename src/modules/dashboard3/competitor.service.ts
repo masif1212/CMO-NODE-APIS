@@ -249,7 +249,7 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
     if (competitorResults.length < MAX_COMPETITORS) {
       console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
 
-      const aiResponse = await fetchCompetitorsFromLLM(user_id, website_id, scrapedMain, userRequirement, Array.from(processedUrls), Array.from(processedNames));
+      const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, Array.from(processedUrls), Array.from(processedNames));
 
       const parsed = parseCompetitorData(aiResponse);
 
@@ -306,7 +306,7 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
     console.log(`[brandprofile] Browser closed`);
 
     const t1 = performance.now();
-    console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
+    console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(4)}ms`);
     console.log("competitorResults:", competitorResults);
 
     return {
@@ -1055,6 +1055,7 @@ static async social_media(user_id: string, website_id: string, report_id: string
       facebook_handle:true,
       instagram_handle:true,
       youtube_handle:true,
+      linkedin_handle:true,
 
     },
   });
@@ -1062,7 +1063,9 @@ static async social_media(user_id: string, website_id: string, report_id: string
   const main_website = await fetchSocialMediaData(
     websiteScraped?.facebook_handle,
     websiteScraped?.instagram_handle,
-    websiteScraped?.youtube_handle
+    websiteScraped?.youtube_handle,
+    websiteScraped?.linkedin_handle,
+    website_url
   );
     
   const competitors = await prisma.competitor_details.findMany({
@@ -1081,10 +1084,11 @@ static async social_media(user_id: string, website_id: string, report_id: string
       limit(async () => {
         const {
           competitor_id,
-          competitor_website_url,
           facebook_handle,
           instagram_handle,
-          youtube_handle
+          youtube_handle,
+          linkedin_handle,
+          competitor_website_url
         } = competitor;
 
         if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
@@ -1098,7 +1102,9 @@ static async social_media(user_id: string, website_id: string, report_id: string
           const social_media = await fetchSocialMediaData(
             facebook_handle,
             instagram_handle,
-            youtube_handle
+            youtube_handle,
+            linkedin_handle,
+            competitor_website_url
           );
 
           await prisma.competitor_details.update({
@@ -1125,18 +1131,18 @@ static async social_media(user_id: string, website_id: string, report_id: string
     }
   }
 
-  const social_mediaData = {
+  const competitor_social_media_data = {
     main_website,
     competitors: competitorsData
   };
 
    await prisma.report.upsert({
         where: { report_id },
-        update: { dashboard3_socialmedia: social_mediaData },
-        create: { website_id,report_id, dashboard3_socialmedia: social_mediaData },
+        update: { dashboard3_socialmedia: competitor_social_media_data },
+        create: { website_id,report_id, dashboard3_socialmedia: competitor_social_media_data },
       });
 
-  return social_mediaData;
+  return {competitor_social_media_data};
 }
 
   

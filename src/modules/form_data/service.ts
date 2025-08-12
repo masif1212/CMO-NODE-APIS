@@ -50,5 +50,30 @@ export const createBrandProfile = async (
 };
 
 
+export const createuserType = async (
+  user_id: string,
+  
+    user_type?: string,
+    
+ 
+  
+) => {
+  const existing = await prisma.users.findFirst({
+    where: { user_id},
+  });
 
+  const saveData: any = {
+    user_type: user_type,
+  };
+
+
+  if (existing) {
+    return await prisma.users.update({
+      where: { user_id: existing.user_id },
+      data: saveData,
+    });
+  } else {
+    return await prisma.user_requirements.create({ data: saveData });
+  }
+};
 

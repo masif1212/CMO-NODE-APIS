@@ -10,23 +10,23 @@ export const openai = new OpenAI({
 });
 
 export async function fetchCompetitorsFromLLM(
-  user_id: string,
-  website_id: string,
+
   scrapedMain: any,
   userRequirement: any,
   existingUrls: string[] = [],
   existingNames: string[] = []
-): Promise<string> {
+): Promise<string>
+
+{
   const prompt = `
 You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
 
 ### Selection Logic:
-1. **First**, check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
-2. **Second**, if a global company **does not serve the target region**, skip it and look for **top local or regional competitors** that are active and well-known in that location.
-3. **Third**, if no local competitors are found, consider **top-tier companies** in the same industry that have a significant online presence and are relevant to the main website's offerings.
+1. **First**,   **look for **top local or regional competitors ** that are active and well-known in target location of main website thats is  ${userRequirement.target_location} and serves the same audience as  ${userRequirement.target_audience}.
+2. **Second**,if no local competitors are found check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
 
 - **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
-- **Market leaders or top-tier** in the same industry as the given website : {${userRequirement.industry} || '' and has  audience in {${userRequirement.target_location}}|| ''}.
+- **Market leaders or top-tier** in the same industry as the given website  and has  audience in {${userRequirement.target_location}}|| ''}.
 - Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
 - Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
 
@@ -35,14 +35,7 @@ You are an expert market research assistant specializing in competitor analysis.
 **main website title: ${scrapedMain.page_title ?? 'Unknown'}
 **main website meta description: ${scrapedMain.meta_description ?? 'Unknown'}
 **main website meta keywords: ${scrapedMain.meta_keywords ?? 'Unknown'}
-
-
-
-
-
 -
-
-
 
 **Output Format**:
 Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first).
@@ -68,7 +61,6 @@ Return a valid **JSON array** of  6 competitors, ordered by prominence (most fam
     "industry": "E-commerce",
     "primary_offering": "Electronics and gadgets marketplace",
     "usp": "Price comparison and deals for Pakistani consumers",
-    "logo_url": "https://priceoye.pk/favicon.ico"
   }
   
   },

@@ -139,14 +139,7 @@ export async function checkBrokenLinks(
   website_url: string,
   maxDepth = 0
 ): Promise<BrokenLinkResult[]> {
-  // Step 1: Verify website ownership before proceeding
-  // const userWebsite = await prisma.user_websites.findFirst({
-  //   where: { user_id, website_id },
-  // });
 
-  // if (!userWebsite) {
-  //   throw new Error("Website does not belong to the user.");
-  // }
 
   console.log(`Puppeteer is launching...`);
   const browser = await puppeteer.launch({ headless: "new" as any })
@@ -156,7 +149,7 @@ export async function checkBrokenLinks(
 
   const brokenLinks: BrokenLinkResult[] = [];
 
-  
+
   const visited = new Set<string>();
   const checkedLinks = new Set<string>();
 

@@ -51,79 +51,16 @@ export const getUserById = async (userId: string) => {
   });
 };
 
-
-// function normalizeUrl(url: string): string {
-//   try {
-//     const u = new URL(url.trim());
-//     u.pathname = u.pathname.replace(/\/+$/, ""); // Remove trailing slashes
-//     return u.origin + u.pathname;
-//   } catch (e) {
-//     throw new Error("Invalid URL: " + url);
-//   }
-// }
-
-// export async function add_userwebsite(user_id: string, rawUrl: string) {
-//   const websiteUrl = normalizeUrl(rawUrl);
-
-//   // Step 1: Check if website already exists
-//   let existingWebsite = await prisma.user_websites.findFirst({
-//     where: {
-//       website_url: websiteUrl,
-//       user_id,
-//     },
-//   });
-
-//   let website_id: string;
-
-//   if (existingWebsite) {
-//     website_id = existingWebsite.website_id;
-//   } else {
-//     // Step 2: Create new website
-//     const newWebsite = await prisma.user_websites.create({
-//       data: {
-//         website_url: websiteUrl,
-//         user_id,
-//         website_type: null,
-//         website_name: null,
-//       },
-//     });
-
-//     website_id = newWebsite.website_id;
-//   }
-//    const matchingRequirement = await prisma.user_requirements.findFirst({
-//     where: {
-//       website_id,
-      
-//     },
-//     select :{
-//       target_location:true,
-//       USP:true,
-//       primary_offering:true,
-//       industry:true,
-//       competitor_urls:true,
-//       target_audience:true
-      
-
-
-//       },
-//   });
-//   // Step 3: Always create new report (even if website is reused)
-//   const newReport = await prisma.report.create({
-//     data: {
-//       website_id,
-//     },
-//   });
-
-//   return { report_id: newReport.report_id, website_id,matchingRequirement };
-// }
-
-
-
-
-
 function normalizeUrl(url: string): string {
   try {
-    const u = new URL(url.trim());
+    let cleanUrl = url.trim();
+
+    // If URL doesn't start with http:// or https://, add https://
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = "https://" + cleanUrl;
+    }
+
+    const u = new URL(cleanUrl);
     u.pathname = u.pathname.replace(/\/+$/, ""); // Remove trailing slashes
     return u.origin + u.pathname;
   } catch (e) {

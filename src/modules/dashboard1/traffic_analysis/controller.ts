@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
-import { generate_d1_recommendation ,generated1_strengthandIssue} from "../llm_dashboard1";
+import { generate_d1_recommendation, generated1_strengthandIssue } from "../llm_dashboard1";
 
 import * as cheerio from "cheerio";
 
@@ -119,7 +119,7 @@ export const fetchProperties = async (req: Request, res: Response) => {
 };
 
 export const fetchAnalyticsReport = async (req: Request, res: Response) => {
-  const { property_id, website_id, user_id ,report_id} = req.body;
+  const { property_id, website_id, user_id, report_id } = req.body;
   console.log("Request Body:", req.body);
 
   if (!req.session?.user?.accessToken) {
@@ -130,7 +130,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing property_id, website_id or user_id" });
   }
 
-  
+
 
   try {
     oAuth2Client.setCredentials({ access_token: req.session.user.accessToken });
@@ -149,15 +149,15 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     // Save user requirement inline here
     await saveUserRequirement({
       user_id,
-     property_id,
-     website_id,
+      property_id,
+      website_id,
       access_token: req.session.user.accessToken,
       profile: req.session.user.profile,
     });
 
-   
+
     const scrapedMeta = await prisma.website_scraped_data.findUnique({
-      where: { scraped_data_id: report?.scraped_data_id?? undefined },
+      where: { scraped_data_id: report?.scraped_data_id ?? undefined },
       select: {
         page_title: true,
         meta_description: true,
@@ -174,21 +174,22 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
         response_time_ms: true,
       },
     });
-               
+
     const record = await prisma.report.upsert({
       where: {
         report_id: report_id, // this must be a UNIQUE constraint or @id in the model
       },
       update: {
-        website_id: website_id, 
-          traffic_analysis_id: savedTraffic.traffic_analysis_id,
-          // dashboard1_Freedata: JSON.stringify(combine_data),
+        website_id: website_id,
+        traffic_analysis_id: savedTraffic.traffic_analysis_id,
+        // dashboard1_Freedata: JSON.stringify(combine_data),
       },
       create: {
-          website_id: website_id,
-          traffic_analysis_id: savedTraffic.traffic_analysis_id,
-          // dashboard1_Freedata: JSON.stringify(combine_data),
-      }});
+        website_id: website_id,
+        traffic_analysis_id: savedTraffic.traffic_analysis_id,
+        // dashboard1_Freedata: JSON.stringify(combine_data),
+      }
+    });
 
     let h1Text = "Not Found";
 
@@ -213,23 +214,23 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     }
 
     const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
-    
- const existing = await prisma.analysis_status.findFirst({
-  where: { report_id }
-});
 
-let update;
-if (existing) {
-  update = await prisma.analysis_status.update({
-    where: { id: existing.id },
-    data: { website_id, trafficanaylsis: true }
-  });
-} else {
-  update = await prisma.analysis_status.create({
-    data: { report_id, website_id, trafficanaylsis: true ,user_id}
-  });
-}
-    
+    const existing = await prisma.analysis_status.findFirst({
+      where: { report_id }
+    });
+
+    let update;
+    if (existing) {
+      update = await prisma.analysis_status.update({
+        where: { id: existing.id },
+        data: { website_id, trafficanaylsis: true }
+      });
+    } else {
+      update = await prisma.analysis_status.create({
+        data: { report_id, website_id, trafficanaylsis: true, user_id }
+      });
+    }
+
     return res.status(200).json({
       message: "seo audit",
       traffic_anaylsis: savedTraffic,
@@ -250,7 +251,7 @@ if (existing) {
 
 export const dashboard1_Recommendation = async (req: Request, res: Response) => {
   // console.log("dashboard1_Recommendation called");
-  const { website_id, user_id ,report_id} = req.body;
+  const { website_id, user_id, report_id } = req.body;
 
   console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
@@ -262,7 +263,7 @@ export const dashboard1_Recommendation = async (req: Request, res: Response) => 
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-   
+
 
     return res.status(200).json(llm_response);
   } catch (error: any) {
@@ -273,8 +274,7 @@ export const dashboard1_Recommendation = async (req: Request, res: Response) => 
 
 
 export const dashboard1_strengthandIssue = async (req: Request, res: Response) => {
-  // console.log("dashboard1_Recommendation called");
-  const { website_id, user_id ,report_id} = req.body;
+  const { website_id, user_id, report_id } = req.body;
 
   console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
@@ -282,11 +282,10 @@ export const dashboard1_strengthandIssue = async (req: Request, res: Response) =
 
   try {
     const llm_response = await generated1_strengthandIssue(website_id, user_id, report_id);
-    // console.log("llm_res",llm_response)
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }
-   
+
 
     return res.status(200).json(llm_response);
   } catch (error: any) {

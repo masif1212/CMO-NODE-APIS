@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserdata} from "./admin_service";
+import { getUserdata,addOrUpdateAnalysisService} from "./admin_service";
 
 const router = Router();
 
@@ -8,5 +8,8 @@ router.get("/data", (req, res, next) => {
   getUserdata(req, res).catch(next);
 });
 
+router.post("/subscription_plans", (req, res, next) => {
+  addOrUpdateAnalysisService(req, res).catch(next);
+});
 
 export default router;
