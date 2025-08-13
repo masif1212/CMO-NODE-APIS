@@ -118,7 +118,9 @@ export const getLinkedinPostsHandler = async (req: Request, res: Response) => {
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
     }
-
+      if (!linkedin_handle) {
+      return res.status(400).json({ success: false, error: 'Missing linkedin_handle in request body' });
+    }
     // If handle is provided → save/update first
     if (linkedin_handle) {
       await prisma.user_requirements.upsert({
@@ -130,16 +132,9 @@ export const getLinkedinPostsHandler = async (req: Request, res: Response) => {
     }
 
     // Always get handle — either from request or DB
-    const handleToUse = linkedin_handle ?? (await prisma.user_requirements.findUnique({
-      where: { website_id },
-      select: { linkedin_handle: true }
-    }))?.linkedin_handle;
+   
 
-    if (!handleToUse) {
-      return res.status(404).json({ success: false, error: 'linkedin_handle not found' });
-    }
-
-    const linkedin_data = await getlinkedinProfileFromScrapedData(handleToUse);
+    const linkedin_data = await getlinkedinProfileFromScrapedData(linkedin_handle);
 
     // Merge dashboard2_data
     const existingReport = await prisma.report.findUnique({

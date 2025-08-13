@@ -455,6 +455,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       select: {
         website_url: true,
         website_id:true,
+        website_name:true,
         report: {
           orderBy: { created_at: 'desc' },
           select: {
@@ -488,6 +489,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
         const base = {
           report_id: report.report_id,
           website_url: site.website_url,
+          website_name:site.website_name,
           created_at: report.created_at,
           updated_at: report.updated_at,
         };

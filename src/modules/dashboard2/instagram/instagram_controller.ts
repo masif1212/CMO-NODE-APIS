@@ -112,7 +112,10 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
     }
-
+    
+    if (!instagram_handle) {
+      return res.status(400).json({ success: false, error: 'Missing instagram_handle in request body' });
+    }
     // If handle is provided → save/update first
     if (instagram_handle) {
       await prisma.user_requirements.upsert({
@@ -123,18 +126,8 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
       });
     }
 
-    // Always get handle — either from request or DB
-    const handleToUse = instagram_handle ?? (await prisma.user_requirements.findUnique({
-      where: { website_id },
-      select: { instagram_handle: true }
-    }))?.instagram_handle;
-
-    if (!handleToUse) {
-      return res.status(404).json({ success: false, error: 'instagram_handle not found' });
-    }
-
-    console.log("instagram_handle", handleToUse);
-    const Instagram_data = await getInstagramPostsFromScrapedData(handleToUse);
+    console.log("instagram_handle", instagram_handle);
+    const Instagram_data = await getInstagramPostsFromScrapedData(instagram_handle);
 
     // Merge dashboard2_data
     const existingReport = await prisma.report.findUnique({

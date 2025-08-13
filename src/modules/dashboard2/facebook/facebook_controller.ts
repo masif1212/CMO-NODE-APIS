@@ -120,7 +120,9 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     if (!report_id) {
       return res.status(400).json({ success: false, error: 'Missing report_id in request body' });
     }
-
+     if (!facebook_handle) {
+      return res.status(400).json({ success: false, error: 'Missing facebook_handle in request body' });
+    }
     // Save or create facebook_handle if provided
     if (facebook_handle) {
       console.log("Saving facebook_handle to database...");
@@ -129,19 +131,11 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
         update: { facebook_handle },
         create: { website_id, facebook_handle, user_id }
       });
+      
     }
 
-    // Always get handle — either from request or DB
-    const handleToUse = facebook_handle ?? (await prisma.website_scraped_data.findUnique({
-      where: { report_id },
-      select: { facebook_handle: true }
-    }))?.facebook_handle;
 
-    if (!handleToUse) {
-      return res.status(404).json({ success: false, error: 'facebook_handle not found' });
-    }
-
-    const facebook_data = await getFacebookPostsFromScrapedData(handleToUse);
+    const facebook_data = await getFacebookPostsFromScrapedData(facebook_handle);
 
     const existingReport = await prisma.report.findUnique({
       where: { report_id },

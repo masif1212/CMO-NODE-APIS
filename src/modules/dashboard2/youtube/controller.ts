@@ -11,7 +11,9 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
   if (!website_id || !report_id) {
     return res.status(400).json({ error: "website_id and report_id are required" });
   }
-
+    if (!youtube_handle) {
+    return res.status(400).json({ error: "youtube_handle required" });
+  }
   try {
     // If handle is provided → save/update it first
     if (youtube_handle) {
@@ -21,16 +23,8 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
         create: { website_id, youtube_handle, user_id } 
       });
     }
-
-    // Always get the handle — either from body or DB
-    const handleToUse = youtube_handle ?? (
-      await prisma.user_requirements.findUnique({
-        where: { website_id },
-        select: { youtube_handle: true }
-      })
-    )?.youtube_handle;
-
-    if (!handleToUse) {
+  
+    if (!youtube_handle) {
       console.warn("No YouTube handle found");
       return res.status(200).json({
         message: "no-youtube-handle",
@@ -41,12 +35,10 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("YouTube handle found:", handleToUse);
+    console.log("YouTube handle found:", youtube_handle);
 
-    // Analyze YouTube
-    const youtube_data = await analyzeYouTubeDataByWebsiteId(handleToUse);
+    const youtube_data = await analyzeYouTubeDataByWebsiteId(youtube_handle);
 
-    // Merge with dashboard2_data
     const existingReport = await prisma.report.findUnique({
       where: { report_id },
       select: { dashboard2_data: true }
