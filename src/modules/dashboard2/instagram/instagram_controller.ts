@@ -115,9 +115,11 @@ export const getInstagramPostsHandler = async (req: Request, res: Response) => {
 
     // If handle is provided → save/update first
     if (instagram_handle) {
-      await prisma.user_requirements.update({
+      await prisma.user_requirements.upsert({
         where: { website_id },
-        data: { instagram_handle }
+        update: { instagram_handle },
+        create: { website_id, instagram_handle, user_id }
+
       });
     }
 

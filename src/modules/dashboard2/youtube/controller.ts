@@ -15,9 +15,10 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
   try {
     // If handle is provided → save/update it first
     if (youtube_handle) {
-      await prisma.user_requirements.update({
+      await prisma.user_requirements.upsert({
         where: { website_id },
-        data: { youtube_handle }
+        update: { youtube_handle },
+        create: { website_id, youtube_handle, user_id } 
       });
     }
 

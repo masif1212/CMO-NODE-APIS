@@ -382,15 +382,6 @@ model user_requirements {
   requirement_id      String     @id @default(uuid())
   user_id             String
   website_id          String    @unique
-  property_id         String?
-  access_token        String?   @db.LongText
-  refresh_token       String?   @db.LongText
-  profile             Json?
-  session_id          String?   @db.LongText
-  fetched_properties  Json?
-  summary_status      String?
-  summary_data        Json?
-  competitor_urls     Json?
   facebook_handle     String?
   instagram_handle    String?
   twitter_handle      String?
@@ -404,7 +395,16 @@ model user_requirements {
   target_location     String?   @db.LongText
   target_audience     String?   @db.LongText
   primary_offering    String?   @db.LongText
+  competitor_urls     Json?
   USP                 String?   @db.LongText
+  property_id         String?
+  access_token        String?   @db.LongText
+  refresh_token       String?   @db.LongText
+  profile             Json?
+  session_id          String?   @db.LongText
+  fetched_properties  Json?
+  summary_status      String?
+  summary_data        Json?
   created_at          DateTime  @default(now())
   updated_at          DateTime  @default(now()) @updatedAt
   users               users         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)

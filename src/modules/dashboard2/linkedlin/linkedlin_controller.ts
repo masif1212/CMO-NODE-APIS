@@ -121,9 +121,11 @@ export const getLinkedinPostsHandler = async (req: Request, res: Response) => {
 
     // If handle is provided → save/update first
     if (linkedin_handle) {
-      await prisma.user_requirements.update({
+      await prisma.user_requirements.upsert({
         where: { website_id },
-        data: { linkedin_handle },
+        update: { linkedin_handle },
+        create: { website_id, linkedin_handle, user_id }
+
       });
     }
 

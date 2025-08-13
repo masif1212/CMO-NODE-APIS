@@ -124,9 +124,10 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
     // Save or create facebook_handle if provided
     if (facebook_handle) {
       console.log("Saving facebook_handle to database...");
-      await prisma.user_requirements.update({
+      await prisma.user_requirements.upsert({
         where: { website_id },
-        data: { facebook_handle },
+        update: { facebook_handle },
+        create: { website_id, facebook_handle, user_id }
       });
     }
 
