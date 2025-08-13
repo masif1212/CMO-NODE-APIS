@@ -571,7 +571,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       facebook_handle:record.facebook_handle,
       instagram_handle:record.instagram_handle,
       youtube_handle:record.youtube_handle,
-      tiktok_handle:record.tiktok_handle,
+      // tiktok_handle:record.tiktok_handle,
      
       },
       onpage_opptimization:{

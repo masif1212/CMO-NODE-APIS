@@ -134,7 +134,6 @@ export const getFacebookPostsHandler = async (req: Request, res: Response) => {
       
     }
 
-
     const facebook_data = await getFacebookPostsFromScrapedData(facebook_handle);
 
     const existingReport = await prisma.report.findUnique({
