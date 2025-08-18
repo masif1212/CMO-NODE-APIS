@@ -1,10 +1,8 @@
 
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import logging from './logger';
-const prisma = new PrismaClient();
 const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY;
 const INSTAGRAM_PROFILE_URL = 'https://api.scrapecreators.com/v1/instagram/profile';
 const INSTAGRAM_POST_URL = 'https://api.scrapecreators.com/v2/instagram/user/posts';

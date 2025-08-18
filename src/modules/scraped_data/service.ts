@@ -21,9 +21,7 @@ export interface ScrapeResult {
 }
 
 function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
-  // hasH1: boolean;
   totalHeadings: number;
-  // headingLevelsUsed: string[];
   headingOrderUsed: string[];
   hasMultipleH1s: boolean;
   skippedHeadingLevels: boolean;
@@ -527,39 +525,100 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       twitter_handle: twitter
     },
   });
-    const record = await prisma.website_scraped_data.create({
-      data: {
-        report_id,
-        website_url,
-        // H1_text: h1Text,
-        page_title: JSON.stringify(meta.page_title),
-        logo_url: finalLogoUrl,
-        meta_description: meta.meta_description,
-        meta_keywords: meta.meta_keywords,
-        og_title: meta.og_title,
-        og_description: meta.og_description,
-        og_image: meta.og_image,
-        twitter_handle: twitter,
-        facebook_handle: facebook,
-        instagram_handle: instagram,
-        linkedin_handle: linkedin,
-        youtube_handle: youtube,
-        tiktok_handle: tiktok,
-        isCrawlable,
-        headingAnalysis,
-        ctr_loss_percent: CTR_Loss_Percent,
-        sitemap_pages: filteredPages,
-        schema_analysis: JSON.stringify(schemaAnalysisData),
-        homepage_alt_text_coverage,
-        other_links: otherLinks.length > 0 ? otherLinks : "not found",
-        raw_html: html,
-        status_code: statusCode,
-        ip_address: ipAddress,
-        response_time_ms: responseTimeMs,
-        status_message: message,
-      },
-    });
-   
+    // const record = await prisma.website_scraped_data.create({
+    //   data: {
+    //     report_id,
+    //     website_url,
+    //     // H1_text: h1Text,
+    //     page_title: JSON.stringify(meta.page_title),
+    //     logo_url: finalLogoUrl,
+    //     meta_description: meta.meta_description,
+    //     meta_keywords: meta.meta_keywords,
+    //     og_title: meta.og_title,
+    //     og_description: meta.og_description,
+    //     og_image: meta.og_image,
+    //     twitter_handle: twitter,
+    //     facebook_handle: facebook,
+    //     instagram_handle: instagram,
+    //     linkedin_handle: linkedin,
+    //     youtube_handle: youtube,
+    //     tiktok_handle: tiktok,
+    //     isCrawlable,
+    //     headingAnalysis,
+    //     ctr_loss_percent: CTR_Loss_Percent,
+    //     sitemap_pages: filteredPages,
+    //     schema_analysis: JSON.stringify(schemaAnalysisData),
+    //     homepage_alt_text_coverage,
+    //     other_links: otherLinks.length > 0 ? otherLinks : "not found",
+    //     raw_html: html,
+    //     status_code: statusCode,
+    //     ip_address: ipAddress,
+    //     response_time_ms: responseTimeMs,
+    //     status_message: message,
+    //   },
+    // });
+    const record = await prisma.website_scraped_data.upsert({
+  where: {
+    report_id: report_id, // must be unique in schema
+  },
+  update: {
+    page_title: JSON.stringify(meta.page_title),
+    logo_url: finalLogoUrl,
+    meta_description: meta.meta_description,
+    meta_keywords: meta.meta_keywords,
+    og_title: meta.og_title,
+    og_description: meta.og_description,
+    og_image: meta.og_image,
+    twitter_handle: twitter,
+    facebook_handle: facebook,
+    instagram_handle: instagram,
+    linkedin_handle: linkedin,
+    youtube_handle: youtube,
+    tiktok_handle: tiktok,
+    isCrawlable,
+    headingAnalysis,
+    ctr_loss_percent: CTR_Loss_Percent,
+    sitemap_pages: filteredPages,
+    schema_analysis: JSON.stringify(schemaAnalysisData),
+    homepage_alt_text_coverage,
+    other_links: otherLinks.length > 0 ? otherLinks : "not found",
+    raw_html: html,
+    status_code: statusCode,
+    ip_address: ipAddress,
+    response_time_ms: responseTimeMs,
+    status_message: message,
+  },
+  create: {
+    report_id,
+    website_url,
+    page_title: JSON.stringify(meta.page_title),
+    logo_url: finalLogoUrl,
+    meta_description: meta.meta_description,
+    meta_keywords: meta.meta_keywords,
+    og_title: meta.og_title,
+    og_description: meta.og_description,
+    og_image: meta.og_image,
+    twitter_handle: twitter,
+    facebook_handle: facebook,
+    instagram_handle: instagram,
+    linkedin_handle: linkedin,
+    youtube_handle: youtube,
+    tiktok_handle: tiktok,
+    isCrawlable,
+    headingAnalysis,
+    ctr_loss_percent: CTR_Loss_Percent,
+    sitemap_pages: filteredPages,
+    schema_analysis: JSON.stringify(schemaAnalysisData),
+    homepage_alt_text_coverage,
+    other_links: otherLinks.length > 0 ? otherLinks : "not found",
+    raw_html: html,
+    status_code: statusCode,
+    ip_address: ipAddress,
+    response_time_ms: responseTimeMs,
+    status_message: message,
+  },
+});
+
     const result = {
       success: true,
       logo_url: record.logo_url ?? undefined,
@@ -577,7 +636,6 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
         h1_text: h1Text,
         metaDataWithoutRawHtml: {
         homepage_alt_text_coverage: record.homepage_alt_text_coverage,
-        // other_links: record.other_links,
         meta_description: record.meta_description,
         meta_keywords: record.meta_keywords,
         page_title: record.page_title,

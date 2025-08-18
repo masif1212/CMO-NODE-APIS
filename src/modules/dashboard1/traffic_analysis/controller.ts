@@ -6,9 +6,6 @@ import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
 import { generate_d1_recommendation, generated1_strengthandIssue } from "../llm_dashboard1";
-
-import * as cheerio from "cheerio";
-
 const prisma = new PrismaClient();
 
 export const startGoogleAuth = (req: Request, res: Response) => {
@@ -156,24 +153,6 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     });
 
 
-    // const scrapedMeta = await prisma.website_scraped_data.findUnique({
-    //   where: { scraped_data_id: report?.scraped_data_id ?? undefined },
-    //   select: {
-    //     page_title: true,
-    //     meta_description: true,
-    //     meta_keywords: true,
-    //     og_title: true,
-    //     og_description: true,
-    //     og_image: true,
-    //     ctr_loss_percent: true,
-    //     raw_html: true,
-    //     homepage_alt_text_coverage: true,
-    //     status_message: true,
-    //     status_code: true,
-    //     ip_address: true,
-    //     response_time_ms: true,
-    //   },
-    // });
 
     await prisma.report.upsert({
       where: {
@@ -182,38 +161,12 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
       update: {
         website_id: website_id,
         traffic_analysis_id: savedTraffic.traffic_analysis_id,
-        // dashboard1_Freedata: JSON.stringify(combine_data),
       },
       create: {
         website_id: website_id,
         traffic_analysis_id: savedTraffic.traffic_analysis_id,
-        // dashboard1_Freedata: JSON.stringify(combine_data),
       }
     });
-
-    let h1Text = "Not Found";
-
-    // if (scrapedMeta?.raw_html) {
-    //   try {
-    //     console.log("parsing HTML...");
-    //     // console.log("Raw HTML Length:", scrapedMeta.raw_html);
-    //     const $ = cheerio.load(scrapedMeta.raw_html);
-
-    //     h1Text = $("h1").first().text().trim() || "Not Found";
-    //     console.log("H1 Text:", h1Text);
-    //   } catch (err) {
-    //     if (err instanceof Error) {
-    //       console.warn("Cheerio failed to parse HTML:", err.message);
-    //     } else {
-    //       console.warn("Cheerio failed to parse HTML:", err);
-    //     }
-    //     // Skips setting h1Text if error happens
-    //   }
-    // } else {
-    //   console.warn("Cheerio.load not available or raw_html missing");
-    // }
-
-    // const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
 
     const existing = await prisma.analysis_status.findFirst({
       where: { report_id }
@@ -234,11 +187,7 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: "seo audit",
       traffic_anaylsis: savedTraffic,
-      // onpage_opptimization: {
-      //   h1Text,
-      //   metaDataWithoutRawHtml,
-      // },
-      // raw_html: scrapedMeta?.raw_html,
+      
     });
   } catch (error: any) {
     console.error("Analytics save error:", error);
@@ -250,16 +199,13 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 };
 
 export const dashboard1_Recommendation = async (req: Request, res: Response) => {
-  // console.log("dashboard1_Recommendation called");
   const { website_id, user_id, report_id } = req.body;
 
   console.log("Request Body:", req.body);
-  // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
     const llm_response = await generate_d1_recommendation(website_id, user_id, report_id);
-    // console.log("llm_res",llm_response)
     if (!llm_response) {
       return res.status(404).json({ message: "No recommendations found" });
     }

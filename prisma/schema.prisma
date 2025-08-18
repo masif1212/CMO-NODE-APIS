@@ -344,7 +344,7 @@ model competitor_details {
   usp                    String?  @db.LongText
   created_at             DateTime @default(now())
   updated_at             DateTime @default(now()) @updatedAt
-  order_index            Int?
+  order_index           Int?
   isCrawlable           Boolean?
   page_title            String?  @db.LongText
   logo_url              String?  @db.LongText

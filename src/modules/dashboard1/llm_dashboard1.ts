@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
 import * as cheerio from "cheerio";
-import { UnsupportedOperation } from "puppeteer";
 
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

@@ -75,11 +75,10 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
 
 
 
-console.log("prompt",prompt)
+// console.log("prompt",prompt)
  
     try {
     const response = await openai.responses.create({
-      // model: 'o4-mini-deep-research-2025-06-26',
       model: "gpt-4.1",
       input: prompt,
       tools: [
@@ -105,16 +104,7 @@ console.log("prompt",prompt)
     
 
 
-    // await prisma.llm_responses.upsert({
-    //   where: { website_id },
-    //   update: {
-    //     dashboard3_competi_camparison: JSON.stringify(output),
-    //   },
-    //   create: {
-    //     website_id,
-    //     dashboard3_competi_camparison: JSON.stringify(output),
-    //   },
-    // });    
+      
     let fixedOutput = output
       .replace(/```json\n|\n```|```/g, '')
       .replace(/,\s*([\]}])/g, '$1')

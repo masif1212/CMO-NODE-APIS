@@ -29,7 +29,7 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
 
 
 
-    console.log("fetching data from db...")
+console.log("fetching data from db...")
     const [scrapedData, pageSpeedData, traffic] = await Promise.all([
       report?.scraped_data_id
         ? prisma.website_scraped_data.findUnique({
@@ -225,7 +225,6 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
       update: {
         website_id,
         dashboard_paiddata: JSON.stringify(fullreport), // existing field
-        // new nested object
       },
       create: {
         website_id,

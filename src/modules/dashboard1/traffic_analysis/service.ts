@@ -167,7 +167,6 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
       dimensions: [{ name: "sessionSource" }],
       metrics: [{ name: "sessions" }],
       limit: "100",
-      // limit: "10",
     },
 
     medium: {
@@ -311,7 +310,7 @@ export const saveTrafficAnalysis = async (summary: any) => {
       engaged_sessions: summary?.engagement?.engagedSessions,
       top_devices: summary?.devices as Prisma.InputJsonValue,
       top_browsers: summary?.browsers as Prisma.InputJsonValue,
-      top_sources: combinedSources as Prisma.InputJsonValue, // <-- updated
+      top_sources: combinedSources as Prisma.InputJsonValue, 
       new_vs_returning: summary?.newVsReturning as Prisma.InputJsonValue,
     },
   });

@@ -246,61 +246,140 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
     }
 
     // If fewer than MAX_COMPETITORS, fetch from LLM
-    if (competitorResults.length < MAX_COMPETITORS) {
-      console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
+    // if (competitorResults.length < MAX_COMPETITORS) {
+    //   console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
 
-      const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, Array.from(processedUrls), Array.from(processedNames));
+    //   const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, Array.from(processedUrls), Array.from(processedNames));
 
-      const parsed = parseCompetitorData(aiResponse);
+    //   const parsed = parseCompetitorData(aiResponse);
 
-      for (const comp of parsed) {
-        if (competitorResults.length >= MAX_COMPETITORS) break;
+    //   for (const comp of parsed) {
+    //     if (competitorResults.length >= MAX_COMPETITORS) break;
 
-        const name = comp.name || `Competitor ${competitorResults.length + 1}`;
-        const url = comp.website_url;
+    //     const name = comp.name || `Competitor ${competitorResults.length + 1}`;
+    //     const url = comp.website_url;
 
-        if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
+    //     if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
 
-        try {
-          const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
-          if (!isValid || !preferredUrl) continue;
+    //     try {
+    //       const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
+    //       if (!isValid || !preferredUrl) continue;
 
-          const competitor_id = uuidv4();
-          await prisma.competitor_details.create({
-            data: {
-              website_url,
-              competitor_id,
-              website_id,
-              report_id,
-              name,
-              competitor_website_url: preferredUrl,
-              industry: comp.industry || userRequirement.industry,
-              primary_offering: comp.primary_offering || userRequirement.primary_offering,
-              usp: comp.usp || "No clear USP identified",
-              order_index: orderIndex++,
-            },
-          });
+    //       const competitor_id = uuidv4();
+    //       await prisma.competitor_details.create({
+    //         data: {
+    //           website_url,
+    //           competitor_id,
+    //           website_id,
+    //           report_id,
+    //           name,
+    //           competitor_website_url: preferredUrl,
+    //           industry: comp.industry || userRequirement.industry,
+    //           primary_offering: comp.primary_offering || userRequirement.primary_offering,
+    //           usp: comp.usp || "No clear USP identified",
+    //           order_index: orderIndex++,
+    //         },
+    //       });
 
-          competitorResults.push({
-            competitor_id,
-            brand_profile: {
-              title: name,
-              industry: comp.industry || userRequirement.industry,
-              unique_selling_point: comp.usp || "No clear USP identified",
-              primary_offering: comp.primary_offering || userRequirement.primary_offering,
-              logo_url: null,
-              website_url: preferredUrl,
-            },
-          });
+    //       competitorResults.push({
+    //         competitor_id,
+    //         brand_profile: {
+    //           title: name,
+    //           industry: comp.industry || userRequirement.industry,
+    //           unique_selling_point: comp.usp || "No clear USP identified",
+    //           primary_offering: comp.primary_offering || userRequirement.primary_offering,
+    //           logo_url: null,
+    //           website_url: preferredUrl,
+    //         },
+    //       });
 
-          processedUrls.add(preferredUrl);
-          processedNames.add(name);
-          console.log(`[brandprofile] Saved LLM competitor: ${name} (${preferredUrl})`);
-        } catch (err) {
-          console.error(`[brandprofile] Error saving LLM competitor ${url}: ${err}`);
-        }
+    //       processedUrls.add(preferredUrl);
+    //       processedNames.add(name);
+    //       console.log(`[brandprofile] Saved LLM competitor: ${name} (${preferredUrl})`);
+    //     } catch (err) {
+    //       console.error(`[brandprofile] Error saving LLM competitor ${url}: ${err}`);
+    //     }
+    //   }
+    // }
+
+
+    // If fewer than MAX_COMPETITORS, fetch from LLM
+if (competitorResults.length < MAX_COMPETITORS) {
+  console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
+
+  let parsed: any[] = [];
+  let attempts = 0;
+  const maxRetries = 3;
+
+  while (attempts <= maxRetries && parsed.length === 0) {
+    console.log(`[brandprofile] LLM parse attempt ${attempts + 1} of ${maxRetries}`);
+    attempts++;
+    try {
+      const aiResponse = await fetchCompetitorsFromLLM(
+        scrapedMain,
+        userRequirement,
+        Array.from(processedUrls),
+        Array.from(processedNames)
+      );
+
+      parsed = parseCompetitorData(aiResponse) || [];
+      if (parsed.length === 0) {
+        console.warn(`[brandprofile] LLM parse attempt ${attempts} returned no competitors`);
       }
+    } catch (err) {
+      console.error(`[brandprofile] Error fetching competitors from LLM (attempt ${attempts}):`, err);
     }
+  }
+
+  for (const comp of parsed) {
+    if (competitorResults.length >= MAX_COMPETITORS) break;
+
+    const name = comp.name || `Competitor ${competitorResults.length + 1}`;
+    const url = comp.website_url;
+
+    if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
+
+    try {
+      const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
+      if (!isValid || !preferredUrl) continue;
+
+      const competitor_id = uuidv4();
+      await prisma.competitor_details.create({
+        data: {
+          website_url,
+          competitor_id,
+          website_id,
+          report_id,
+          name,
+          competitor_website_url: preferredUrl,
+          industry: comp.industry || userRequirement.industry,
+          primary_offering: comp.primary_offering || userRequirement.primary_offering,
+          usp: comp.usp || "No clear USP identified",
+          order_index: orderIndex++,
+        },
+      });
+
+      competitorResults.push({
+        competitor_id,
+        brand_profile: {
+          title: name,
+          industry: comp.industry || userRequirement.industry,
+          unique_selling_point: comp.usp || "No clear USP identified",
+          primary_offering: comp.primary_offering || userRequirement.primary_offering,
+          logo_url: null,
+          website_url: preferredUrl,
+        },
+      });
+
+      processedUrls.add(preferredUrl);
+      processedNames.add(name);
+      console.log(`[brandprofile] Saved LLM competitor: ${name} (${preferredUrl})`);
+    } catch (err) {
+      console.error(`[brandprofile] Error saving LLM competitor ${url}: ${err}`);
+    }
+  }
+}
+
 
     await browser.close();
     console.log(`[brandprofile] Browser closed`);

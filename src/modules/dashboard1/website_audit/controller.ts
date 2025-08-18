@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { getPageSpeedData, savePageSpeedAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
-import * as cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 
@@ -68,7 +67,6 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       best_practices: mainPageSpeedData.audit_details.categoryScores["best_practices"],
       mobileFriendliness: mainPageSpeedData.audit_details.categoryScores.mobileFriendliness,
     };
-    //  console.log("Category scores:", categoryScores);
     const website = await prisma.user_websites.findUnique({
       where: { website_id },
     });

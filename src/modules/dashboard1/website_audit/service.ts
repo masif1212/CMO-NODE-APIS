@@ -1,7 +1,6 @@
 import axios from "axios";
 import { PrismaClient } from "@prisma/client";
 import lighthouse from "lighthouse";
-import chromeLauncher from "chrome-launcher";
 
 const prisma = new PrismaClient();
 import puppeteer from "puppeteer";
