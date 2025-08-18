@@ -226,9 +226,7 @@ async function isHttpStatus200(url: string): Promise<boolean> {
   }
 }
 
-export async function isValidCompetitorUrl(url: string, competitorName?: string, sharedBrowser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
-  let browser: Browser | null = sharedBrowser || null;
-  let browserLaunchedHere = false;
+export async function isValidCompetitorUrl(url: string, competitorName?: string, Browser?: Browser,): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
 
   try {
     if (!/^https?:\/\//.test(url)) {
@@ -265,37 +263,35 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
    
     
 
-    const mode = process.env.MODE;
 
-console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
+    // if (mode === "production") {
+    //   const launchOptions = {
+    //   executablePath: "/usr/bin/google-chrome-stable",
+    //   headless: "new" as any,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    // };
 
+    //   console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
+    //   browser = await puppeteer.launch(launchOptions);
+    // } else if (mode === "development") {
+    //   const localLaunchOptions = {
+    //     headless: "new" as any,
+    //     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    //   };
 
+    //   console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
+    //   browser = await puppeteer.launch(localLaunchOptions);
+    // } else {
+    //   console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
+    //   throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
+    // }
 
-    if (mode === "production") {
-      const launchOptions = {
-      executablePath: "/usr/bin/google-chrome-stable",
-      headless: "new" as any,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    };
+    // console.log("[brandprofile] Puppeteer browser launched successfully.");
 
-      console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
-      browser = await puppeteer.launch(launchOptions);
-    } else if (mode === "development") {
-      const localLaunchOptions = {
-        headless: "new" as any,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      };
-
-      console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
-      browser = await puppeteer.launch(localLaunchOptions);
-    } else {
-      console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
-      throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
+    if (!Browser) {
+      return { isValid: false, reason: "Browser instance is required but not provided" };
     }
-
-    console.log("[brandprofile] Puppeteer browser launched successfully.");
-
-    const firstCheck = await checkLandingHomepage(url, browser);
+    const firstCheck = await checkLandingHomepage(url, Browser);
     if (firstCheck.valid) {
       return { isValid: true, preferredUrl: firstCheck.finalUrl };
     }
@@ -312,7 +308,7 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
       return { isValid: false, reason };
     }
 
-    const secondCheck = await checkLandingHomepage(altUrl, browser);
+    const secondCheck = await checkLandingHomepage(altUrl, Browser);
     if (secondCheck.valid) {
       return { isValid: true, preferredUrl: secondCheck.finalUrl };
     }
@@ -323,13 +319,7 @@ console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
     console.error(`Validation failed for ${url}:`, err);
     return { isValid: false, reason: `Unexpected error: ${errorMessage}` };
   } finally {
-    if (browserLaunchedHere && browser) {
-      try {
-        await browser.close();
-      } catch (err) {
-        console.warn("Failed to close browser:", err);
-      }
-    }
+    
   }
 }
 
