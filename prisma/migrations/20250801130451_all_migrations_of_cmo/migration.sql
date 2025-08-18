@@ -74,11 +74,9 @@ CREATE TABLE `user_websites` (
     `website_url` VARCHAR(191) NOT NULL,
     `website_type` VARCHAR(191) NULL,
     `website_name` VARCHAR(191) NULL,
-    `domain` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `user_websites_user_id_domain_key`(`user_id`, `domain`),
     UNIQUE INDEX `user_websites_user_id_website_id_key`(`user_id`, `website_id`),
     PRIMARY KEY (`website_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -371,7 +369,6 @@ CREATE TABLE `competitor_details` (
     `report_id` VARCHAR(191) NOT NULL,
     `scraped_data_id` VARCHAR(191) NULL,
     `name` VARCHAR(191) NULL,
-    `website_url` VARCHAR(191) NULL,
     `competitor_website_url` LONGTEXT NULL,
     `industry` LONGTEXT NULL,
     `region` LONGTEXT NULL,
@@ -381,7 +378,21 @@ CREATE TABLE `competitor_details` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `order_index` INTEGER NULL,
+
+    INDEX `competitor_details_website_id_idx`(`website_id`),
+    INDEX `competitor_details_website_id_order_index_idx`(`website_id`, `order_index`),
+    INDEX `competitor_details_scraped_data_id_idx`(`scraped_data_id`),
+    PRIMARY KEY (`competitor_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `competitor_data` (
+    `competitor_scraped_id` VARCHAR(191) NOT NULL,
+    `competitor_id` VARCHAR(191) NULL,
+    `website_id` VARCHAR(191) NOT NULL,
+    `report_id` VARCHAR(191) NOT NULL,
     `isCrawlable` BOOLEAN NULL,
+    `website_url` VARCHAR(191) NOT NULL,
     `page_title` LONGTEXT NULL,
     `logo_url` LONGTEXT NULL,
     `meta_description` LONGTEXT NULL,
@@ -395,7 +406,6 @@ CREATE TABLE `competitor_details` (
     `instagram_handle` LONGTEXT NULL,
     `linkedin_handle` LONGTEXT NULL,
     `homepage_alt_text_coverage` INTEGER NULL,
-    `social_media_data` JSON NULL,
     `youtube_handle` LONGTEXT NULL,
     `tiktok_handle` LONGTEXT NULL,
     `ctr_loss_percent` JSON NULL,
@@ -405,11 +415,11 @@ CREATE TABLE `competitor_details` (
     `page_speed` JSON NULL,
     `other_links` JSON NULL,
     `raw_html` LONGTEXT NULL,
+    `scraped_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    INDEX `competitor_details_website_id_idx`(`website_id`),
-    INDEX `competitor_details_website_id_order_index_idx`(`website_id`, `order_index`),
-    INDEX `competitor_details_scraped_data_id_idx`(`scraped_data_id`),
-    PRIMARY KEY (`competitor_id`)
+    UNIQUE INDEX `competitor_data_competitor_id_key`(`competitor_id`),
+    PRIMARY KEY (`competitor_scraped_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -453,7 +463,6 @@ CREATE TABLE `analysis_status` (
     `social_media_anaylsis` BOOLEAN NULL,
     `competitors_identification` BOOLEAN NULL,
     `recommendationbymo1` BOOLEAN NULL,
-    `strengthandissues_d1` BOOLEAN NULL,
     `recommendationbymo2` BOOLEAN NULL,
     `recommendationbymo3` BOOLEAN NULL,
     `cmo_recommendation` BOOLEAN NULL,
@@ -507,11 +516,10 @@ CREATE TABLE `report` (
     `dashboard_paiddata` LONGTEXT NULL,
     `strengthandissues_d1` LONGTEXT NULL,
     `recommendationbymo1` LONGTEXT NULL,
-    `dashboard2_data` JSON NULL,
+    `dashboard2_data` LONGTEXT NULL,
     `strengthandissues_d2` LONGTEXT NULL,
     `recommendationbymo2` LONGTEXT NULL,
     `dashboard3_data` LONGTEXT NULL,
-    `dashboard3_socialmedia` JSON NULL,
     `recommendationbymo3` LONGTEXT NULL,
     `dashboard4_data` LONGTEXT NULL,
     `cmorecommendation` LONGTEXT NULL,
@@ -572,6 +580,9 @@ ALTER TABLE `api_keys` ADD CONSTRAINT `api_keys_user_id_fkey` FOREIGN KEY (`user
 
 -- AddForeignKey
 ALTER TABLE `competitor_details` ADD CONSTRAINT `competitor_details_scraped_data_id_fkey` FOREIGN KEY (`scraped_data_id`) REFERENCES `website_scraped_data`(`scraped_data_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `competitor_data` ADD CONSTRAINT `competitor_data_competitor_id_fkey` FOREIGN KEY (`competitor_id`) REFERENCES `competitor_details`(`competitor_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `user_requirements` ADD CONSTRAINT `user_requirements_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;

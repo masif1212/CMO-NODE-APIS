@@ -55,7 +55,7 @@ Return a valid **JSON array** of  6 competitors, ordered by prominence (most fam
     "primary_offering": "Online marketplace for affordable products",
     "usp": "Competitive pricing with rapid market expansion",
   },
-  {{
+  {
     "name": "PriceOye",
     "website_url": "https://priceoye.pk",
     "industry": "E-commerce",
@@ -97,10 +97,10 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
     const output = response.output_text?.trim();
 
     if (!output) {
-      console.warn(`LLM returned empty response for website_id: ${scrapedMain.website_id}`);
+      console.warn(`LLM returned empty response`);
       return '[]';
     }
-    console.log(`LLM response for website_id ${scrapedMain.website_id}:`, output);
+    console.log(`LLM response generated:`, output);
     
 
 
