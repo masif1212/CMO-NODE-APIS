@@ -24,14 +24,7 @@ export const technical_seo = async (req: Request, res: Response) => {
 
   const totalBroken = brokenLinksResult.length;
   console.log("report_id", report_id)
-  // const report = await prisma.report.findUnique({
-  //   where: { report_id: report_id }, // You must have 'record_id' from req.body
-  //   select: {
-  //     scraped_data_id: true,
-  //     website_analysis_id: true,
-  //   }
-  // });
-  // Step 3: Save analysis to DB
+  
   console.log("Saving broken link analysis to database...");
   const analysis = await prisma.brand_website_analysis.upsert({
     where: {

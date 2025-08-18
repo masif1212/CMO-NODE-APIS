@@ -531,7 +531,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       data: {
         report_id,
         website_url,
-        H1_text: h1Text,
+        // H1_text: h1Text,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
         meta_description: meta.meta_description,

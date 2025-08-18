@@ -24,10 +24,6 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
 
     const responsePayload: Record<string, any> = { success: true };
 
-
-
-
-
     if (!report) throw new Error("Missing report object");
 
 
