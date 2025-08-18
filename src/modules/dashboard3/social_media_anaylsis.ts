@@ -1,6 +1,6 @@
 import { getFacebookPostsFromScrapedData } from "../dashboard2/facebook/facebook.service";
 import { getInstagramPostsFromScrapedData } from "../dashboard2/instagram/instagram.service";
-import {analyzeYouTubeDataByWebsiteId} from "../dashboard2/youtube/youtubeAnalysis"
+import {analyzeYouTubeDataByWebsiteId} from "../dashboard2/youtube/youtube_service"
 
 import { getlinkedinProfileFromScrapedData } from '../dashboard2/linkedlin/linkedlin_service';
 import { getgoogleAds } from '../dashboard2/google_ads/google_ads_service';

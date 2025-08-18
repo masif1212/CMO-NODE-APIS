@@ -96,16 +96,7 @@ try {
       },
     };
 
-    // console.log("Generating LLM response (what working, what needs to be fixed)...");
-    // const llmResponse = await openai.chat.completions.create({
-    //   model: model,
-    //   temperature: 0.5,
-    //   response_format: { type: "json_object" },
-    //   messages: [
-    //     { role: "system", content: prompt_web_and_seo },
-    //     { role: "user", content: JSON.stringify(allDataforstrength) },
-    //   ],
-    // });
+   
     console.log("allDataforrecommendation",allDataforrecommendation)
   
 
@@ -226,7 +217,7 @@ try {
         
         siteSpeedAndMobileExperience: {
   speedHealth: parsedData?.data_for_llm?.speed_health ?? {},
-  mobileFriendliness: parsedData?.data_for_llm?.categories?.mobileFriendliness ?? [],
+  // mobileFriendliness: parsedData?.data_for_llm?.categories?.mobileFriendliness ?? [],
 }
 
       },
@@ -239,6 +230,7 @@ try {
         new_vs_returning: traffic?.new_vs_returning ?? "N/A",
         top_countries: traffic?.top_countries ?? "N/A",
         top_devices: traffic?.top_devices ?? "N/A",
+        bounc_rate: traffic?.overall_bounce_rate ?? "N/A",
       },
       OnPage_Optimization: {
         title: scraped?.page_title ?? "N/A",
@@ -316,14 +308,13 @@ try {
   where: { report_id }
 });
 
-let update;
 if (existing) {
-  update = await prisma.analysis_status.update({
+  await prisma.analysis_status.update({
     where: { id: existing.id },
     data: { website_id, strengthandissues_d1: true }
   });
 } else {
-  update = await prisma.analysis_status.create({
+  await prisma.analysis_status.create({
     data: { report_id, website_id, strengthandissues_d1: true ,user_id}
   });
 }
@@ -397,41 +388,41 @@ Each object inside the arrays must include:
 ### Evaluation Criteria:
 
 #### website audit:
-- LCP: <2.5s (10); 2.5–4s (5); >4s (1); missing (3)
-- CLS: <0.1 (10); 0.1–0.25 (5); >0.25 (1); missing (3)
-- FCP: <1.8s (10); 1.8–3s (5); >3s (1); missing (3)
-- TTI: <3.8s (10); 3.8–7.8s (5); >7.8s (1); missing (3)
-- TBT: <200ms (10); 200–500ms (5); >500ms (1); missing (3)
-- Performance: >90 (10); 50–89 (5); <50 (1); missing (3)
-- SEO Score: >90 (10); 50–89 (5); <50 (1); missing (3)
-- Best Practices: >90 (10); 50–89 (5); <50 (1); missing (3)
+- LCP: <2.5s (7-9); 2.5–4s (4-6); >4s (1-3); missing (1)
+- CLS: <0.1 (6-9); 0.1–0.25 (5-6); >0.25 (1-4); missing (0-1)
+- FCP: <1.8s (6-7); 1.8–3s (5); >3s (1); missing (0-1)
+- TTI: <3.8s (7-10); 3.8–7.8s (5); >7.8s (1); missing (0-1)
+- TBT: <200ms (7-10); 200–500ms (5); >500ms (1); missing (0-1)
+- Performance: >90 (7-10); 50–89 (5); <50 (1); missing (0-1)
+- SEO Score: >90 (7-10); 50–89 (5); <50 (1); missing (0-1)
+- Best Practices: >90 (7-10); 50–89 (5); <50 (1); missing (0-1)
 
 #### SEO audit:
 
 ##### Traffic Analysis:
-- Avg Session Duration: >3 min (10); 1–3 min (7); <1 min (3); missing (3)
-- Engagement Rate: >50% (10); 30–50% (5); <30% (2); missing (3)
-- Organic Traffic: >50% of total (10); 20–50% (5); <20% (2); missing (3)
-- Total Visitors: >10,000 monthly (10); 1,000–10,000 (5–7); <1,000 (3); missing (3)
-- New vs Returning: Balanced (40–60%) (10); skewed (>80% new) (5); missing (3)
-- Bounce Rate: <40% (10); 40–60% (5); >60% (2); missing (3)
+- Avg Session Duration: >3 min (7-10); 1–3 min (7); <1 min (3); missing (0-1)
+- Engagement Rate: >50% (7-10); 30–50% (5); <30% (2); missing (0-1)
+- Organic Traffic: >50% of total (7-10); 20–50% (5); <20% (2); missing (0-1)
+- Total Visitors: >7-10,000 monthly (7-10); 1,000–7-10,000 (5–7); <1,000 (3); missing (0-1)
+- New vs Returning: Balanced (40–60%) (7-10); skewed (>80% new) (5); missing (0-1)
+- Bounce Rate: <40% (7-10); 40–60% (5); >60% (2); missing (0-1)
 
 ##### OnPage Optimization:
-- Title: <60 chars, keyword-rich (8–10); 60–70 chars (5–7); >70 or missing (1–3)
+- Title: <60 chars, keyword-rich (7-10); 60–70 chars (5–7); >70 or missing (1–3)
 - Description: 150–160 chars, compelling (8–10); <120 or >160 (5–7); missing (1–4)
 - H1: Present, unique, keyword-aligned (7–9); missing (1–4)
-- Alt Text Coverage: >90% (10); 70–90% (7); <70% (3); missing (3)
+- Alt Text Coverage: >90% (8-10); 70–90% (7); <70% (3); missing (0-1)
 - OG Tags:
   - og:title: Keyword-aligned and engaging (8–10); generic (5–7); missing (1–3)
   - og:description: Informative and compelling (8–10); generic/too long (5–7); missing (1–4)
   - og:image: High-quality and optimized (8–10); missing or irrelevant (1–3)
 
 ##### Technical SEO:
-- Schema (Chatbot Crawlability): Valid JSON-LD (10); invalid (3); missing (1)
-- Broken Links: None (10); 1–3 (5); >3 (1); missing (5)
+- Schema (Chatbot Crawlability): Valid JSON-LD (7-10); invalid (3); missing (1)
+- Broken Links: None (9-9.5); 1–3 (5); >3 (1); missing (5)
 
 ##### GEO:
-- Geo Schema: Valid JSON-LD (10); invalid (3); missing (1)
+- Geo Schema: Valid JSON-LD (7-9); invalid (3); missing (1)
 - AI Discoverability: High visibility on open search (8–10); low or missing (1–3)
 
 ### Additional Rules:

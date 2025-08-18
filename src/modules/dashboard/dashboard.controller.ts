@@ -585,16 +585,15 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       ...(onpage_optimization && { onpage_optimization }),
       ...(technical_seo && { technical_seo }),
       ...otherSeoFields,
-      // recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
       recommendation_by_mo_dashboard1 : {
       strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
       recommendations: safeParse(reportData?.recommendationbymo1),
     },
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
-      competitors: competitor_data,
+      competitors:{competitor_data,competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia)},
       recommendation_by_mo_dashboard3: safeParse(reportData?.recommendationbymo3),
-      competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia),
+      
       dashboard4_data: safeParse(reportData?.dashboard4_data),
       cmo_recommendation: safeParse(reportData?.cmorecommendation),
       

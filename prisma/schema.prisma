@@ -29,7 +29,7 @@ model users {
   sessions              sessions[]
   audit_logs            audit_logs[]
   login_attempts        login_attempts[]
-  mfa_methods           mfa_methods[]
+  // mfa_methods           mfa_methods[]
   email_verifications   email_verifications[]
   api_keys              api_keys[]
   user_requirements     user_requirements[]
@@ -188,17 +188,17 @@ model login_attempts {
   users      users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-model mfa_methods {
-  mfa_id      String   @id @default(uuid())
-  user_id     String
-  mfa_type    String
-  secret      String
-  phone_number String?
-  is_verified Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now()) @updatedAt
-  users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-}
+// model mfa_methods {
+//   mfa_id      String   @id @default(uuid())
+//   user_id     String
+//   mfa_type    String
+//   secret      String
+//   phone_number String?
+//   is_verified Boolean  @default(false)
+//   created_at  DateTime @default(now())
+//   updated_at  DateTime @default(now()) @updatedAt
+//   users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+// }
 
 model email_verifications {
   verification_id String   @id @default(uuid())
@@ -291,12 +291,11 @@ model brand_traffic_analysis {
   @@index([report_id])
 }
 
-
-
 model website_scraped_data {
-  scraped_data_id            String   @id @default(uuid())
+  scraped_data_id           String   @id @default(uuid())
   report_id                 String?   @unique
   website_url               String?
+  H1_text                   String?  @db.LongText
   isCrawlable               Boolean?
   headingAnalysis           Json?
   page_title                String?  @db.LongText
@@ -333,7 +332,7 @@ model website_scraped_data {
 model competitor_details {
   competitor_id          String   @id @default(uuid())
   website_id             String
-  report_id              String   @unique
+  report_id              String   
   scraped_data_id        String?
   name                   String?
   website_url            String?

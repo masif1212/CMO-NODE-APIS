@@ -2,158 +2,6 @@ import { google, youtube_v3 } from "googleapis";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
-// export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
-  
-//   console.log("youtubeUrl",youtube_handle)
-//   const channelId = await resolveYouTubeChannelId(youtube_handle);
-//   if (!channelId) return { status: "invalid-channel" };
-
-//   console.log("Resolved Channel ID:", channelId);
-
-//   const videoIdsAndDates = await fetchVideosLast30Days(channelId);
-//   if (videoIdsAndDates.length === 0) {
-//     console.log("No videos found for last 30 days");
-//     return { youtube_data: "No videos found for last 30 days"};
-//   }
-
-//   const videoIds = videoIdsAndDates.map((v) => v.videoId);
-//   const videoStats = await fetchVideoMetrics(videoIds);
-
-//   const videoMetrics = videoStats.map((v) => {
-//     const match = videoIdsAndDates.find((x) => x.videoId === v.id);
-//     return { ...v, publishedAt: match?.publishedAt };
-//   });
-
-//   const engagementRate = calculateEngagementRate(videoMetrics);
-
-//   const youtubeData = await fetchYouTubeChannelData(channelId);
-//   if (!youtubeData) return { status: "api-failure" };
-
-//   const stats = youtubeData.statistics;
-//   const followers = parseInt(stats?.subscriberCount || "0", 10);
-//   const comments = parseInt(stats?.commentCount || "0", 10);
-//   const videosCount = parseInt(stats?.videoCount || "0", 10);
-//   const safeJson = JSON.parse(JSON.stringify(youtubeData));
-
-//   const weeklyPostingGraph = getWeeklyPostingFrequencyWithLabels(videoIdsAndDates);
-//   const dailyPostingGraph = getDailyPostingFrequencyWithLabels(videoIdsAndDates);
-
-//   const engagementToFollowerRatio = engagementRate / 100;
-//   const postingFrequency = calculatePostingFrequency(videoIdsAndDates);
-//   const perPostEngagement = {
-//     dailyMetrics: aggregateDailyMetrics(videoMetrics),
-//     dailyFrequency: dailyPostingGraph,
-//     weeklyFrequency: weeklyPostingGraph,
-//   };
-
-
-
-
-
-//  let message = '';
-
-// function getRandomMessage(messages: string[]): string {
-//   return messages[Math.floor(Math.random() * messages.length)];
-// }
-
-// function getEngagementMessage(rate: number): string {
-//   if (rate >= 90) {
-//     return getRandomMessage([
-//       "🚀 Viral-level engagement — your content is dominating the platform and creating real buzz!",
-//       "🔥 You’re going viral — keep capitalizing on this momentum with strategic uploads.",
-//       "🌟 Top-tier engagement — this level of traction is rare. Consider boosting with collaborations."
-//     ]);
-//   } else if (rate >= 75) {
-//     return getRandomMessage([
-//       "🔥 Exceptional engagement — your audience is clearly loving your content.",
-//       "💥 Fantastic performance — your videos are striking a chord with viewers.",
-//       "🎉 Engagement is off the charts — now’s the time to double down on your best formats."
-//     ]);
-//   } else if (rate >= 50) {
-//     return getRandomMessage([
-//       "🎯 Great engagement — your audience is active and connected.",
-//       "📊 Strong signals — your content is generating quality interactions.",
-//       "🙌 Engagement levels are impressive — build on this with storytelling or series content."
-//     ]);
-//   } else if (rate >= 30) {
-//     return getRandomMessage([
-//       "📈 Solid performance — your videos are getting noticed.",
-//       "✅ Good traction — engagement is strong, but there’s room to grow.",
-//       "⚡ You’re building momentum — optimize content length and posting time to go further."
-//     ]);
-//   } else if (rate >= 20) {
-//     return getRandomMessage([
-//       "👍 Decent engagement — your content is starting to resonate.",
-//       "🧠 You're on the right path — refine your targeting and keep experimenting.",
-//       "🎥 Viewers are responding — consider boosting visibility with optimized titles and tags."
-//     ]);
-//   } else if (rate >= 10) {
-//     return getRandomMessage([
-//       "🧐 Moderate engagement — try strengthening your hooks and intros.",
-//       "🤔 Not bad, but it could be better — analyze high-performing posts for insights.",
-//       "👀 There’s interest — now focus on converting casual viewers into loyal followers."
-//     ]);
-//   } else if (rate >= 5) {
-//     return getRandomMessage([
-//       "⚠️ Low engagement — rethink your format or niche positioning.",
-//       "📉 Performance is underwhelming — test different content angles or visuals.",
-//       "😕 Engagement needs a lift — maybe your thumbnails or intros need work."
-//     ]);
-//   } else if (rate >= 1) {
-//     return getRandomMessage([
-//       "🔍 Minimal interaction — time to assess content quality and audience fit.",
-//       "❓ Not reaching the audience — audit your recent posts for improvement points.",
-//       "🛠️ Try something new — the current approach isn't resonating."
-//     ]);
-//   } else {
-//     return getRandomMessage([
-//       "❗ Almost no engagement — consider a major strategy shift.",
-//       "🧯 Zero traction — research your audience deeply and start fresh.",
-//       "⛔ Content is not connecting — look at what's trending and redefine your approach."
-//     ]);
-//   }
-// }
-
-
-
-// const youtube_data = {
-//   message: getEngagementMessage(engagementRate),
-//   youtube_handle,
-//   profile: {
-//     ...safeJson.snippet,
-//     ...safeJson.statistics
-//   },
-//   engagement_rate: engagementRate,
-//   engagementToFollowerRatio,
-//   postingFrequency,
-//   perPostEngagement,
-//   comments,
-// };
- 
-
-// // const youtube_data = {
-// //   message:"yotube data found",
-// //   youtube_handle,
-// //  profile : {
-// //   ...safeJson.snippet, // Fix: Remove .Data
-// //   ...safeJson.statistics
-// // },
-// //   engagement_rate: engagementRate,
-// //   engagementToFollowerRatio,
-// //   postingFrequency,
-// //   perPostEngagement,
-// //   comments,
-  
-// // };
-  
-
-
-// return { youtube_data };
-// }
-
-
-
 export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
   console.log("youtubeUrl", youtube_handle);
 
@@ -162,14 +10,12 @@ export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
 
   console.log("Resolved Channel ID:", channelId);
 
-  const videoIdsAndDates = await fetchVideosLast30Days(channelId);
+  const videoIdsAndDates = await fetchLast30Videos(channelId);
   const youtubeData = await fetchYouTubeChannelData(channelId);
   if (!youtubeData) return { status: "api-failure" };
 
   const stats = youtubeData.statistics;
-  const followers = parseInt(stats?.subscriberCount || "0", 10);
   const comments = parseInt(stats?.commentCount || "0", 10);
-  const videosCount = parseInt(stats?.videoCount || "0", 10);
   const safeJson = JSON.parse(JSON.stringify(youtubeData));
 
   // 🔧 Define frequency type explicitly
@@ -290,6 +136,39 @@ export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
   return { youtube_data };
 }
 
+async function fetchLast30Videos(channelId: string): Promise<{ videoId: string, publishedAt: string }[]> {
+  const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });
+
+  let nextPageToken: string | undefined = undefined;
+  const videos: { videoId: string, publishedAt: string }[] = [];
+
+  do {
+    const res = await youtube.search.list({
+      channelId,
+      part: ["id", "snippet"],
+      maxResults: 50,
+      order: "date",
+      type: ["video"],
+      pageToken: nextPageToken,
+    });
+
+    const data: youtube_v3.Schema$SearchListResponse = res.data;
+
+    for (const item of data.items || []) {
+      const videoId = item.id?.videoId;
+      const publishedAt = item.snippet?.publishedAt;
+      if (videoId && publishedAt) {
+        videos.push({ videoId, publishedAt });
+      }
+      if (videos.length >= 30) break; // stop once 30 videos are collected
+    }
+
+    if (videos.length >= 30) break; // break outer loop too
+    nextPageToken = data.nextPageToken ?? undefined;
+  } while (nextPageToken);
+
+  return videos.slice(0, 30); // ensure only 30 max
+}
 
 
 async function resolveYouTubeChannelId(url: string): Promise<string | null> {
@@ -327,39 +206,39 @@ async function fetchYouTubeChannelData(channelId: string): Promise<youtube_v3.Sc
   return data.items?.[0] || null;
 }
 
-async function fetchVideosLast30Days(channelId: string): Promise<{ videoId: string, publishedAt: string }[]> {
-  const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });
-  const publishedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+// async function fetchVideosLast30Days(channelId: string): Promise<{ videoId: string, publishedAt: string }[]> {
+//   const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });
+//   const publishedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  let nextPageToken: string | undefined = undefined;
-  const videos: { videoId: string, publishedAt: string }[] = [];
+//   let nextPageToken: string | undefined = undefined;
+//   const videos: { videoId: string, publishedAt: string }[] = [];
 
-  do {
-    const res = await youtube.search.list({
-      channelId,
-      part: ["id", "snippet"],
-      maxResults: 50,
-      order: "date",
-      type: ["video"],
-      publishedAfter,
-      pageToken: nextPageToken,
-    });
+//   do {
+//     const res = await youtube.search.list({
+//       channelId,
+//       part: ["id", "snippet"],
+//       maxResults: 50,
+//       order: "date",
+//       type: ["video"],
+//       publishedAfter,
+//       pageToken: nextPageToken,
+//     });
 
-    const data: youtube_v3.Schema$SearchListResponse = res.data;
+//     const data: youtube_v3.Schema$SearchListResponse = res.data;
 
-    for (const item of data.items || []) {
-      const videoId = item.id?.videoId;
-      const publishedAt = item.snippet?.publishedAt;
-      if (videoId && publishedAt) {
-        videos.push({ videoId, publishedAt });
-      }
-    }
+//     for (const item of data.items || []) {
+//       const videoId = item.id?.videoId;
+//       const publishedAt = item.snippet?.publishedAt;
+//       if (videoId && publishedAt) {
+//         videos.push({ videoId, publishedAt });
+//       }
+//     }
     
-    nextPageToken = data.nextPageToken ?? undefined;
-  } while (nextPageToken);
+//     nextPageToken = data.nextPageToken ?? undefined;
+//   } while (nextPageToken);
 
-  return videos;
-}
+//   return videos;
+// }
 
 async function fetchVideoMetrics(videoIds: string[]): Promise<youtube_v3.Schema$Video[]> {
   const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });

@@ -490,8 +490,6 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     if (html) {
       try {
         console.log("parsing HTML...");
-        // console.log("Raw HTML Length:", scrapedMeta.raw_html);
-        const $ = cheerio.load(html);
 
         h1Text = $("h1").first().text().trim() || "Not Found";
         console.log("H1 Text:", h1Text);
@@ -533,6 +531,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       data: {
         report_id,
         website_url,
+        H1_text: h1Text,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
         meta_description: meta.meta_description,

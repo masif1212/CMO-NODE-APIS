@@ -156,26 +156,26 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     });
 
 
-    const scrapedMeta = await prisma.website_scraped_data.findUnique({
-      where: { scraped_data_id: report?.scraped_data_id ?? undefined },
-      select: {
-        page_title: true,
-        meta_description: true,
-        meta_keywords: true,
-        og_title: true,
-        og_description: true,
-        og_image: true,
-        ctr_loss_percent: true,
-        raw_html: true,
-        homepage_alt_text_coverage: true,
-        status_message: true,
-        status_code: true,
-        ip_address: true,
-        response_time_ms: true,
-      },
-    });
+    // const scrapedMeta = await prisma.website_scraped_data.findUnique({
+    //   where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+    //   select: {
+    //     page_title: true,
+    //     meta_description: true,
+    //     meta_keywords: true,
+    //     og_title: true,
+    //     og_description: true,
+    //     og_image: true,
+    //     ctr_loss_percent: true,
+    //     raw_html: true,
+    //     homepage_alt_text_coverage: true,
+    //     status_message: true,
+    //     status_code: true,
+    //     ip_address: true,
+    //     response_time_ms: true,
+    //   },
+    // });
 
-    const record = await prisma.report.upsert({
+    await prisma.report.upsert({
       where: {
         report_id: report_id, // this must be a UNIQUE constraint or @id in the model
       },
@@ -193,27 +193,27 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
 
     let h1Text = "Not Found";
 
-    if (scrapedMeta?.raw_html) {
-      try {
-        console.log("parsing HTML...");
-        // console.log("Raw HTML Length:", scrapedMeta.raw_html);
-        const $ = cheerio.load(scrapedMeta.raw_html);
+    // if (scrapedMeta?.raw_html) {
+    //   try {
+    //     console.log("parsing HTML...");
+    //     // console.log("Raw HTML Length:", scrapedMeta.raw_html);
+    //     const $ = cheerio.load(scrapedMeta.raw_html);
 
-        h1Text = $("h1").first().text().trim() || "Not Found";
-        console.log("H1 Text:", h1Text);
-      } catch (err) {
-        if (err instanceof Error) {
-          console.warn("Cheerio failed to parse HTML:", err.message);
-        } else {
-          console.warn("Cheerio failed to parse HTML:", err);
-        }
-        // Skips setting h1Text if error happens
-      }
-    } else {
-      console.warn("Cheerio.load not available or raw_html missing");
-    }
+    //     h1Text = $("h1").first().text().trim() || "Not Found";
+    //     console.log("H1 Text:", h1Text);
+    //   } catch (err) {
+    //     if (err instanceof Error) {
+    //       console.warn("Cheerio failed to parse HTML:", err.message);
+    //     } else {
+    //       console.warn("Cheerio failed to parse HTML:", err);
+    //     }
+    //     // Skips setting h1Text if error happens
+    //   }
+    // } else {
+    //   console.warn("Cheerio.load not available or raw_html missing");
+    // }
 
-    const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
+    // const { raw_html, ...metaDataWithoutRawHtml } = scrapedMeta || {};
 
     const existing = await prisma.analysis_status.findFirst({
       where: { report_id }
@@ -234,10 +234,10 @@ export const fetchAnalyticsReport = async (req: Request, res: Response) => {
     return res.status(200).json({
       message: "seo audit",
       traffic_anaylsis: savedTraffic,
-      onpage_opptimization: {
-        h1Text,
-        metaDataWithoutRawHtml,
-      },
+      // onpage_opptimization: {
+      //   h1Text,
+      //   metaDataWithoutRawHtml,
+      // },
       // raw_html: scrapedMeta?.raw_html,
     });
   } catch (error: any) {

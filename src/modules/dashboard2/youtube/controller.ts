@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { analyzeYouTubeDataByWebsiteId } from "./youtubeAnalysis";
+import { analyzeYouTubeDataByWebsiteId } from "./youtube_service";
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
