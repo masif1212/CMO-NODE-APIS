@@ -17,7 +17,7 @@ const featureKeys = [
 ] as const;
 
 type FeatureKey = typeof featureKeys[number];
-const user_role_id = 'bed1b83b-235b-4192-a80b-f2751fabcc90'
+const user_role= 'User'; // Replace with actual role ID for users
 
 
 const priceKeyMap: Record<string, string> = {
@@ -32,14 +32,19 @@ const priceKeyMap: Record<string, string> = {
   cmo_recommendation: "cmorecommendation",
 };
 
-
-
-
-
 export const getUserdata = async (req: Request, res: Response) => {
   try {
     // 🔹 Load all users with websites and analysis status
     const allUsers = await prisma.users.findMany({
+      where: {
+        user_roles: {
+          some: {
+            roles: {
+              role_name: user_role
+            }
+          }
+        }
+      },
       include: {
         user_websites: {
           include: {
@@ -157,10 +162,7 @@ export const getUserdata = async (req: Request, res: Response) => {
           // Add price info
           const pricedStatus: Record<string, any> = {};
           for (const key of Object.keys(filteredStatus)) {
-            // const priceKey = key.startsWith("recommendationbymo") ? "recommendationbymo" : key;
-            // const price = getHistoricalPrice(priceKey, status.created_at);
-
-            // pricedStatus[key] = { value: true, price };
+   
 
 
             const priceKey = priceKeyMap[key] || key;
@@ -195,6 +197,7 @@ export const getUserdata = async (req: Request, res: Response) => {
         email: user.email || 'N/A',
         Username: username,
         user_type: user.user_type || 'N/A',
+        account_status: user.account_status || 'N/A',
         totalWebsites: user.user_websites.length,
         totalAnalysis: reports.length,
         totalFreeAnalysis,
@@ -364,9 +367,32 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
   }
 }
 
+export async function Deactivateuser(req: Request, res: Response) {
+  try {
+    const { user_id } = req.body;
+    if (!user_id || typeof user_id !== 'string') {
+      
+      return res.json("User ID is required");
+    }
+    
+      const user = await prisma.users.update({
+        where: { 
+          user_id: user_id 
+        },
+        data: { 
+          account_status: "inactive"
+        }
+  });
+ 
+ 
 
-
-
+   
+    return res.json(user);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
 
 
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserdata,addOrUpdateAnalysisService} from "./admin_service";
+import { getUserdata,addOrUpdateAnalysisService,Deactivateuser} from "./admin_service";
 
 const router = Router();
 
@@ -10,6 +10,10 @@ router.get("/data", (req, res, next) => {
 
 router.post("/subscription_plans", (req, res, next) => {
   addOrUpdateAnalysisService(req, res).catch(next);
+});
+
+router.post("/Deactivateuser", (req, res, next) => {
+  Deactivateuser(req, res).catch(next);
 });
 
 export default router;

@@ -74,9 +74,6 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       }
     }
 
-
-
-    // 🔹 Fetch data
     const userWebsites = await prisma.user_websites.findMany({
       where: { user_id: userId },
       select: {
@@ -202,11 +199,6 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
-
-
-
 
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
