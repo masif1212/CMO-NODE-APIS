@@ -48,7 +48,24 @@ model analysisServices {
   description String?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+  
+  AnalysisServiceHistory AnalysisServiceHistory[]
 }
+
+
+model AnalysisServiceHistory {
+  id          String   @id @default(uuid())
+  service_id  String   // links to analysisServices.id
+  price       Decimal
+  valid_from  DateTime
+  valid_to    DateTime?
+
+  created_at  DateTime @default(now())
+
+  // Relations
+  service     analysisServices @relation(fields: [service_id], references: [id])
+}
+
 
 model paymentMethods {
   method_id          String     @id @default(uuid())
@@ -188,17 +205,6 @@ model login_attempts {
   users      users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-// model mfa_methods {
-//   mfa_id      String   @id @default(uuid())
-//   user_id     String
-//   mfa_type    String
-//   secret      String
-//   phone_number String?
-//   is_verified Boolean  @default(false)
-//   created_at  DateTime @default(now())
-//   updated_at  DateTime @default(now()) @updatedAt
-//   users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-// }
 
 model email_verifications {
   verification_id String   @id @default(uuid())
@@ -241,7 +247,7 @@ model data_retention_policies {
 
 model brand_website_analysis {
   website_analysis_id      String   @id @default(uuid())
-  report_id               String?   @unique
+  // report_id               String?   @unique
   performance_score        Float? 
   seo_score                Float?
   first_contentful_paint   String?
@@ -260,8 +266,8 @@ model brand_website_analysis {
   revenue_loss_percent     Float?
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
-  report                   report?  @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
-  @@index([report_id])
+  // report                   report?  @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
+  // @@index([report_id])
 }
 
 model brand_traffic_analysis {
@@ -488,7 +494,7 @@ model report {
   user_websites             user_websites? @relation(fields: [website_id], references: [website_id], onDelete: Cascade)
   competitor_details        competitor_details[] @relation
   analysis_status           analysis_status[] @relation
-  brand_website_analysis    brand_website_analysis[] @relation
+  // brand_website_analysis    brand_website_analysis[] @relation
   brand_traffic_analysis    brand_traffic_analysis[] @relation
   website_scraped_data      website_scraped_data[] @relation
   @@index([website_id, updated_at])

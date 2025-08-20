@@ -17,206 +17,74 @@ const featureKeys = [
 ] as const;
 
 type FeatureKey = typeof featureKeys[number];
+const user_role_id = 'bed1b83b-235b-4192-a80b-f2751fabcc90'
+
+
+const priceKeyMap: Record<string, string> = {
+  website_audit: "dashboard1_Freedata",
+  seo_audit: "dashboard_paiddata",
+  trafficanalysis: "traffic_analysis_id",
+  social_media_analysis: "dashboard2_data",
+  competitors_identification: "dashboard3_data",
+  recommendationbymo1: "recommendationbymo",
+  recommendationbymo2: "recommendationbymo",
+  recommendationbymo3: "recommendationbymo",
+  cmo_recommendation: "cmorecommendation",
+};
 
 
 
-// export const getUserdata = async (req: Request, res: Response) => {
-//   try {
-//     const allUsers = await prisma.users.findMany({
-//       include: {
-//         user_websites: {
-//           include: {
-//             analysis_status: {
-//               orderBy: { created_at: 'desc' }, // ✅ Ensure latest report first
-//             },
-//           },
-//         },
-//       },
-//     });
-
-//     let totalFreeUsers = 0;
-//     let totalPaidUsers = 0;
-//     let totalNoAuditUsers = 0; 
-
-//     const featureCounts: Record<FeatureKey, number> = featureKeys.reduce(
-//       (acc, key) => ({ ...acc, [key]: 0 }),
-//       {} as Record<FeatureKey, number>
-//     );
-
-//     let totalAnalysisCount = 0;
-
-//     const users = allUsers.map(user => {
-//       let totalFreeAnalysis = 0;
-//       let totalPaidAnalysis = 0;
-//       let latestReportCreatedAt: Date | null = null;
-//       let latestSeoAudit = false;
-
-//       user.user_websites.forEach(website => {
-//         website.analysis_status.forEach((status, idx) => {
-//           totalAnalysisCount++;
-
-//           // ✅ Track latest report creation date & SEO audit flag
-//           if (!latestReportCreatedAt || status.created_at > latestReportCreatedAt) {
-//             latestReportCreatedAt = status.created_at;
-//             latestSeoAudit = status.onpageoptimization === true;
-//           }
-
-//           if (status.website_audit) featureCounts.website_audit++;
-//           if (status.trafficanaylsis) featureCounts.trafficanalysis++;
-//           if (status.onpageoptimization) featureCounts.seo_audit++;
-//           if (status.social_media_anaylsis) featureCounts.social_media_analysis++;
-//           if (status.competitors_identification) featureCounts.competitors_analysis++;
-//           if (status.recommendationbymo1) featureCounts.recommendationbymo1++;
-//           if (status.recommendationbymo2) featureCounts.recommendationbymo2++;
-//           if (status.recommendationbymo3) featureCounts.recommendationbymo3++;
-//           if (status.cmo_recommendation) featureCounts.cmo_recommendation++;
-
-//           const isFreeAnalysis =
-//             status.website_audit === true &&
-//             !status.trafficanaylsis &&
-//             !status.onpageoptimization &&
-//             !status.offpageoptimization &&
-//             !status.social_media_anaylsis &&
-//             !status.competitors_identification &&
-//             !status.recommendationbymo1 &&
-//             !status.recommendationbymo2 &&
-//             !status.recommendationbymo3 &&
-//             !status.cmo_recommendation;
-
-//           const isPaidAnalysis =
-//             status.trafficanaylsis ||
-//             status.onpageoptimization ||
-//             status.offpageoptimization ||
-//             status.social_media_anaylsis ||
-//             status.competitors_identification ||
-//             status.recommendationbymo1 ||
-//             status.recommendationbymo2 ||
-//             status.recommendationbymo3 ||
-//             status.cmo_recommendation;
-
-//           if (isFreeAnalysis) totalFreeAnalysis++;
-//           if (isPaidAnalysis) totalPaidAnalysis++;
-//         });
-//       });
-//         if (totalPaidAnalysis > 0) {
-//           totalPaidUsers++;
-//         } else if (totalFreeAnalysis > 0) {
-//           totalFreeUsers++;
-//         } else {
-//           totalNoAuditUsers++; // ✅ No audits performed
-//         }
-
-//       const username =
-//         [user.first_name, user.last_name]
-//           .filter(name => name && name.trim() !== '')
-//           .join(' ') || 'N/A';
-
-//       return {
-//         user_id: user.user_id,
-//         email: user.email || 'N/A',
-//         Username: username,
-//         user_type: user.user_type || 'N/A',
-//         totalWebsites: user.user_websites.length,
-//         totalAnalysis: user.user_websites.reduce(
-//           (sum, website) => sum + website.analysis_status.length,
-//           0
-//         ),
-//         totalFreeAnalysis,
-//         totalPaidAnalysis,
-//         createdAt: user.created_at,
-//         lastlogin: user.last_login,
-//         keywords_data: latestSeoAudit,
-//         latestReportCreatedAt: latestReportCreatedAt as unknown as Date
-//       };
-//     });
-
-//     // ✅ Sort by latest report date
-//     const sortedUsers = users.sort((a, b) => {
-//       const dateA = a.latestReportCreatedAt as Date | null;
-//       const dateB = b.latestReportCreatedAt as Date | null;
-//       if (!dateA && !dateB) return 0;
-//       if (!dateA) return 1;
-//       if (!dateB) return -1;
-//       return dateB.getTime() - dateA.getTime();
-//     });
-
-//     const totalFeatureUsage = featureKeys.reduce(
-//       (sum, key) => sum + featureCounts[key],
-//       0
-//     );
-
-//     const featureUsageDistribution = {
-//       totalAnalysis: totalAnalysisCount,
-//       ...featureKeys.reduce((acc, key, idx) => {
-//         let percentage = 0;
-//         if (totalFeatureUsage > 0) {
-//           if (idx === featureKeys.length - 1) {
-//             const allocated = Object.values(acc).reduce(
-//               (sum, val: any) =>
-//                 sum + parseFloat((val as { percentage: string }).percentage),
-//               0
-//             );
-//             percentage = 100 - allocated;
-//           } else {
-//             percentage = parseFloat(
-//               ((featureCounts[key] / totalFeatureUsage) * 100).toFixed(4)
-//             );
-//           }
-//         }
-//         acc[key] = {
-//           count: featureCounts[key],
-//           percentage: percentage.toFixed(4) + '%',
-//         };
-//         return acc;
-//       }, {} as Record<FeatureKey, { count: number; percentage: string }>),
-//     };
-
-//     const userGrowthOverTime = allUsers.reduce((acc, user) => {
-//       const dateKey = user.created_at.toISOString().split('T')[0];
-//       acc[dateKey] = (acc[dateKey] || 0) + 1;
-//       return acc;
-//     }, {} as Record<string, number>);
-
-//     const sortedUserGrowth = Object.entries(userGrowthOverTime)
-//       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-//       .map(([date, count]) => ({ date, count }));
-
-//     const result = {
-//       totalUsers: allUsers.length,
-//       totalFreeUsers,
-//       totalFreeUserspercentage:
-//         ((totalFreeUsers / allUsers.length) * 100).toFixed(4) + '%',
-//       totalPaidUsers,
-//       totalPaidUserspercentage: ((totalPaidUsers / allUsers.length) * 100).toFixed(4) + '%',
-//        totalNoAuditUsers, // ✅ Added
-//        totalNoAuditUserspercentage: ((totalNoAuditUsers / allUsers.length) * 100).toFixed(4) + '%',
-//       featureUsageDistribution,
-//       userGrowthOverTime: sortedUserGrowth,
-//       users: sortedUsers.map(({ latestReportCreatedAt, ...u }) => u) // remove sort field from output
-//     };
-
-//     res.json({ result });
-//   } catch (error) {
-//     console.error('❌ Error:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// };
 
 
 export const getUserdata = async (req: Request, res: Response) => {
   try {
+    // 🔹 Load all users with websites and analysis status
     const allUsers = await prisma.users.findMany({
       include: {
         user_websites: {
           include: {
             analysis_status: {
-              orderBy: { created_at: 'desc' }, // ✅ Ensure latest first
+              orderBy: { created_at: 'desc' }, // latest first
             },
           },
         },
       },
     });
 
+    // 🔹 Load service prices + history for price lookup
+    const analysisServices = await prisma.analysisServices.findMany({
+      include: { AnalysisServiceHistory: true },
+    });
+
+    // Map of service -> sorted histories
+    const serviceHistoryMap: Record<string, { price: number; updated_at: Date }[]> = {};
+    for (const service of analysisServices) {
+      const histories = [
+        { price: service.price.toNumber(), updated_at: service.updated_at },
+        ...service.AnalysisServiceHistory.map((h) => ({
+          price: h.price.toNumber(),
+          updated_at: h.created_at,
+        })),
+      ].sort((a, b) => a.updated_at.getTime() - b.updated_at.getTime());
+
+      if (service.report) {
+        serviceHistoryMap[service.report] = histories;
+      }
+    }
+
+    // Helper to get historical price at a given date
+    const getHistoricalPrice = (reportKey: string, createdAt: Date): number | null => {
+      const histories = serviceHistoryMap[reportKey];
+      if (!histories || histories.length === 0) return null;
+      let applied = histories[0].price;
+      for (const h of histories) {
+        if (h.updated_at <= createdAt) applied = h.price;
+        else break;
+      }
+      return applied;
+    };
+
+    // Feature counters
     let totalFreeUsers = 0;
     let totalPaidUsers = 0;
     let totalNoAuditUsers = 0;
@@ -227,18 +95,18 @@ export const getUserdata = async (req: Request, res: Response) => {
       {} as Record<FeatureKey, number>
     );
 
+    // Process users
     const users = allUsers.map(user => {
       let totalFreeAnalysis = 0;
       let totalPaidAnalysis = 0;
       let latestReportCreatedAt: Date | null = null;
-      // let latestSeoAudit = false;
       const reports: any[] = [];
 
       user.user_websites.forEach(website => {
         website.analysis_status.forEach(status => {
           totalAnalysisCount++;
 
-          // ✅ Update feature counts
+          // Feature counters
           if (status.website_audit) featureCounts.website_audit++;
           if (status.trafficanaylsis) featureCounts.trafficanalysis++;
           if (status.onpageoptimization) featureCounts.seo_audit++;
@@ -249,9 +117,9 @@ export const getUserdata = async (req: Request, res: Response) => {
           if (status.recommendationbymo3) featureCounts.recommendationbymo3++;
           if (status.cmo_recommendation) featureCounts.cmo_recommendation++;
 
-          // ✅ Check free/paid classification
+          // Free / Paid classification
           const isFreeAnalysis =
-            status.website_audit === true &&
+            status.website_audit &&
             !status.trafficanaylsis &&
             !status.onpageoptimization &&
             !status.offpageoptimization &&
@@ -276,36 +144,51 @@ export const getUserdata = async (req: Request, res: Response) => {
           if (isFreeAnalysis) totalFreeAnalysis++;
           if (isPaidAnalysis) totalPaidAnalysis++;
 
-          // ✅ Track latest report
+          // Latest report
           if (!latestReportCreatedAt || status.created_at > latestReportCreatedAt) {
             latestReportCreatedAt = status.created_at;
           }
-           const filteredStatus = Object.fromEntries(
-                Object.entries(status).filter(([key, value]) => value === true)
-);
-          // ✅ Push report info into array
+
+          // Include only true fields
+          const filteredStatus = Object.fromEntries(
+            Object.entries(status).filter(([_, value]) => value === true)
+          );
+
+          // Add price info
+          const pricedStatus: Record<string, any> = {};
+          for (const key of Object.keys(filteredStatus)) {
+            // const priceKey = key.startsWith("recommendationbymo") ? "recommendationbymo" : key;
+            // const price = getHistoricalPrice(priceKey, status.created_at);
+
+            // pricedStatus[key] = { value: true, price };
+
+
+            const priceKey = priceKeyMap[key] || key;
+            const price = getHistoricalPrice(priceKey, status.created_at);
+            pricedStatus[key] = { value: true, price };
+
+          }
+
           reports.push({
             report_id: status.report_id,
             created_at: status.created_at,
-            website_url: website.website_url, 
+            website_url: website.website_url,
             isPaidAnalysis,
-            ...filteredStatus
+            ...pricedStatus,
           });
         });
       });
 
-      // ✅ Count user categories
+      // Count user types
       if (totalPaidAnalysis > 0) totalPaidUsers++;
       else if (totalFreeAnalysis > 0) totalFreeUsers++;
       else totalNoAuditUsers++;
 
-      // ✅ Sort reports by created_at DESC
+      // Sort reports
       reports.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       const username =
-        [user.first_name, user.last_name]
-          .filter(name => name && name.trim() !== '')
-          .join(' ') || 'N/A';
+        [user.first_name, user.last_name].filter(Boolean).join(' ') || 'N/A';
 
       return {
         user_id: user.user_id,
@@ -323,7 +206,7 @@ export const getUserdata = async (req: Request, res: Response) => {
       };
     });
 
-    // ✅ Sort users by latest report date
+    // Sort users by latest report
     const sortedUsers = users.sort((a, b) => {
       const dateA = a.latestReportCreatedAt as unknown as Date;
       const dateB = b.latestReportCreatedAt as unknown as Date;
@@ -333,7 +216,7 @@ export const getUserdata = async (req: Request, res: Response) => {
       return dateB.getTime() - dateA.getTime();
     });
 
-    // ✅ Feature usage percentage
+    // Feature usage %
     const totalFeatureUsage = featureKeys.reduce(
       (sum, key) => sum + featureCounts[key],
       0
@@ -346,26 +229,20 @@ export const getUserdata = async (req: Request, res: Response) => {
         if (totalFeatureUsage > 0) {
           if (idx === featureKeys.length - 1) {
             const allocated = Object.values(acc).reduce(
-              (sum, val: any) =>
-                sum + parseFloat((val as { percentage: string }).percentage),
+              (sum, val: any) => sum + parseFloat(val.percentage),
               0
             );
             percentage = 100 - allocated;
           } else {
-            percentage = parseFloat(
-              ((featureCounts[key] / totalFeatureUsage) * 100).toFixed(4)
-            );
+            percentage = parseFloat(((featureCounts[key] / totalFeatureUsage) * 100).toFixed(4));
           }
         }
-        acc[key] = {
-          count: featureCounts[key],
-          percentage: percentage.toFixed(4) + '%',
-        };
+        acc[key] = { count: featureCounts[key], percentage: percentage.toFixed(4) + '%' };
         return acc;
       }, {} as Record<FeatureKey, { count: number; percentage: string }>),
     };
 
-    // ✅ User growth over time
+    // User growth over time
     const userGrowthOverTime = allUsers.reduce((acc, user) => {
       const dateKey = user.created_at.toISOString().split('T')[0];
       acc[dateKey] = (acc[dateKey] || 0) + 1;
@@ -379,8 +256,7 @@ export const getUserdata = async (req: Request, res: Response) => {
     const result = {
       totalUsers: allUsers.length,
       totalFreeUsers,
-      totalFreeUserspercentage:
-        ((totalFreeUsers / allUsers.length) * 100).toFixed(4) + '%',
+      totalFreeUserspercentage: ((totalFreeUsers / allUsers.length) * 100).toFixed(4) + '%',
       totalPaidUsers,
       totalPaidUserspercentage: ((totalPaidUsers / allUsers.length) * 100).toFixed(4) + '%',
       totalNoAuditUsers,
@@ -397,11 +273,13 @@ export const getUserdata = async (req: Request, res: Response) => {
   }
 };
 
+
 export async function addOrUpdateAnalysisService(req: Request, res: Response) {
   try {
     const { type, name, price, description, report } = req.body;
 
-    if (!name && price == null) {
+    // ✅ If no update values are provided, just return all services
+    if (!name && price == null && !description && !report) {
       const allServices = await prisma.analysisServices.findMany();
       return res.json(allServices);
     }
@@ -409,6 +287,7 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
     // Step 1: Find service by type
     let existingService = await prisma.analysisServices.findFirst({
       where: { type },
+      include: { AnalysisServiceHistory: true },
     });
 
     let service;
@@ -416,10 +295,33 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
     if (existingService) {
       console.log("Service found. Updating...");
 
-      // Build update object dynamically
+      // If price is changing, close the old history record and insert a new one
+      if (price != null && Number(price) !== Number(existingService.price)) {
+        // ✅ Close the previous history (set valid_to)
+        await prisma.analysisServiceHistory.updateMany({
+          where: {
+            service_id: existingService.id,
+            valid_to: null, // only the active record
+          },
+          data: {
+            valid_to: new Date(),
+          },
+        });
+
+        // ✅ Insert new history entry with new price
+        await prisma.analysisServiceHistory.create({
+          data: {
+            service_id: existingService.id,
+            price: Number(price),
+            valid_from: new Date(),
+          },
+        });
+      }
+
+      // ✅ Build update object dynamically
       const updateData: any = {};
       if (name) updateData.name = name;
-      if (price != null) updateData.price = price;
+      if (price != null) updateData.price = Number(price);
       if (description) updateData.description = description;
       if (report) updateData.report = report;
 
@@ -429,31 +331,39 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
           .json({ error: "No valid fields provided for update" });
       }
 
+      // ✅ Update main service with NEW values
       service = await prisma.analysisServices.update({
         where: { id: existingService.id },
         data: updateData,
       });
-
     } else {
       console.log("No service found with this type. Creating new...");
+
+      // ✅ Create fresh service
       service = await prisma.analysisServices.create({
         data: {
           type,
           name: name ?? "",
-          price: price ?? 0,
+          price: price != null ? Number(price) : 0,
           description: description ?? null,
           report: report ?? null,
+          AnalysisServiceHistory: {
+            create: {
+              price: price != null ? Number(price) : 0,
+              valid_from: new Date(),
+            },
+          },
         },
       });
     }
 
     return res.json(service);
-
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Server error" });
   }
 }
+
 
 
 

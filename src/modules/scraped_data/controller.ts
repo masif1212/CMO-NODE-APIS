@@ -37,6 +37,8 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
 });
 
     console.log("Scraping compelted successfully");
+    console.log("----------------------------------------------------------------------------------");
+
     return res.status(200).json({
       scraped_data_id:data.scraped_data_id,
       report_id,

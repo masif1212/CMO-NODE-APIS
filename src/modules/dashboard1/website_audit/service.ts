@@ -714,11 +714,9 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
     const audit = audits[id];
     return audit?.display_value || null;
   };
-  return await prisma.brand_website_analysis.upsert({
-    where: {
-      report_id: report_id,
-    },
-    update: {
+  return await prisma.brand_website_analysis.create({
+   
+    data: {
       performance_score: mainPageSpeedData.audit_details.categoryScores?.performance ?? null,
       seo_score: mainPageSpeedData.audit_details.categoryScores?.seo ?? null,
       accessibility_score: mainPageSpeedData.audit_details.categoryScores?.accessibility ?? null,
@@ -744,34 +742,7 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
   
       updated_at: new Date(),
     },
-    create: {
-      report_id: report_id,
-      performance_score: mainPageSpeedData.audit_details.categoryScores?.performance ?? null,
-      seo_score: mainPageSpeedData.audit_details.categoryScores?.seo ?? null,
-      accessibility_score: mainPageSpeedData.audit_details.categoryScores?.accessibility ?? null,
-      best_practices_score: mainPageSpeedData.audit_details.categoryScores?.["best-practices"] ?? null,
-  
-      first_contentful_paint: getAuditValue("first-contentful-paint"),
-      largest_contentful_paint: getAuditValue("largest-contentful-paint"),
-      total_blocking_time: getAuditValue("total-blocking-time"),
-      speed_index: getAuditValue("speed-index"),
-      cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
-      time_to_interactive: getAuditValue("interactive"),
-  
-      revenue_loss_percent: mainPageSpeedData.revenueLossPercent,
-  
-      audit_details: {
-        allAudits: mainPageSpeedData.audit_details.allAudits,
-        categoryScores: mainPageSpeedData.audit_details.categoryScores,
-        optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
-        user_access_readiness: mainPageSpeedData.audit_details.user_access_readiness,
-        seoAudits: mainPageSpeedData.audit_details.seoAudits,
-        audits: mainPageSpeedData.audit_details.audits,
-      },
-  
-      created_at: new Date(),
-      updated_at: new Date(),
-    },
+    
     select: {
       website_analysis_id: true,
       revenue_loss_percent: true,
@@ -780,45 +751,5 @@ export async function savePageSpeedAnalysis(user_id: string, website_id: string,
   });
   
 
-  // return await prisma.brand_website_analysis.upsert({
-  //   update : {WHERE:{ report_id},
-     
-  //  data:{
-  //     // Score categories (already percentage from getPageSpeedData)
-  //     performance_score: mainPageSpeedData.audit_details.categoryScores?.performance ?? null,
-  //     // pwa_score: mainPageSpeedData.audit_details.categoryScores?.pwa ?? null,
-  //     seo_score: mainPageSpeedData.audit_details.categoryScores?.seo ?? null,
-  //     accessibility_score: mainPageSpeedData.audit_details.categoryScores?.accessibility ?? null,
-  //     best_practices_score: mainPageSpeedData.audit_details.categoryScores?.["best-practices"] ?? null,
-
-  //     // Timing metrics
-  //     first_contentful_paint: getAuditValue("first-contentful-paint"),
-  //     largest_contentful_paint: getAuditValue("largest-contentful-paint"),
-  //     total_blocking_time: getAuditValue("total-blocking-time"),
-  //     speed_index: getAuditValue("speed-index"),
-  //     cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
-  //     time_to_interactive: getAuditValue("interactive"),
-
-  //     revenue_loss_percent: mainPageSpeedData.revenueLossPercent,
-
-  //     // Audit groups
-  //     audit_details: {
-  //       allAudits: mainPageSpeedData.audit_details.allAudits,
-  //       categoryScores: mainPageSpeedData.audit_details.categoryScores,
-  //       optimization_opportunities: mainPageSpeedData.audit_details.optimization_opportunities,
-  //       user_access_readiness: mainPageSpeedData.audit_details.user_access_readiness,
-  //       seoAudits: mainPageSpeedData.audit_details.seoAudits,
-  //       audits: mainPageSpeedData.audit_details.audits,
-  //     },
-
-  //     created_at: new Date(),
-  //     updated_at: new Date(),
-  //   },
-  //   select: {
-  //     website_analysis_id: true,
-  //     revenue_loss_percent: true,
-  //     best_practices_score: true,
-  //   },
-  // });
 }
 

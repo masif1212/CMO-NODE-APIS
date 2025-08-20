@@ -48,6 +48,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     }
 
     console.log("Website audit analysis saved successfully");
+    console.log("----------------------------------------------------------------------------------");
 
     // Extract directly from mainPageSpeedData
     const auditMap = Object.fromEntries(

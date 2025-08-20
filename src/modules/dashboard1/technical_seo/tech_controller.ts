@@ -24,25 +24,28 @@ export const technical_seo = async (req: Request, res: Response) => {
 
   const totalBroken = brokenLinksResult.length;
   console.log("report_id", report_id)
-  
+  const report = await prisma.report.findUnique({
+    where: { report_id },
+    select: {
+      // report_id: true,
+      website_id: true,
+      website_analysis_id:true
+    },})
   console.log("Saving broken link analysis to database...");
   const analysis = await prisma.brand_website_analysis.upsert({
     where: {
-      report_id, // must be unique or PK
+      website_analysis_id:report?.website_analysis_id ?? undefined, // must be unique or PK
     },
     update: {
-      report_id,
       total_broken_links: totalBroken,
       broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
     },
     create: {
-      report_id ,
       total_broken_links: totalBroken,
       broken_links: brokenLinksResult as unknown as Prisma.InputJsonValue,
     },
     select: {
       website_analysis_id: true,
-      // website_id: true,
       total_broken_links: true,
       broken_links: true,
       audit_details: true,

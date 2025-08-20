@@ -26,6 +26,8 @@ competitorRouter.post('/seo_audit', async (req, res, next) => {
     const data = await CompetitorService.seo_audit(user_id,website_id,report_id);
    
     console.log("competitors seo_audit complete ")
+    console.log("----------------------------------------------------------------------------------");
+
     res.status(200).json(data);
   } catch (e) {
     next(e);

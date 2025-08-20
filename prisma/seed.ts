@@ -77,102 +77,150 @@ async function main() {
     }
 
     // 4. Seed Analysis Services
-    console.log("Checking for existing analysis services...");
-    const existingServices = await prisma.analysisServices.findMany();
-    console.log(`Found ${existingServices.length} existing services.`);
-    if (existingServices.length === 0) {
-      console.log("No existing services found, seeding new services...");
-      await prisma.analysisServices.createMany({
+//     console.log("Checking for existing analysis services...");
+//     const existingServices = await prisma.analysisServices.findMany();
+//     console.log(`Found ${existingServices.length} existing services.`);
+//     if (existingServices.length === 0) {
+//       console.log("No existing services found, seeding new services...");
+//       await prisma.analysisServices.createMany({
        
         
-        data : [
-   {
-    type: 'si',
-    report: 'strengthandissues_d1',
-    name:'Strength and Issues',
-    price: 6.0,
-    description: 'Recommendations by MO 1',
-  },
+//         data : [
+//    {
+//     type: 'si',
+//     report: 'strengthandissues_d1',
+//     name:'Strength and Issues',
+//     price: 6.0,
+//     description: 'Recommendations by MO 1',
+//   },
 
-    {
-    type: 'sma',
-    report: 'dashboard2_data',
-    name : "Social Media Analsis",
-    price: 6.0,
-    description: 'Data from dashboard 2',
-  },
+//     {
+//     type: 'sma',
+//     report: 'dashboard2_data',
+//     name : "Social Media Analsis",
+//     price: 6.0,
+//     description: 'Data from dashboard 2',
+//   },
 
-    {
-    type: 'crca',
-    report: 'cmorecommendation',
-   name : "CMO recommendation",
+//     {
+//     type: 'crca',
+//     report: 'cmorecommendation',
+//    name : "CMO recommendation",
 
-    price: 4.0,
-    description: 'Final CMO recommendation',
-  },
-  {
-    type: 'cwa',
-    name : "Comprehensive Website Audit",
+//     price: 4.0,
+//     description: 'Final CMO recommendation',
+//   },
+//   {
+//     type: 'cwa',
+//     name : "Comprehensive Website Audit",
 
-    report: 'dashboard1_Freedata',
-    price: 0,
-    description: 'Data from dashboard 1 free analysis',
-  },
-    {
-    type: 'sism',
-    name : "Strength and Issues (Social Media)",
+//     report: 'dashboard1_Freedata',
+//     price: 0,
+//     description: 'Data from dashboard 1 free analysis',
+//   },
+//     {
+//     type: 'sism',
+//     name : "Strength and Issues (Social Media)",
 
-    report: 'strengthandissues_d2',
-    price: 6.0,
-    description: 'Recommendations by MO 2',
-  },
-  {
-    type: 'sa',
-    name : "SEO audit",
+//     report: 'strengthandissues_d2',
+//     price: 6.0,
+//     description: 'Recommendations by MO 2',
+//   },
+//   {
+//     type: 'sa',
+//     name : "SEO audit",
 
-    report: 'dashboard_paiddata',
-    price: 12.0,
-    description: 'Paid dashboard analysis data',
-  },
+//     report: 'dashboard_paiddata',
+//     price: 12.0,
+//     description: 'Paid dashboard analysis data',
+//   },
 
-    {
-    type: 'ca',
-    name : "Competitior Analysis",
+//     {
+//     type: 'ca',
+//     name : "Competitior Analysis",
 
-    report: 'dashboard3_data',
-    price: 14.0,
-    description: 'Data from dashboard 3',
-  },
+//     report: 'dashboard3_data',
+//     price: 14.0,
+//     description: 'Data from dashboard 3',
+//   },
 
-   {
-    type: 'ta',
-    name :"Traffic Anaylsis",
-    report: 'traffic_analysis_id',
-    price: 4.0,
-    description: 'traffic analysis',
-  },
+//    {
+//     type: 'ta',
+//     name :"Traffic Anaylsis",
+//     report: 'traffic_analysis_id',
+//     price: 4.0,
+//     description: 'traffic analysis',
+//   },
  
-  {
-    type: 'rs',
-    name : "Recommendation",
-    report: 'recommendationbymo',
-    price: 4.0,
-    description: 'Recommendations by MO ',
-  },
-  {
-    type: 'dd',
-    report: 'dashboard4_data',
-    price: 140.0,
-    description: 'Data from dashboard 4',
-  },
+//   {
+//     type: 'rs',
+//     name : "Recommendation",
+//     report: 'recommendationbymo',
+//     price: 4.0,
+//     description: 'Recommendations by MO ',
+//   },
+//   {
+//     type: 'dd',
+//     report: 'dashboard4_data',
+//     price: 140.0,
+//     description: 'Data from dashboard 4',
+//   },
 
-],
-        skipDuplicates: true,
-      });
-      console.log("Seeded analysis services successfully.");
-    } else {
-      console.log("Analysis services already exist, skipping seeding.");
-    }
+// ],
+//         skipDuplicates: true,
+//       });
+//       console.log("Seeded analysis services successfully.");
+//     } else {
+//       console.log("Analysis services already exist, skipping seeding.");
+//     }
+
+
+// 4. Seed Analysis Services
+console.log("Checking for existing analysis services...");
+const existingServices = await prisma.analysisServices.findMany();
+console.log(`Found ${existingServices.length} existing services.`);
+
+const servicesData = [
+  { type: 'si', report: 'strengthandissues_d1', name:'Strength and Issues', price: 6.0, description: 'Recommendations by MO 1' },
+  { type: 'sma', report: 'dashboard2_data', name : "Social Media Analsis", price: 6.0, description: 'Data from dashboard 2' },
+  { type: 'crca', report: 'cmorecommendation', name : "CMO recommendation", price: 4.0, description: 'Final CMO recommendation' },
+  { type: 'cwa', report: 'dashboard1_Freedata', name : "Comprehensive Website Audit", price: 0, description: 'Data from dashboard 1 free analysis' },
+  { type: 'sism', report: 'strengthandissues_d2', name : "Strength and Issues (Social Media)", price: 6.0, description: 'Recommendations by MO 2' },
+  { type: 'sa', report: 'dashboard_paiddata', name : "SEO audit", price: 12.0, description: 'Paid dashboard analysis data' },
+  { type: 'ca', report: 'dashboard3_data', name : "Competitior Analysis", price: 14.0, description: 'Data from dashboard 3' },
+  { type: 'ta', report: 'traffic_analysis_id', name :"Traffic Anaylsis", price: 4.0, description: 'traffic analysis' },
+  { type: 'rs', report: 'recommendationbymo', name : "Recommendation", price: 4.0, description: 'Recommendations by MO ' },
+  { type: 'dd', report: 'dashboard4_data', price: 140.0, description: 'Data from dashboard 4' },
+];
+
+if (existingServices.length === 0) {
+  console.log("No existing services found, seeding new services...");
+
+  for (const service of servicesData) {
+    // Create the service
+    const createdService = await prisma.analysisServices.create({
+      data: {
+        ...service,
+        updated_at: now,
+        // Create initial history
+        AnalysisServiceHistory: {
+          create: [{
+            price: service.price,
+            created_at: now,
+            valid_from: now
+          }],
+        },
+      },
+    });
+
+    console.log(`Created service ${createdService.name} with initial history`);
+  }
+
+  console.log("Seeded analysis services successfully.");
+} else {
+  console.log("Analysis services already exist, skipping seeding.");
+}
+
   } catch (error) {
     console.error("Error during seeding:", error);
     throw error; // Ensure the script fails explicitly
