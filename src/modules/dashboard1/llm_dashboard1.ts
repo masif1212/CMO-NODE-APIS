@@ -5,8 +5,7 @@ import * as cheerio from "cheerio";
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
-let propmt_for_whatsworking = "Whats working and what needs to be fixed(dashbord1)";
-let recommendation = "recommendation by mo for dashboard 1";
+
 
 export const generate_d1_recommendation= async (website_id: string, user_id: string, report_id:string) => {
   if (!website_id || !user_id) {
@@ -19,7 +18,7 @@ export const generate_d1_recommendation= async (website_id: string, user_id: str
       console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
   try {
    
-  const [scraped, analysis, traffic,prompt] = await Promise.all([
+  const [scraped, analysis, traffic] = await Promise.all([
   prisma.website_scraped_data.findUnique({
     where: { scraped_data_id: report?.scraped_data_id ?? undefined },
   
@@ -37,12 +36,6 @@ export const generate_d1_recommendation= async (website_id: string, user_id: str
         where: { traffic_analysis_id: report.traffic_analysis_id },
       })
     : null,
-     prisma.propmt_templates.findUnique({
-    where: { template_name: propmt_for_whatsworking },
-    select: {
-    description: true,
-    },
-  }),  
 ]);
 
     let h1Text = "Not Found";
@@ -105,14 +98,14 @@ try {
    
     console.log("allDataforrecommendation",allDataforrecommendation)
   
-    recommendation = prompt?.description || "Whats working and what needs to be fixed";
+
     console.log("Generating LLM response (funnel recommendation)…");
     const funnelLLMResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: recommendation },
+        { role: "system", content: funnelRecommendationPrompt },
         { role: "user", content: JSON.stringify(allDataforrecommendation) },
       ],
     });
@@ -185,8 +178,8 @@ export const generated1_strengthandIssue = async (website_id: string, user_id: s
       })
       console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
   try {
-  
-  const [scraped, analysis, traffic,propmt] = await Promise.all([
+   
+  const [scraped, analysis, traffic] = await Promise.all([
   prisma.website_scraped_data.findUnique({
     where: { scraped_data_id: report?.scraped_data_id ?? undefined },
   
@@ -199,20 +192,13 @@ export const generated1_strengthandIssue = async (website_id: string, user_id: s
       total_broken_links: true,
     },
   }),
-  
   report?.traffic_analysis_id
     ? prisma.brand_traffic_analysis.findUnique({
         where: { traffic_analysis_id: report.traffic_analysis_id },
       })
     : null,
-     prisma.propmt_templates.findUnique({
-    where: { template_name: propmt_for_whatsworking },
-    select: {
-    description: true,
-    },
-  }),
 ]);
-    
+
     let h1Text = "Not Found";
     if (scraped?.raw_html) {
       const $ = cheerio.load(scraped.raw_html);
@@ -270,14 +256,14 @@ try {
       },
     };
     console.log("allDataforstrength",allDataforstrength)
-    propmt_for_whatsworking = propmt?.description || "Whats working and what needs to be fixed";
+  
     console.log("Generating LLM response (what working, what needs to be fixed)...");
     const llmResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content:propmt_for_whatsworking },
+        { role: "system", content: prompt_web_and_seo },
         { role: "user", content: JSON.stringify(allDataforstrength) },
       ],
     });
@@ -447,11 +433,6 @@ Each object inside the arrays must include:
 
 Output only **valid, parsable JSON** as described above.
 `;
-
-
-
-    
-
 
 const funnelRecommendationPrompt = `
 You are a senior growth strategist and website optimization expert.
