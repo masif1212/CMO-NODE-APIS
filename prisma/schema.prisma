@@ -530,3 +530,12 @@ model email_templates {
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
 }
+
+
+model propmt_templates {
+  template_id   String   @id @default(uuid())
+  template_name String?  @unique
+  description   String?  @db.LongText
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+}

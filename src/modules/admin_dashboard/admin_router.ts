@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserdata,addOrUpdateAnalysisService,Deactivateuser,addorUpdateEmailtemplate} from "./admin_service";
+import { getUserdata,addOrUpdateAnalysisService,Deactivateuser,addorUpdateEmailtemplate,addorUpdatepropmttemplate} from "./admin_service";
 
 const router = Router();
 
@@ -23,8 +23,8 @@ router.post("/updateEmailTemplate", (req, res, next) => {
 });
 
 
-// router.post("/Updatepropmttemplate", (req, res, next) => {
-//   addorUpdatepropmttemplate(req, res).catch(next);
-// });
+router.post("/Updatepropmttemplate", (req, res, next) => {
+  addorUpdatepropmttemplate(req, res).catch(next);
+});
 
 export default router;

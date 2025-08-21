@@ -411,48 +411,48 @@ export async function addorUpdateEmailtemplate(req: Request, res: Response) {
 }
 
 
-// export async function addorUpdatepropmttemplate(req: Request, res: Response) {
-//   try {
-//     const { name,  description } = req.body;
+export async function addorUpdatepropmttemplate(req: Request, res: Response) {
+  try {
+    const { name,  description } = req.body;
 
-//     // ✅ Case 1: If no data is provided → return all templates
-//     if (!name && !description) {
-//       const allTemplates = await prisma.email_templates.findMany();
-//       return res.json(allTemplates);
-//     }
+    // ✅ Case 1: If no data is provided → return all templates
+    if (!name && !description) {
+      const allTemplates = await prisma.propmt_templates.findMany();
+      return res.json(allTemplates);
+    }
 
-//     // ✅ Case 2: If name is provided, check if it exists
-//     let existingTemplate = null;
-//     if (name) {
-//       existingTemplate = await prisma.propmts_templates.findUnique({
-//         where: { template_name: name },
-//       });
-//     }
+    // ✅ Case 2: If name is provided, check if it exists
+    let existingTemplate = null;
+    if (name) {
+      existingTemplate = await prisma.propmt_templates.findUnique({
+        where: { template_name: name },
+      });
+    }
 
-//     if (existingTemplate) {
-//       // ✅ Update only the provided fields
-//       await prisma.email_templates.update({
-//         where: { template_name: name },
-//         data: {
-//           description: description ?? existingTemplate.description,
-//         },
-//       });
-//     } else {
-//       // ✅ Create new template
-//       await prisma.email_templates.create({
-//         data: {
-//           template_name: name,
-//           description: description ?? null,
-//         },
-//       });
-//     }
+    if (existingTemplate) {
+      // ✅ Update only the provided fields
+      await prisma.propmt_templates.update({
+        where: { template_name: name },
+        data: {
+          description: description ?? existingTemplate.description,
+        },
+      });
+    } else {
+      // ✅ Create new template
+      await prisma.propmt_templates.create({
+        data: {
+          template_name: name,
+          description: description ?? null,
+        },
+      });
+    }
 
-//     // ✅ Always return all templates after insert/update
-//     const allTemplates = await prisma.email_templates.findMany();
-//     return res.json(allTemplates);
+    // ✅ Always return all templates after insert/update
+    const allTemplates = await prisma.propmt_templates.findMany();
+    return res.json(allTemplates);
 
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
