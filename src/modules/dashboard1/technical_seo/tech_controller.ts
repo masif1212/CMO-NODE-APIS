@@ -29,12 +29,13 @@ export const technical_seo = async (req: Request, res: Response) => {
     select: {
       // report_id: true,
       website_id: true,
-      website_analysis_id:true
-    },})
+      website_analysis_id: true
+    },
+  })
   console.log("Saving broken link analysis to database...");
   const analysis = await prisma.brand_website_analysis.upsert({
     where: {
-      website_analysis_id:report?.website_analysis_id ?? undefined, // must be unique or PK
+      website_analysis_id: report?.website_analysis_id ?? undefined, // must be unique or PK
     },
     update: {
       total_broken_links: totalBroken,

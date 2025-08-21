@@ -288,7 +288,7 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
     }
 
     // Step 1: Find service by type
-    let existingService = await prisma.analysisServices.findFirst({
+    let existingService = await prisma.analysisServices.findUnique({
       where: { type },
       include: { AnalysisServiceHistory: true },
     });
@@ -383,9 +383,6 @@ export async function Deactivateuser(req: Request, res: Response) {
           account_status: "inactive"
         }
   });
- 
- 
-
    
     return res.json(user);
   } catch (error) {

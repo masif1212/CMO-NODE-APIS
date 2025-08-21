@@ -4,52 +4,55 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 
-    const brandAudit: any[] = [];
-    const socialMedia: any[] = [];
-    const competitorsAnalysis: any[] = [];
-    const finalRecommendationByCMO: any[] = [];
-    // 🔹 Field groups
-    const brandFields = [
-      "dashboard1_Freedata",
-      "dashboard_paiddata",
-      "strengthandissues_d1",
-      "recommendationbymo1",
-      "traffic_analysis_id",
-    ];
-    const socialFields = [
-      "dashboard2_data",
-      "strengthandissues_d2",
-      "recommendationbymo2",
-    ];
-    const competitorFields = ["dashboard3_data", "recommendationbymo3"];
-    const cmoFields = ["cmorecommendation"];
-
-    // 🔹 Aliases for field names (keys in response)
-    const renameFields: Record<string, string> = {
-      dashboard1_Freedata: "website_audit",
-      dashboard_paiddata: "seo_audit",
-      strengthandissues_d1: "strength_and_issues",
-      traffic_analysis_id: "traffic_analysis",
-      recommendationbymo1: "recommendationbymo",
-
-      dashboard2_data: "social_data",
-      strengthandissues_d2: "social_issues",
-      recommendationbymo2: "recommendationbymo",
-
-      dashboard3_data: "competitor_data",
-      recommendationbymo3: "recommendationbymo",
-
-      cmorecommendation: "cmo_recommendation",
-    };
 
 export const getUserDashboard = async (req: Request, res: Response) => {
-  const userId = req.query.user_id;
+ 
 
+
+  const brandFields = [
+  "dashboard1_Freedata",
+  "dashboard_paiddata",
+  "strengthandissues_d1",
+  "recommendationbymo1",
+  "traffic_analysis_id",
+];
+const socialFields = [
+  "dashboard2_data",
+  "strengthandissues_d2",
+  "recommendationbymo2",
+];
+const competitorFields = ["dashboard3_data", "recommendationbymo3"];
+const cmoFields = ["cmorecommendation"];
+
+// 🔹 Aliases for field names (keys in response)
+const renameFields: Record<string, string> = {
+  dashboard1_Freedata: "website_audit",
+  dashboard_paiddata: "seo_audit",
+  strengthandissues_d1: "strength_and_issues",
+  traffic_analysis_id: "traffic_analysis",
+  recommendationbymo1: "recommendationbymo",
+
+  dashboard2_data: "social_data",
+  strengthandissues_d2: "social_issues",
+  recommendationbymo2: "recommendationbymo",
+
+  dashboard3_data: "competitor_data",
+  recommendationbymo3: "recommendationbymo",
+
+  cmorecommendation: "cmo_recommendation",
+};
+   const userId = req.query.user_id;
   if (typeof userId !== "string") {
     return res.status(400).json({ error: "Invalid or missing user_id" });
   }
 
   try {
+      const brandAudit: any[] = [];
+      const socialMedia: any[] = [];
+      const competitorsAnalysis: any[] = [];
+      const finalRecommendationByCMO: any[] = [];
+      // 🔹 Field groups
+
     // 🔹 Load service prices + history
     const analysisServices = await prisma.analysisServices.findMany({
       include: { AnalysisServiceHistory: true },
@@ -180,8 +183,8 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       total_cmo_recommendations: Array.isArray(finalRecommendationByCMO)
         ? finalRecommendationByCMO.length
         : finalRecommendationByCMO
-        ? 1
-        : 0,
+          ? 1
+          : 0,
     };
 
     // 🔹 Return grouped response
@@ -196,10 +199,9 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("❌ Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Something went Wrong on server side" });
   }
 };
-
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const reportId = req.query.report_id as string;
@@ -211,10 +213,10 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
   try {
     const reportData = await prisma.report.findUnique({
       where: { report_id: reportId },
-      
+
     });
 
-   
+
 
     // Parse and extract
     const websiteAudit = safeParse(reportData?.dashboard1_Freedata)?.full_report || null;
@@ -234,21 +236,21 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       ...(technical_seo && { technical_seo }),
       ...otherSeoFields,
       // recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
-      recommendation_by_mo_dashboard1 : {
-      strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
-      recommendations: safeParse(reportData?.recommendationbymo1),
-    },
+      recommendation_by_mo_dashboard1: {
+        strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
+        recommendations: safeParse(reportData?.recommendationbymo1),
+      },
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
-      competitors:{ ...competitor_data,competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia)},
+      competitors: { ...competitor_data, competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia) },
       recommendation_by_mo_dashboard3: safeParse(reportData?.recommendationbymo3),
-      
+
       dashboard4_data: safeParse(reportData?.dashboard4_data),
       cmo_recommendation: safeParse(reportData?.cmorecommendation),
-      
+
     };
 
-   
+
     res.json(parsedReport);
   } catch (error) {
     console.error('Error fetching report:', error);
@@ -290,7 +292,7 @@ export const getaudit = async (req: Request, res: Response) => {
       'recommendationbymo3',
     ];
 
- 
+
 
     const userWebsites = await prisma.user_websites.findMany({
       where: { website_id: website_id },
@@ -304,7 +306,7 @@ export const getaudit = async (req: Request, res: Response) => {
             report_id: true,
             created_at: true,
             updated_at: true,
-            scraped_data_id:true,
+            scraped_data_id: true,
             dashboard1_Freedata: true,
             dashboard_paiddata: true,
             strengthandissues_d1: true,
@@ -319,65 +321,66 @@ export const getaudit = async (req: Request, res: Response) => {
         },
       },
     });
-    
-  
+
+
 
     const websites = await Promise.all(userWebsites.map(async (site) => {
-  const brandAudit: any[] = [];
-  const socialMedia: any[] = [];
-  const competitorsAnalysis: any[] = [];
+      const brandAudit: any[] = [];
+      const socialMedia: any[] = [];
+      const competitorsAnalysis: any[] = [];
 
-  for (const report of site.report) {
-    const base = {
-      report_id: report.report_id,
-      created_at: report.created_at,
-      updated_at: report.updated_at,
-    };
+      for (const report of site.report) {
+        const base = {
+          report_id: report.report_id,
+          created_at: report.created_at,
+          updated_at: report.updated_at,
+        };
 
-    const hasAnyField = (fields: string[]) =>
-      fields.some(field => report[field as keyof typeof report] != null);
+        const hasAnyField = (fields: string[]) =>
+          fields.some(field => report[field as keyof typeof report] != null);
 
-    // 🔍 Fetch logo_url using scraped_data_id (if present)
-    let logo_url: string | null = null;
-    if (report.scraped_data_id) {
-      const scraped = await prisma.website_scraped_data.findUnique({
-        where: { scraped_data_id: report.scraped_data_id },
-        select: { logo_url: true },
-      });
-      logo_url = scraped?.logo_url || null;
-    }
+        // 🔍 Fetch logo_url using scraped_data_id (if present)
+        let logo_url: string | null = null;
+        if (report.scraped_data_id) {
+          const scraped = await prisma.website_scraped_data.findUnique({
+            where: { scraped_data_id: report.scraped_data_id },
+            select: { logo_url: true },
+          });
+          logo_url = scraped?.logo_url || null;
+        }
 
-    const reportWithLogo = {
-      ...base,
-      logo_url,
-    };
+        const reportWithLogo = {
+          ...base,
+          logo_url,
+        };
 
-    if (hasAnyField(brandFields)) {
-      brandAudit.push(reportWithLogo);
-    }
+        if (hasAnyField(brandFields)) {
+          brandAudit.push(reportWithLogo);
+        }
 
-    if (hasAnyField(socialFields)) {
-      socialMedia.push(reportWithLogo);
-    }
+        if (hasAnyField(socialFields)) {
+          socialMedia.push(reportWithLogo);
+        }
 
-    if (hasAnyField(competitorFields)) {
-      competitorsAnalysis.push(reportWithLogo);
-    }
-  }
+        if (hasAnyField(competitorFields)) {
+          competitorsAnalysis.push(reportWithLogo);
+        }
+      }
 
-  if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
-    return {
-      website_url: site.website_url,
-      website_id: site.website_id,
-      reports: {
-        brand_audit: brandAudit,
-        social_media_audit: socialMedia,
-        competitors_analysis: competitorsAnalysis,
-      },
-    };
-  }
+      if (brandAudit.length || socialMedia.length || competitorsAnalysis.length) {
+        return {
+          website_url: site.website_url,
+          website_id: site.website_id,
+          reports: {
+            brand_audit: brandAudit,
+            social_media_audit: socialMedia,
+            competitors_analysis: competitorsAnalysis,
+          },
+        };
+      }
 
-  return null; }) .filter((site): site is NonNullable<typeof site> => site !== null));
+      return null;
+    }).filter((site): site is NonNullable<typeof site> => site !== null));
 
     res.json({ websites });
   } catch (error) {
