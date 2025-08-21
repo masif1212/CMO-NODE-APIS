@@ -141,7 +141,7 @@ export const savePaymentMethod = async (req: AuthenticatedRequest, res: Response
 };
 
 export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { token, analysis_types, save_card, source_id } = req.body;
+  const { token, analysis_types, save_card, source_id,report_id, detail, } = req.body;
   const { user_id, email } = req.user!;
 
   if (!analysis_types || !Array.isArray(analysis_types) || analysis_types.length === 0) {
@@ -200,6 +200,8 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
       data: {
         user_id,
         amount: totalCost,
+        report_id,
+        detail,
         currency: "USD",
         payment_method: payment.source?.scheme || "card",
         payment_status: payment.status,
@@ -271,8 +273,6 @@ export const webhookHandler = async (req: Request, res: Response): Promise<void>
     res.status(400).send("Webhook signature verification failed.");
   }
 };
-
-
 
 export async function totalpayment(req: Request, res: Response) {
   try {

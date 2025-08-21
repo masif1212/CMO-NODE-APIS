@@ -80,7 +80,9 @@ model paymentMethods {
 model payments {
   payment_id      String         @id @default(uuid())
   user_id         String
-  amount          Decimal
+  report_id       String?
+  detail          Json?
+  amount          Int?
   currency        String
   payment_method  String
   payment_status  String
@@ -92,6 +94,8 @@ model payments {
   updated_at      DateTime       @default(now()) @updatedAt
   users           users          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   subscriptions   subscriptions? @relation(fields: [subscription_id], references: [subscription_id])
+
+  report report[]
 }
 
 model user_websites {
@@ -498,6 +502,7 @@ model report {
   competitor_details     competitor_details[]     @relation
   analysis_status        analysis_status[]        @relation
   totalpayment              totalpayment[]           @relation
+  payments             payments[]              @relation
   // brand_website_analysis    brand_website_analysis[] @relation
   brand_traffic_analysis brand_traffic_analysis[] @relation
   website_scraped_data   website_scraped_data[]   @relation

@@ -104,7 +104,7 @@ const prisma = new PrismaClient();
 //             dashboard3_data: true,
 //             recommendationbymo3: true,
 //             cmorecommendation: true,
-//             totalpayment: {
+//             payments: {
 //               select: {
 //                 total_amount: true,
 //                 details: true,
@@ -272,10 +272,10 @@ export const getUserDashboard = async (req: Request, res: Response) => {
             dashboard3_data: true,
             recommendationbymo3: true,
             cmorecommendation: true,
-            totalpayment: {
+            payments: {
               select: {
-                total_amount: true,
-                details: true,
+                amount: true,
+                detail: true,
               },
             },
           },
@@ -288,9 +288,9 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     for (const site of userWebsites) {
       for (const report of site.report) {
         // ✅ sum payments from this report
-        const reportPayments = report.totalpayment ?? [];
+        const reportPayments = report.payments ?? [];
         const reportTotal = reportPayments.reduce(
-          (sum, p) => sum + (p.total_amount ?? 0),
+          (sum, p) => sum + (p.amount ?? 0),
           0
         );
         totalSpend += reportTotal;
@@ -302,7 +302,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           created_at: report.created_at,
           updated_at: report.updated_at,
           total_payment: reportTotal,
-          columns: reportPayments.map((p) => p.details),
+          columns: reportPayments.map((p) => p.detail),
         };
 
         const extractFields = (fields: string[]) => {

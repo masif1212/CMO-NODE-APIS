@@ -43,10 +43,10 @@ export const getUserdata = async (req: Request, res: Response) => {
             },
             report:{
               include: {
-                totalpayment: {
+                payments: {
                   select: {
-                    total_amount: true,
-                    details: true,
+                    amount: true,
+                    detail: true,
                   }
                 }
               }
@@ -56,24 +56,7 @@ export const getUserdata = async (req: Request, res: Response) => {
       }
     });
 
-    const analysisServices = await prisma.analysisServices.findMany({
-      include: { AnalysisServiceHistory: true },
-    });
-
-    const serviceHistoryMap: Record<string, { price: number; updated_at: Date }[]> = {};
-    for (const service of analysisServices) {
-      const histories = [
-        { price: service.price.toNumber(), updated_at: service.updated_at },
-        ...service.AnalysisServiceHistory.map((h) => ({
-          price: h.price.toNumber(),
-          updated_at: h.created_at,
-        })),
-      ].sort((a, b) => a.updated_at.getTime() - b.updated_at.getTime());
-
-      if (service.report) {
-        serviceHistoryMap[service.report] = histories;
-      }
-    }
+  
 
  
     // Feature counters
@@ -143,10 +126,10 @@ export const getUserdata = async (req: Request, res: Response) => {
 
           // Include only true fields
         
-            const report = website.report.find(r => r.report_id === status.report_id);
-            const reportPayment = report?.totalpayment;
+            const report = website.report.find((r: { report_id: any; }) => r.report_id === status.report_id);
+            const reportPayment = report?.payments;
                           if (reportPayment && reportPayment.length > 0) {
-                totalSpend = reportPayment.reduce((sum, p) => sum + (p.total_amount ?? 0), 0);
+                totalSpend = reportPayment.reduce((sum: any, p: { amount: any; }) => sum + (p.amount ?? 0), 0);
               }
            
          
@@ -155,7 +138,7 @@ export const getUserdata = async (req: Request, res: Response) => {
             created_at: status.created_at,
             website_url: website.website_url,
             isPaidAnalysis,
-            total_payment: website.report.find(r => r.report_id === status.report_id)?.totalpayment ?? 0
+            total_payment: website.report.find((r: { report_id: any; }) => r.report_id === status.report_id)?.payments ?? 0
 
           
           });
@@ -427,3 +410,49 @@ export async function addorUpdateEmailtemplate(req: Request, res: Response) {
   }
 }
 
+
+// export async function addorUpdatepropmttemplate(req: Request, res: Response) {
+//   try {
+//     const { name,  description } = req.body;
+
+//     // ✅ Case 1: If no data is provided → return all templates
+//     if (!name && !description) {
+//       const allTemplates = await prisma.email_templates.findMany();
+//       return res.json(allTemplates);
+//     }
+
+//     // ✅ Case 2: If name is provided, check if it exists
+//     let existingTemplate = null;
+//     if (name) {
+//       existingTemplate = await prisma.propmts_templates.findUnique({
+//         where: { template_name: name },
+//       });
+//     }
+
+//     if (existingTemplate) {
+//       // ✅ Update only the provided fields
+//       await prisma.email_templates.update({
+//         where: { template_name: name },
+//         data: {
+//           description: description ?? existingTemplate.description,
+//         },
+//       });
+//     } else {
+//       // ✅ Create new template
+//       await prisma.email_templates.create({
+//         data: {
+//           template_name: name,
+//           description: description ?? null,
+//         },
+//       });
+//     }
+
+//     // ✅ Always return all templates after insert/update
+//     const allTemplates = await prisma.email_templates.findMany();
+//     return res.json(allTemplates);
+
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// }

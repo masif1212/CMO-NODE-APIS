@@ -21,4 +21,10 @@ router.post("/Deactivateuser", (req, res, next) => {
 router.post("/updateEmailTemplate", (req, res, next) => {
   addorUpdateEmailtemplate(req, res).catch(next);
 });
+
+
+// router.post("/Updatepropmttemplate", (req, res, next) => {
+//   addorUpdatepropmttemplate(req, res).catch(next);
+// });
+
 export default router;
