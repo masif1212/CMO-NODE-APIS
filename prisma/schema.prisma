@@ -497,9 +497,31 @@ model report {
   user_websites          user_websites?           @relation(fields: [website_id], references: [website_id], onDelete: Cascade)
   competitor_details     competitor_details[]     @relation
   analysis_status        analysis_status[]        @relation
+  totalpayment              totalpayment[]           @relation
   // brand_website_analysis    brand_website_analysis[] @relation
   brand_traffic_analysis brand_traffic_analysis[] @relation
   website_scraped_data   website_scraped_data[]   @relation
 
   @@index([website_id, updated_at])
+}
+
+
+model totalpayment {
+  id           String   @id @default(uuid())
+  report_id    String?
+  details      Json?
+  created_at   DateTime @default(now())
+  total_amount  Int?
+
+  report       report?   @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
+}
+
+
+model email_templates {
+  template_id   String   @id @default(uuid())
+  template_name String?  @unique
+  subject       String?
+  description   String?  @db.LongText
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
 }

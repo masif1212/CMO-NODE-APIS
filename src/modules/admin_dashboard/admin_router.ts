@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserdata,addOrUpdateAnalysisService,Deactivateuser} from "./admin_service";
+import { getUserdata,addOrUpdateAnalysisService,Deactivateuser,addorUpdateEmailtemplate} from "./admin_service";
 
 const router = Router();
 
@@ -16,4 +16,9 @@ router.post("/Deactivateuser", (req, res, next) => {
   Deactivateuser(req, res).catch(next);
 });
 
+
+
+router.post("/updateEmailTemplate", (req, res, next) => {
+  addorUpdateEmailtemplate(req, res).catch(next);
+});
 export default router;

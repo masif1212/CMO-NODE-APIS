@@ -13,7 +13,6 @@ router.get("/detailed", (req, res, next) => {
   getWebsiteDetailedAnalysis(req, res).catch(next);
 });
 
-
 router.get("/reports", (req, res, next) => {
   getaudit(req, res).catch(next);
 });

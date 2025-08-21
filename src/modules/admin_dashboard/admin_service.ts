@@ -20,17 +20,7 @@ type FeatureKey = typeof featureKeys[number];
 const user_role= 'User'; // Replace with actual role ID for users
 
 
-const priceKeyMap: Record<string, string> = {
-  website_audit: "dashboard1_Freedata",
-  seo_audit: "dashboard_paiddata",
-  trafficanalysis: "traffic_analysis_id",
-  social_media_analysis: "dashboard2_data",
-  competitors_identification: "dashboard3_data",
-  recommendationbymo1: "recommendationbymo",
-  recommendationbymo2: "recommendationbymo",
-  recommendationbymo3: "recommendationbymo",
-  cmo_recommendation: "cmorecommendation",
-};
+
 
 export const getUserdata = async (req: Request, res: Response) => {
   try {
@@ -51,17 +41,25 @@ export const getUserdata = async (req: Request, res: Response) => {
             analysis_status: {
               orderBy: { created_at: 'desc' }, // latest first
             },
-          },
-        },
-      },
+            report:{
+              include: {
+                totalpayment: {
+                  select: {
+                    total_amount: true,
+                    details: true,
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
-    // 🔹 Load service prices + history for price lookup
     const analysisServices = await prisma.analysisServices.findMany({
       include: { AnalysisServiceHistory: true },
     });
 
-    // Map of service -> sorted histories
     const serviceHistoryMap: Record<string, { price: number; updated_at: Date }[]> = {};
     for (const service of analysisServices) {
       const histories = [
@@ -77,29 +75,18 @@ export const getUserdata = async (req: Request, res: Response) => {
       }
     }
 
-    // Helper to get historical price at a given date
-    const getHistoricalPrice = (reportKey: string, createdAt: Date): number | null => {
-      const histories = serviceHistoryMap[reportKey];
-      if (!histories || histories.length === 0) return null;
-      let applied = histories[0].price;
-      for (const h of histories) {
-        if (h.updated_at <= createdAt) applied = h.price;
-        else break;
-      }
-      return applied;
-    };
-
+ 
     // Feature counters
     let totalFreeUsers = 0;
     let totalPaidUsers = 0;
     let totalNoAuditUsers = 0;
     let totalAnalysisCount = 0;
-
+    let totalSpend = 0; 
     const featureCounts: Record<FeatureKey, number> = featureKeys.reduce(
       (acc, key) => ({ ...acc, [key]: 0 }),
       {} as Record<FeatureKey, number>
     );
-
+    
     // Process users
     const users = allUsers.map(user => {
       let totalFreeAnalysis = 0;
@@ -121,7 +108,7 @@ export const getUserdata = async (req: Request, res: Response) => {
           if (status.recommendationbymo2) featureCounts.recommendationbymo2++;
           if (status.recommendationbymo3) featureCounts.recommendationbymo3++;
           if (status.cmo_recommendation) featureCounts.cmo_recommendation++;
-
+           
           // Free / Paid classification
           const isFreeAnalysis =
             status.website_audit &&
@@ -155,28 +142,22 @@ export const getUserdata = async (req: Request, res: Response) => {
           }
 
           // Include only true fields
-          const filteredStatus = Object.fromEntries(
-            Object.entries(status).filter(([_, value]) => value === true)
-          );
-
-          // Add price info
-          const pricedStatus: Record<string, any> = {};
-          for (const key of Object.keys(filteredStatus)) {
-   
-
-
-            const priceKey = priceKeyMap[key] || key;
-            const price = getHistoricalPrice(priceKey, status.created_at);
-            pricedStatus[key] = { value: true, price };
-
-          }
-
+        
+            const report = website.report.find(r => r.report_id === status.report_id);
+            const reportPayment = report?.totalpayment;
+                          if (reportPayment && reportPayment.length > 0) {
+                totalSpend = reportPayment.reduce((sum, p) => sum + (p.total_amount ?? 0), 0);
+              }
+           
+         
           reports.push({
             report_id: status.report_id,
             created_at: status.created_at,
             website_url: website.website_url,
             isPaidAnalysis,
-            ...pricedStatus,
+            total_payment: website.report.find(r => r.report_id === status.report_id)?.totalpayment ?? 0
+
+          
           });
         });
       });
@@ -205,6 +186,7 @@ export const getUserdata = async (req: Request, res: Response) => {
         createdAt: user.created_at,
         lastlogin: user.last_login,
         latestReportCreatedAt,
+        totalSpend,
         reports,
       };
     });
@@ -277,6 +259,7 @@ export const getUserdata = async (req: Request, res: Response) => {
 };
 
 
+// add or update  service
 export async function addOrUpdateAnalysisService(req: Request, res: Response) {
   try {
     const { type, name, price, description, report } = req.body;
@@ -367,9 +350,13 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
   }
 }
 
+
+
+
+
 export async function Deactivateuser(req: Request, res: Response) {
   try {
-    const { user_id } = req.body;
+    const { user_id , status} = req.body;
     if (!user_id || typeof user_id !== 'string') {
       
       return res.json("User ID is required");
@@ -380,7 +367,7 @@ export async function Deactivateuser(req: Request, res: Response) {
           user_id: user_id 
         },
         data: { 
-          account_status: "inactive"
+          account_status: status
         }
   });
    
@@ -392,4 +379,51 @@ export async function Deactivateuser(req: Request, res: Response) {
 }
 
 
+export async function addorUpdateEmailtemplate(req: Request, res: Response) {
+  try {
+    const { name, subject, description } = req.body;
+
+    // ✅ Case 1: If no data is provided → return all templates
+    if (!name && !subject && !description) {
+      const allTemplates = await prisma.email_templates.findMany();
+      return res.json(allTemplates);
+    }
+
+    // ✅ Case 2: If name is provided, check if it exists
+    let existingTemplate = null;
+    if (name) {
+      existingTemplate = await prisma.email_templates.findUnique({
+        where: { template_name: name },
+      });
+    }
+
+    if (existingTemplate) {
+      // ✅ Update only the provided fields
+      await prisma.email_templates.update({
+        where: { template_name: name },
+        data: {
+          subject: subject ?? existingTemplate.subject,
+          description: description ?? existingTemplate.description,
+        },
+      });
+    } else {
+      // ✅ Create new template
+      await prisma.email_templates.create({
+        data: {
+          template_name: name,
+          subject: subject ?? null,
+          description: description ?? null,
+        },
+      });
+    }
+
+    // ✅ Always return all templates after insert/update
+    const allTemplates = await prisma.email_templates.findMany();
+    return res.json(allTemplates);
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
 

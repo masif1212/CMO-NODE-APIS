@@ -238,14 +238,13 @@ console.log("fetching data from db...")
       where: { report_id }
     });
 
-    let update;
     if (existing) {
-      update = await prisma.analysis_status.update({
+      await prisma.analysis_status.update({
         where: { id: existing.id },
         data: { website_id, onpageoptimization: true }
       });
     } else {
-      update = await prisma.analysis_status.create({
+      await prisma.analysis_status.create({
         data: { report_id, website_id, onpageoptimization: true, user_id }
       });
     }

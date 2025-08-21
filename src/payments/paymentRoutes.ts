@@ -4,7 +4,7 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth";
 // CHANGED: Import the new getPaymentMethods function
-import { payAsYouGo, savePaymentMethod, getPaymentHistory, webhookHandler, getPaymentMethods } from "./paymentController";
+import { payAsYouGo, savePaymentMethod, getPaymentHistory, webhookHandler, getPaymentMethods ,totalpayment} from "./paymentController";
 import express from "express";
 
 const paymentRouter = Router();
@@ -23,5 +23,11 @@ paymentRouter.get("/history", authenticateToken, getPaymentHistory);
 
 // Webhook route for Checkout.com
 paymentRouter.post("/webhook", express.raw({ type: "application/json" }), webhookHandler);
+
+
+
+paymentRouter.post("/totalpayment", (req, res, next) => {
+  totalpayment(req, res).catch(next);
+});
 
 export default paymentRouter;

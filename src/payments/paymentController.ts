@@ -4,6 +4,7 @@
 import { Request, Response } from "express";
 import { Checkout, Webhooks } from "checkout-sdk-node";
 import { PrismaClient } from "@prisma/client";
+import { report } from "process";
 
 const prisma = new PrismaClient();
 const cko = new Checkout(process.env.CHECKOUT_SECRET_KEY!);
@@ -270,3 +271,28 @@ export const webhookHandler = async (req: Request, res: Response): Promise<void>
     res.status(400).send("Webhook signature verification failed.");
   }
 };
+
+
+
+export async function totalpayment(req: Request, res: Response) {
+  try {
+    const { report_id, detail, totalpayment} = req.body;
+    if (!report_id || typeof report_id !== 'string') {
+      
+      return res.json("User ID is required");
+    }
+    
+      const user = await prisma.totalpayment.create({
+        data: { 
+          report_id: report_id,
+          details: detail,
+          total_amount: totalpayment
+        }
+  });
+    
+    return res.json(user);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
