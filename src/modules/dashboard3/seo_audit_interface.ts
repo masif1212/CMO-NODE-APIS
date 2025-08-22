@@ -15,9 +15,9 @@ export interface SeoAudit {
   alt_text_coverage: number | null;
   isCrawlable: boolean | false;
   headingAnalysis: {
-    hasH1: boolean;
+    // hasH1: boolean;
     totalHeadings: number;
-    headingLevelsUsed: string[];
+    // headingLevelsUsed: string[];
     headingOrderUsed: string[];
     hasMultipleH1s: boolean;
     skippedHeadingLevels: boolean;

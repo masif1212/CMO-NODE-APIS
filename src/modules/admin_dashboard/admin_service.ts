@@ -19,9 +19,6 @@ const featureKeys = [
 type FeatureKey = typeof featureKeys[number];
 const user_role= 'User'; // Replace with actual role ID for users
 
-
-
-
 export const getUserdata = async (req: Request, res: Response) => {
   try {
     // 🔹 Load all users with websites and analysis status

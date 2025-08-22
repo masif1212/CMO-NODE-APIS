@@ -5,213 +5,6 @@ const prisma = new PrismaClient();
 
 
 
-// export const getUserDashboard = async (req: Request, res: Response) => {
-
-
-
-//   const brandFields = [
-//     "dashboard1_Freedata",
-//     "dashboard_paiddata",
-//     "strengthandissues_d1",
-//     "recommendationbymo1",
-//     "traffic_analysis_id",
-//   ];
-//   const socialFields = [
-//     "dashboard2_data",
-//     "strengthandissues_d2",
-//     "recommendationbymo2",
-//   ];
-//   const competitorFields = [
-//     "dashboard3_data", "recommendationbymo3"
-//   ];
-//   const cmoFields = [
-//     "cmorecommendation"
-//   ];
-
-//   // 🔹 Aliases for field names (keys in response)
-//   const renameFields: Record<string, string> = {
-//     dashboard1_Freedata: "website_audit",
-//     dashboard_paiddata: "seo_audit",
-//     strengthandissues_d1: "strength_and_issues",
-//     traffic_analysis_id: "traffic_analysis",
-//     recommendationbymo1: "recommendationbymo",
-
-//     dashboard2_data: "social_data",
-//     strengthandissues_d2: "social_issues",
-//     recommendationbymo2: "recommendationbymo",
-
-//     dashboard3_data: "competitor_data",
-//     recommendationbymo3: "recommendationbymo",
-
-//     cmorecommendation: "cmo_recommendation",
-//   };
-//   const userId = req.query.user_id;
-//   if (typeof userId !== "string") {
-//     return res.status(400).json({ error: "Invalid or missing user_id" });
-//   }
-
-//   try {
-//     const brandAudit: any[] = [];
-//     const socialMedia: any[] = [];
-//     const competitorsAnalysis: any[] = [];
-//     const finalRecommendationByCMO: any[] = [];
-//     // 🔹 Field groups
-
-//     // 🔹 Load service prices + history
-//     const analysisServices = await prisma.analysisServices.findMany({
-//       include: { AnalysisServiceHistory: true },
-//     });
-
-//     // 🔹 Map of service -> histories (sorted by updated_at)
-//     const serviceHistoryMap: Record<
-//       string,
-//       { price: number; updated_at: Date }[]
-//     > = {};
-//     for (const service of analysisServices) {
-//       const histories = [
-//         { price: service.price.toNumber(), updated_at: service.updated_at },
-//         ...service.AnalysisServiceHistory.map((h) => ({
-//           price: h.price.toNumber(),
-//           updated_at: h.created_at,
-//         })),
-//       ].sort((a, b) => a.updated_at.getTime() - b.updated_at.getTime());
-
-//       if (service.report) {
-//         serviceHistoryMap[service.report] = histories;
-//       }
-//     }
-
-//     const userWebsites = await prisma.user_websites.findMany({
-//       where: { user_id: userId },
-//       select: {
-//         website_url: true,
-//         website_id: true,
-//         website_name: true,
-//         report: {
-//           orderBy: { created_at: "desc" },
-//           select: {
-//             report_id: true,
-//             created_at: true,
-//             updated_at: true,
-//             dashboard1_Freedata: true,
-//             dashboard_paiddata: true,
-//             strengthandissues_d1: true,
-//             recommendationbymo1: true,
-//             traffic_analysis_id: true,
-//             dashboard2_data: true,
-//             strengthandissues_d2: true,
-//             recommendationbymo2: true,
-//             dashboard3_data: true,
-//             recommendationbymo3: true,
-//             cmorecommendation: true,
-//             payments: {
-//               select: {
-//                 total_amount: true,
-//                 details: true,
-//               },
-//             },
-//           },
-//         },
-//       },
-//     });
-
-
-
-//     // Helper to get historical price at report.created_at
-//     const getHistoricalPrice = (
-//       reportKey: string,
-//       createdAt: Date
-//     ): number | null => {
-//       const histories = serviceHistoryMap[reportKey];
-//       if (!histories || histories.length === 0) return null;
-
-//       let applied = histories[0].price;
-//       for (const h of histories) {
-//         if (h.updated_at <= createdAt) {
-//           applied = h.price;
-//         } else {
-//           break;
-//         }
-//       }
-//       return applied;
-//     };
-
-//     for (const site of userWebsites) {
-//       for (const report of site.report) {
-//         const base = {
-//           report_id: report.report_id,
-//           website_url: site.website_url,
-//           website_name: site.website_name,
-//           created_at: report.created_at,
-//           updated_at: report.updated_at,
-//         };
-
-//         const extractFields = (fields: string[]) => {
-//           const result: Record<string, number> = {};
-//           for (const key of fields) {
-//             const value = report[key as keyof typeof report];
-//             if (value != null) {
-//               const priceKey = key.startsWith("recommendationbymo")
-//                 ? "recommendationbymo"
-//                 : key;
-
-//               const historicalPrice = getHistoricalPrice(
-//                 priceKey,
-//                 report.created_at
-//               );
-//               if (historicalPrice != null) {
-//                 const renamed = renameFields[key] ?? key;
-//                 result[renamed] = historicalPrice;
-//               }
-//             }
-//           }
-//           return result;
-//         };
-
-//         const brand = extractFields(brandFields);
-//         const social = extractFields(socialFields);
-//         const competitor = extractFields(competitorFields);
-//         const cmo = extractFields(cmoFields);
-
-//         // if (Object.keys(brand).length)
-//           brandAudit.push({ ...base, columns: brand });
-//         if (Object.keys(social).length)
-//           socialMedia.push({ ...base, columns: social });
-//         if (Object.keys(competitor).length)
-//           competitorsAnalysis.push({ ...base, columns: competitor });
-//         if (Object.keys(cmo).length)
-//           finalRecommendationByCMO.push({ ...base, columns: cmo });
-//       }
-//     }
-
-//     const dashboardCounts = {
-//       total_brand_audit: brandAudit.length,
-//       total_social_media: socialMedia.length,
-//       total_competitor_analysis: competitorsAnalysis.length,
-//       total_cmo_recommendations: Array.isArray(finalRecommendationByCMO)
-//         ? finalRecommendationByCMO.length
-//         : finalRecommendationByCMO
-//           ? 1
-//           : 0,
-//     };
-
-//     // 🔹 Return grouped response
-//     res.json({
-//       ...dashboardCounts,
-//       data: {
-//         brand_audit: brandAudit,
-//         social_media: socialMedia,
-//         competitors_analysis: competitorsAnalysis,
-//         cmo_recommendation: finalRecommendationByCMO,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("❌ Error:", error);
-//     res.status(500).json({ error: "Something went Wrong on server side" });
-//   }
-// };
-
-
 export const getUserDashboard = async (req: Request, res: Response) => {
   const brandFields = [
     "dashboard1_Freedata",
@@ -247,7 +40,6 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     const brandAudit: any[] = [];
     const socialMedia: any[] = [];
     const competitorsAnalysis: any[] = [];
-    const finalRecommendationByCMO: any[] = [];
 
     const userWebsites = await prisma.user_websites.findMany({
       where: { user_id: userId },
@@ -273,21 +65,53 @@ export const getUserDashboard = async (req: Request, res: Response) => {
             recommendationbymo3: true,
             cmorecommendation: true,
             payments: {
-              select: {
-                amount: true,
-                detail: true,
-              },
+              select: { amount: true, detail: true },
             },
           },
         },
       },
     });
 
+    // ✅ Get CMO recommendations
+    const recommendations = await prisma.cmo_recommendation.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: "desc" },
+    });
+
+  
+const formattedRecommendations = recommendations.map((rec) => {
+  let websiteMeta = null;
+  let firstReportId: string | null = null;
+
+  for (const site of userWebsites) {
+    const foundReport = site.report.find((r) =>
+      (rec.report_ids as string[]).includes(r.report_id)
+    );
+    if (foundReport) {
+      websiteMeta = {
+        website_id: site.website_id,
+        website_url: site.website_url,
+        website_name: site.website_name,
+      };
+      firstReportId = foundReport.report_id; // 👈 pick first report_id
+      break;
+    }
+  }
+
+  return {
+    report_id: firstReportId,
+    ...websiteMeta,   
+    created_at: rec.created_at,
+    updated_at: rec.updated_at,
+    report_ids: rec.report_ids,   // keep all if needed
+    id: rec.id,         // 🔹 adds website info
+  };
+});
+
     let totalSpend = 0;
 
     for (const site of userWebsites) {
       for (const report of site.report) {
-        // ✅ sum payments from this report
         const reportPayments = report.payments ?? [];
         const reportTotal = reportPayments.reduce(
           (sum, p) => sum + (p.amount ?? 0),
@@ -302,7 +126,9 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           created_at: report.created_at,
           updated_at: report.updated_at,
           total_payment: reportTotal,
-          columns: reportPayments.flatMap((p) => Array.isArray(p.detail) ? p.detail : [p.detail]),
+          columns: reportPayments.flatMap((p) =>
+            Array.isArray(p.detail) ? p.detail : [p.detail]
+          ),
         };
 
         const extractFields = (fields: string[]) => {
@@ -311,7 +137,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
             const value = report[key as keyof typeof report];
             if (value != null) {
               const renamed = renameFields[key] ?? key;
-              result[renamed] = 1; // 🔹 marker (since price is no longer needed)
+              result[renamed] = 1;
             }
           }
           return result;
@@ -320,12 +146,10 @@ export const getUserDashboard = async (req: Request, res: Response) => {
         const brand = extractFields(brandFields);
         const social = extractFields(socialFields);
         const competitor = extractFields(competitorFields);
-        const cmo = extractFields(cmoFields);
 
         if (Object.keys(brand).length) brandAudit.push({ ...base });
-        if (Object.keys(social).length) socialMedia.push({ ...base,  });
+        if (Object.keys(social).length) socialMedia.push({ ...base });
         if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base });
-        if (Object.keys(cmo).length) finalRecommendationByCMO.push({ ...base});
       }
     }
 
@@ -333,7 +157,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       total_brand_audit: brandAudit.length,
       total_social_media: socialMedia.length,
       total_competitor_analysis: competitorsAnalysis.length,
-      total_cmo_recommendations: finalRecommendationByCMO.length,
+      total_cmo_recommendations: formattedRecommendations.length,
       total_spend: totalSpend,
     };
 
@@ -343,14 +167,17 @@ export const getUserDashboard = async (req: Request, res: Response) => {
         brand_audit: brandAudit,
         social_media: socialMedia,
         competitors_analysis: competitorsAnalysis,
-        cmo_recommendation: finalRecommendationByCMO,
+        cmo_recommendations: formattedRecommendations,
       },
     });
   } catch (error) {
     console.error("❌ Error:", error);
-    res.status(500).json({ error: "Something went Wrong on server side" });
+    res.status(500).json({ error: "Something went wrong on server side" });
   }
 };
+
+
+
 
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const reportId = req.query.report_id as string;

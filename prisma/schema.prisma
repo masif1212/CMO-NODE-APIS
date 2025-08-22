@@ -503,6 +503,7 @@ model report {
   competitor_details     competitor_details[]     @relation
   analysis_status        analysis_status[]        @relation
   totalpayment              totalpayment[]           @relation
+  // cmoRecommendations CmoRecommendationOnReports[]
 
   payments    payments[] @relation("ReportToPayments")
 
@@ -542,3 +543,27 @@ model propmt_templates {
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
 }
+
+
+model cmo_recommendation {
+  user_id       String ?  
+  id           String   @id @default(uuid())
+  report_ids    Json?
+  cmorecommendation String? @db.LongText
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+  // reports          CmoRecommendationOnReports[]
+
+}
+
+// model CmoRecommendationOnReports {
+//   id                   String            @id @default(uuid())
+//   report_id            String
+//   cmo_recommendation_id String
+
+//   // Relations
+//   report               report            @relation(fields: [report_id], references: [report_id])
+//   // cmoRecommendation    cmo_recommendation @relation(fields: [cmo_recommendation_id], references: [id])
+
+//   @@unique([report_id, cmo_recommendation_id]) // prevents duplicates
+// }

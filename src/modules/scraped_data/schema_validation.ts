@@ -76,7 +76,7 @@ function validateSchema(schema: Schema): { isValid: boolean; error?: string } {
   return { isValid: true };
 }
 
-export async function validateComprehensiveSchema(url: string, website_id: string): Promise<SchemaOutput> {
+export async function validateComprehensiveSchema(url: string): Promise<SchemaOutput> {
   try {
     const response: AxiosResponse = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SchemaValidator/1.0)' },

@@ -24,9 +24,6 @@ export class CMORecommendationService {
     this.model = model;
   }
 
-
-
-
   private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
   const [website, requirement, reports] = await Promise.all([
     this.prisma.user_websites.findUnique({
@@ -90,10 +87,7 @@ export class CMORecommendationService {
   };
 }
 
-  
-
-
-  public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
+public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
     try {
       const {
         website_audit_data: website_audit_data,
@@ -457,7 +451,15 @@ NOTE: Never mention a third api like pagespeed , semrush etc
             },
           });
         }
-  
+        await this.prisma.cmo_recommendation.create({
+            data: {
+              user_id: input.user_id,
+              report_ids: input.report_ids, // saves as JSON array
+              // cmorecommendation: JSON.stringify(cmo_recommendation),
+            },
+          });
+     
+
         for (const reportId of input.report_ids) {
                 const existing = await this.prisma.analysis_status.findFirst({
             where: { report_id: reportId }
@@ -481,6 +483,7 @@ NOTE: Never mention a third api like pagespeed , semrush etc
         }
   
       return { cmo_recommendation: cmo_recommendation};
+
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);
       throw new Error('Failed to generate CMO recommendation');

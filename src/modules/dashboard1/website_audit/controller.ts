@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getPageSpeedData, savePageSpeedAnalysis } from "./service";
+import { getPageSpeedData, savePageSpeedAnalysis,getWebsiteUrlById } from "./service";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
   try {
     console.log("Website audit started");
     const report = await prisma.report.findUnique({
-      where: { report_id: report_id }, // You must have 'report_id' from req.body
+      where: { report_id: report_id }, 
       select: { scraped_data_id: true }
     });
 
@@ -26,8 +26,10 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         success: false,
         error: "No report found with the given report_id.",
       });
-    }
-    const mainPageSpeedData = await getPageSpeedData(user_id, website_id);
+    } 
+    const url = await getWebsiteUrlById(user_id, website_id);
+
+    const mainPageSpeedData = await getPageSpeedData(url);
 
     if (!mainPageSpeedData || typeof mainPageSpeedData !== "object" || Object.keys(mainPageSpeedData).length === 0) {
       return res.status(502).json({
@@ -154,14 +156,13 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       where: { report_id }
     });
 
-    let update;
     if (existing) {
-      update = await prisma.analysis_status.update({
+      await prisma.analysis_status.update({
         where: { id: existing.id },
         data: { website_id, website_audit: true }
       });
     } else {
-      update = await prisma.analysis_status.create({
+      await prisma.analysis_status.create({
         data: { report_id, website_id, website_audit: true, user_id }
       });
     }

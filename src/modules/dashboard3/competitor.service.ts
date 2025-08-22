@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { scrapeWebsiteCompetitors, fetchBrands } from "./scraper";
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM, createComparisonPrompt } from "./llm";
 import { parseCompetitorData } from "./parser";
-import { getPageSpeedData } from "./pagespeed";
+import { getPageSpeedData } from "../dashboard1/website_audit/service";
 import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
@@ -12,10 +12,8 @@ import puppeteer from "puppeteer";
 import {fetchSocialMediaData} from "./social_media_anaylsis"
 import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
 import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
-import { UserRequirement, ProcessedResult, LlmCompetitor } from "./brandprofile_interface";
-import e from "express";
-import { st } from "rdflib";
-import { start } from "repl";
+import { UserRequirement, ProcessedResult} from "./brandprofile_interface";
+
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });

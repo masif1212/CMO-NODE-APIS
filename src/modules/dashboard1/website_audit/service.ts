@@ -4,7 +4,7 @@ import lighthouse from "lighthouse";
 
 const prisma = new PrismaClient();
 import puppeteer from "puppeteer";
-async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+export async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
 
@@ -33,8 +33,7 @@ const mobileFriendlyAudits = [
   "mobile-friendly",
 ];
 
-export async function getPageSpeedData(user_id: string, website_id: string) {
-  const url = await getWebsiteUrlById(user_id, website_id);
+export async function getPageSpeedData(url:string) {
   console.log("url fetch", url);
   const API_KEY = process.env.PAGESPEED_API_KEY || '';
   const API_URL = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
@@ -620,6 +619,14 @@ export async function getPageSpeedData(user_id: string, website_id: string) {
         largest_contentful_paint: getAudit("largest-contentful-paint"),
         cumulative_layout_shift: getAudit("cumulative-layout-shift"),
       },
+        categories: {
+        performance: getScore("performance"),
+        seo: getScore("seo"),
+        accessibility: getScore("accessibility"),
+        best_practices: getScore("best-practices"),
+        pwa: getScore("pwa"),
+      },
+      
       audit_details: {
         allAudits: detailedAuditResults,
         optimization_opportunities: bestPracticeGroups,

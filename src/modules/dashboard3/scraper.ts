@@ -4,7 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
-import { parseStringPromise } from "xml2js";
+import {getRobotsTxtAndSitemaps,evaluateHeadingHierarchy,isLogoUrlValid,parseSitemap,isCrawlableByLLMBots,getStatusMessage} from "../scraped_data/service"
+
 
 import { parse } from 'tldts'; // For root domain extraction
 dotenv.config();
@@ -19,190 +20,6 @@ const getDomainRoot = (url: string): string => {
 
 
 const prisma = new PrismaClient();
-
-async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
-  try {
-    // console.log("getRobotsTxtAndSitemaps")
-    const robotsUrl = new URL("/robots.txt", baseUrl).href;
-    const { data } = await axios.get(robotsUrl);
-    const sitemapUrls: string[] = [];
-
-    for (const line of data.split("\n")) {
-      if (line.toLowerCase().startsWith("sitemap:")) {
-        const parts = line.split(":");
-        const sitemapUrl = parts.slice(1).join(":").trim();
-        if (sitemapUrl) sitemapUrls.push(sitemapUrl);
-      }
-    }
-
-    if (sitemapUrls.length === 0) {
-      const guesses = ["/sitemap.xml", "/sitemap_index.xml"];
-      for (const guess of guesses) {
-        sitemapUrls.push(new URL(guess, baseUrl).href);
-      }
-    }
-
-    return sitemapUrls;
-  } catch {
-    return [];
-  }
-}
-
-async function parseSitemap(sitemapUrl: string): Promise<string[]> {
-  try {
-    // console.log("parseSitemap")
-    const { data } = await axios.get(sitemapUrl);
-    const parsed = await parseStringPromise(data);
-    const urls: string[] = [];
-
-    if (parsed.sitemapindex?.sitemap) {
-      for (const entry of parsed.sitemapindex.sitemap) {
-        if (entry.loc?.[0]) {
-          const nestedUrls = await parseSitemap(entry.loc[0]);
-          urls.push(...nestedUrls);
-        }
-      }
-    }
-
-    if (parsed.urlset?.url) {
-      for (const entry of parsed.urlset.url) {
-        if (entry.loc?.[0]) urls.push(entry.loc[0]);
-      }
-    }
-
-    return urls;
-  } catch {
-    return [];
-  }
-}
-
-async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
-  try {
-    const response = await axios.head(logoUrl, {
-      timeout: 10000,
-      validateStatus: () => true // Don't throw on 404/500
-    });
-    return response.status === 200;
-  } catch (error) {
-    return false;
-  }
-}
-
-function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
-  hasH1: boolean;
-  totalHeadings: number;
-  headingLevelsUsed: string[];
-  headingOrderUsed: string[];
-  hasMultipleH1s: boolean;
-  skippedHeadingLevels: boolean;
-  reversedHeadingOrder: boolean;
-  headingHierarchyIssues: boolean;
-  message: string;
-} {
-  const headings = $("h1, h2, h3, h4, h5, h6");
-  const levels: number[] = [];
-  const headingOrderUsed: string[] = [];
-  const headingLevelsUsed: string[] = [];
-
-  headings.each((_, el) => {
-    const tag = $(el)[0].tagName.toLowerCase();
-    const level = parseInt(tag.replace("h", ""));
-    if (!isNaN(level)) {
-      levels.push(level);
-      headingOrderUsed.push(tag);
-      if (!headingLevelsUsed.includes(tag)) {
-        headingLevelsUsed.push(tag);
-      }
-    }
-  });
-
-  const totalHeadings = levels.length;
-  const hasH1 = headingLevelsUsed.includes("h1");
-  const hasMultipleH1s = levels.filter((l) => l === 1).length > 1;
-
-  // Check for skipped heading levels (e.g., h2 → h4 without h3)
-  let skippedHeadingLevels = false;
-  for (let i = 1; i < levels.length; i++) {
-    const prev = levels[i - 1];
-    const curr = levels[i];
-    if (curr - prev > 1) {
-      skippedHeadingLevels = true;
-      break;
-    }
-  }
-
-  // Check for reversed order (e.g., h3 before h2)
-  let reversedHeadingOrder = false;
-  for (let i = 1; i < levels.length; i++) {
-    if (levels[i] < levels[i - 1]) {
-      reversedHeadingOrder = true;
-      break;
-    }
-  }
-
-  const headingHierarchyIssues =
-    !hasH1 || hasMultipleH1s || skippedHeadingLevels || reversedHeadingOrder;
-
-  let message = "Heading structure looks good.";
-  if (!hasH1) {
-    message = "Missing <h1> tag — every page should have a main heading.";
-  } else if (hasMultipleH1s) {
-    message = "Multiple <h1> tags found — should only have one main heading.";
-  } else if (skippedHeadingLevels) {
-    message = "Heading levels are skipped — e.g., <h2> followed by <h4>.";
-  } else if (reversedHeadingOrder) {
-    message = "Improper heading order — higher-level headings (e.g., <h3>) appear before <h2>.";
-  }
-
-  return {
-    hasH1,
-    totalHeadings,
-    headingLevelsUsed,
-    headingOrderUsed,
-    hasMultipleH1s,
-    skippedHeadingLevels,
-    reversedHeadingOrder,
-    headingHierarchyIssues,
-    message,
-  };
-}
-
-
-
-async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
-  try {
-    const robotsUrl = new URL("/robots.txt", baseUrl).href;
-    const { data: robotsTxt } = await axios.get(robotsUrl);
-
-    const disallowedAgents = ["*", "GPTBot", "CCBot", "AnthropicBot", "ClaudeBot", "ChatGPT-User", "googlebot"];
-    const lines = robotsTxt.split("\n").map((line: string) => line.trim());
-    let currentAgent: string | null = null;
-    const disallowedMap: Record<string, string[]> = {};
-
-    for (const line of lines) {
-      if (line.toLowerCase().startsWith("user-agent:")) {
-        currentAgent = line.split(":")[1].trim();
-      } else if (line.toLowerCase().startsWith("disallow:") && currentAgent) {
-        const path = line.split(":")[1].trim();
-        if (!disallowedMap[currentAgent]) disallowedMap[currentAgent] = [];
-        disallowedMap[currentAgent].push(path);
-      }
-    }
-
-    for (const agent of disallowedAgents) {
-      const disallows = disallowedMap[agent];
-      if (disallows && disallows.some(path => path === "/" || path === "/*")) {
-        return false;
-      }
-    }
-
-    return true;
-  } catch {
-    return true;
-  }
-}
-
-
 export async function scrapeWebsiteCompetitors(url: string) {
   try {
     const res = await axios.get(url, { timeout: 10000 });
@@ -307,33 +124,6 @@ if (!finalLogoUrl) {
   } else {
     selectedKeyPages = allSitemapUrls;
   }
-  // let affectedPagesCount = 0;
-  // const keyPages = await Promise.all(
-  //   selectedKeyPages.map(async (pageUrl) => {
-  //     try {
-  //       const res = await axios.get(pageUrl);
-  //       if (res.status >= 200 && res.status < 400) {
-  //         const $$ = cheerio.load(res.data);
-  //         const titles = $$("title").map((_, el) => $$(el).text().trim()).get().filter(Boolean);
-  //         const title =
-  //           titles.length > 1
-  //             ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-  //             : titles[0] || "not found";
-  //         const meta_description = $$('meta[name="description"]').attr("content") || "not found";
-  //         const og_title = $$('meta[property="og:title"]').attr("content") || "not found";
-  //         const meta_keywords = $$('meta[name="keywords"]').attr("content") || "not found";
-
-  //         const missingAny = !(title && meta_description && og_title && meta_keywords);
-  //         if (missingAny) affectedPagesCount++;
-
-  //         return { url: pageUrl, title, meta_description, og_title, meta_keywords };
-  //       }
-  //     } catch {
-  //       return null;
-  //     }
-  //   })
-  // );
-
 
   let affectedPagesCount = 0;
 const keyPages = await Promise.all(
@@ -575,11 +365,7 @@ Format:
   
 
 
-    // const saveData = JSON.stringify({/*  */
-    //   // brands: parsedBrands,
-    //   website_found: websiteFound,
-
-    // });
+    
 
     await prisma.report.upsert({
       where: { report_id },
@@ -590,18 +376,7 @@ Format:
     
 
     return websiteFound.toString()
-    // return {
-
-
-    //   AI_Discoverability: {
-        
-    //     ...response 
-        
-    //   },
-
-
-
-    // };
+  
   } catch (error: any) {
     throw new Error(`OpenAI Error: ${error.message}`);
   }

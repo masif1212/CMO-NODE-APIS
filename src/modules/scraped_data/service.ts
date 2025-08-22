@@ -20,7 +20,7 @@ export interface ScrapeResult {
   scraped_data_id?:string
 }
 
-function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
+export function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   totalHeadings: number;
   headingOrderUsed: string[];
   hasMultipleH1s: boolean;
@@ -96,7 +96,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   };
 }
 
-async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
+export async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
       timeout: 20000,
@@ -108,7 +108,7 @@ async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   }
 }
 
-async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
+export async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   try {
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
     const { data: robotsTxt } = await axios.get(robotsUrl);
@@ -141,7 +141,7 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   }
 }
 
-async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
+export async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   try {
     // console.log("getRobotsTxtAndSitemaps")
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
@@ -169,7 +169,7 @@ async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   }
 }
 
-async function parseSitemap(sitemapUrl: string): Promise<string[]> {
+export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   try {
     // console.log("parseSitemap")
     const { data } = await axios.get(sitemapUrl);
@@ -197,7 +197,7 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   }
 }
 
-async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+export async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
     where: {
@@ -218,19 +218,8 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
-export async function scrapeWebsite(user_id: string, website_id:string ,report_id: string): Promise<ScrapeResult> {
-  const start = Date.now();
-  const website_url = await getWebsiteUrlById(user_id, website_id);
-  const domain = new URL(website_url).hostname;
 
-  console.log("domain", domain);
-
-  let statusCode: number = 0;
-  let ipAddress: string = "N/A";
-  let html: string = "";
-  let message: string = "Unknown error";
-
-  function getStatusMessage(code: number): string {
+export function getStatusMessage(code: number): string {
     const messages: Record<number, string> = {
        400: "Bad Request",
   401: "Unauthorized - Authentication required",
@@ -284,6 +273,20 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     if (code >= 400 && code <= 499) return `Client error (${code})`;
     return `Unhandled status code (${code})`;
   }
+
+export async function scrapeWebsite(user_id: string, website_id:string ,report_id: string): Promise<ScrapeResult> {
+  const start = Date.now();
+  const website_url = await getWebsiteUrlById(user_id, website_id);
+  const domain = new URL(website_url).hostname;
+
+  console.log("domain", domain);
+
+  let statusCode: number = 0;
+  let ipAddress: string = "N/A";
+  let html: string = "";
+  let message: string = "Unknown error";
+
+
 
   try {
     const response = await axios.get(website_url);
@@ -455,7 +458,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
   };
 
   try {
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, report_id);
+    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url);
     const isCrawlable = await isCrawlableByLLMBots(website_url);
 
     let finalLogoUrl = schemaAnalysisData.logo ?? null;
@@ -601,7 +604,6 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       facebook_handle:record.facebook_handle,
       instagram_handle:record.instagram_handle,
       youtube_handle:record.youtube_handle,
-      // tiktok_handle:record.tiktok_handle,
      
       },
       onpage_opptimization:{
