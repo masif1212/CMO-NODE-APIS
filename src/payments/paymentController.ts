@@ -141,7 +141,7 @@ export const savePaymentMethod = async (req: AuthenticatedRequest, res: Response
 };
 
 export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { token, analysis_types, save_card, source_id,report_id, detail, } = req.body;
+  const { token, analysis_types, save_card, source_id,report_id, detail } = req.body;
   const { user_id, email } = req.user!;
 
   if (!analysis_types || !Array.isArray(analysis_types) || analysis_types.length === 0) {

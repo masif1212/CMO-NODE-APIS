@@ -132,7 +132,7 @@ export const getUserdata = async (req: Request, res: Response) => {
                 totalSpend = reportPayment.reduce((sum: any, p: { amount: any; }) => sum + (p.amount ?? 0), 0);
               }
            
-         
+          
           reports.push({
             report_id: status.report_id,
             created_at: status.created_at,

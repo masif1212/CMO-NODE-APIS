@@ -302,7 +302,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           created_at: report.created_at,
           updated_at: report.updated_at,
           total_payment: reportTotal,
-          columns: reportPayments.map((p) => p.detail),
+          columns: reportPayments.flatMap((p) => Array.isArray(p.detail) ? p.detail : [p.detail]),
         };
 
         const extractFields = (fields: string[]) => {
