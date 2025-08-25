@@ -110,16 +110,16 @@ export class CompetitorService {
   // --- Load website URL ---
   const website_url = await getWebsiteUrlById(user_id, website_id);
   if (!website_url) {
-    throw new Error(`[brandprofile] ❌ No website URL found for website_id=${website_id}`);
+    throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
   }
-  console.log(`[brandprofile] ✅ Found main website URL: ${website_url}`);
+  console.log(`[brandprofile]  Found main website URL: ${website_url}`);
 
   // --- Load report + scraped data ---
   const report = await prisma.report.findUnique({
     where: { report_id },
     select: { scraped_data_id: true },
   });
-  console.log(`[brandprofile] 🔎 Report scraped_data_id: ${report?.scraped_data_id}`);
+  console.log(`[brandprofile]  Report scraped_data_id: ${report?.scraped_data_id}`);
 
   const [scrapedMain, userRequirementRaw] = await Promise.all([
     prisma.website_scraped_data.findUnique({
@@ -129,11 +129,11 @@ export class CompetitorService {
   ]);
 
   if (!scrapedMain) {
-    throw new Error(`[brandprofile] ❌ No scraped data found for report_id=${report_id}`);
+    throw new Error(`[brandprofile] No scraped data found for report_id=${report_id}`);
   }
 
   console.log(
-    `[brandprofile] ✅ Loaded scraped main website data (id=${scrapedMain.scraped_data_id})`
+    `[brandprofile]  Loaded scraped main website data (id=${scrapedMain.scraped_data_id})`
   );
 
   const userRequirement: UserRequirement = {
@@ -149,7 +149,7 @@ export class CompetitorService {
       : [],
   };
 
-  console.log(`[brandprofile] 📝 Parsed user requirements: ${JSON.stringify(userRequirement)}`);
+  console.log(`[brandprofile]  Parsed user requirements: ${JSON.stringify(userRequirement)}`);
 
   const MAX_COMPETITORS = 3;
   const competitorResults: ProcessedResult[] = [];
@@ -175,7 +175,7 @@ export class CompetitorService {
           "--disable-gpu",
         ],
       });
-      console.log("[brandprofile] 🌐 Launching Puppeteer in production (Cloud Run)...");
+      console.log("[brandprofile]  Launching Puppeteer in production (Cloud Run)...");
     } else if (mode === "development") {
       browser = await puppeteer.launch({
         headless: "new" as any,
@@ -188,7 +188,7 @@ export class CompetitorService {
 
     const endLaunch = Date.now();
     console.log(
-      `[brandprofile] ✅ Puppeteer browser launched in ${(endLaunch - startLaunch) / 1000}s`
+      `[brandprofile]  Puppeteer browser launched in ${(endLaunch - startLaunch) / 1000}s`
     );
 
     // --- Process user-provided competitors ---
@@ -218,31 +218,31 @@ export class CompetitorService {
           scraped = await scrapeWebsiteCompetitors(preferredUrl);
           end = Date.now();
           console.log(
-            `[brandprofile] 🌐 Scraped data for ${preferredUrl} (took ${(end - start) / 1000}s)`
+            `[brandprofile]  Scraped data for ${preferredUrl} (took ${(end - start) / 1000}s)`
           );
           start = Date.now();
 
           competitorData = await extractCompetitorDataFromLLM(scraped);
           end = Date.now();
           console.log(
-            `[brandprofile] 🤖 Extracted competitor data for ${preferredUrl} (took ${(end - start) / 1000}s)`
+            `[brandprofile]  Extracted competitor data for ${preferredUrl} (took ${(end - start) / 1000}s)`
           );
         } else {
           start = Date.now();
           competitorData = await extractCompetitorDataFromLLM(scraped);
           end = Date.now();
           console.log(
-            `[brandprofile] ⚠️ Fallback to competitor data extraction for ${originalUrl} (took ${(end - start) / 1000}s)`
+            `[brandprofile]  Fallback to competitor data extraction for ${originalUrl} (took ${(end - start) / 1000}s)`
           );
         }
         start = Date.now();
         name = competitorData?.name || scraped?.page_title || originalUrl;
         end = Date.now();
-        console.log(`[brandprofile] 🏷️ Competitor name: ${name} (extracted in ${(end - start) / 1000}s)`);
+        console.log(`[brandprofile]  Competitor name: ${name} (extracted in ${(end - start) / 1000}s)`);
 
         if (processedNames.has(name)) {
 
-          console.log(`[brandprofile] ⚠️ Duplicate competitor skipped: ${name}`);
+          console.log(`[brandprofile]  Duplicate competitor skipped: ${name}`);
           continue;
         }
         start = Date.now();
@@ -262,7 +262,7 @@ export class CompetitorService {
           },
         });
         end = Date.now();
-        console.log(`[brandprofile] ✅ Saved competitor ${name} (${preferredUrl}) to database (took ${(end - start) / 1000}s)`);
+        console.log(`[brandprofile]  Saved competitor ${name} (${preferredUrl}) to database (took ${(end - start) / 1000}s)`);
         start = Date.now();
         competitorResults.push({
           competitor_id,
@@ -276,19 +276,19 @@ export class CompetitorService {
           },
         });
         end = Date.now();
-        console.log(`[brandprofile] 📝 Added competitor result for ${name} (${preferredUrl}) (took ${(end - start) / 1000}s)`);
+        console.log(`[brandprofile]  Added competitor result for ${name} (${preferredUrl}) (took ${(end - start) / 1000}s)`);
         processedUrls.add(preferredUrl);
         processedNames.add(name);
 
-        console.log(`[brandprofile] ✅ Saved competitor: ${name} (${preferredUrl})`);
+        console.log(`[brandprofile]  Saved competitor: ${name} (${preferredUrl})`);
       } catch (err) {
-        console.error(`[brandprofile] ❌ Error processing competitor ${originalUrl}:`, err);
+        console.error(`[brandprofile] Error processing competitor ${originalUrl}:`, err);
       }
     }
 
     // --- If fewer than MAX_COMPETITORS, fetch from LLM ---
     if (competitorResults.length < MAX_COMPETITORS) {
-      console.log(`[brandprofile] 🤖 Fetching remaining competitors from LLM...`);
+      console.log(`[brandprofile]  Fetching remaining competitors from LLM...`);
 
       let parsed: any[] = [];
       let attempts = 0;
@@ -312,10 +312,10 @@ export class CompetitorService {
           endn = Date.now();
           console.log(`[brandprofile] LLM competitors parsed in ${(endn - startn) / 1000}s`);
           if (parsed.length === 0) {
-            console.warn(`[brandprofile] ⚠️ LLM returned no competitors (attempt ${attempts})`);
+            console.warn(`[brandprofile]  LLM returned no competitors (attempt ${attempts})`);
           }
         } catch (err) {
-          console.error(`[brandprofile] ❌ Error fetching competitors from LLM (attempt ${attempts}):`, err);
+          console.error(`[brandprofile] Error fetching competitors from LLM (attempt ${attempts}):`, err);
         }
       }
       let start = Date.now();
@@ -326,12 +326,12 @@ export class CompetitorService {
         const url = comp.website_url;
         if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
         let end = Date.now();
-        console.log(`[brandprofile] 🏷️ Processing LLM competitor: ${name} (${url}) (took ${(end - start) / 1000}s)`);
+        console.log(`[brandprofile]  Processing LLM competitor: ${name} (${url}) (took ${(end - start) / 1000}s)`);
         try {
           start = Date.now();
           const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
           end = Date.now();
-        console.log(`[brandprofile] 🏷️ validation result for : ${name} (${url}) (took ${(end - start) / 1000}s)`);
+        console.log(`[brandprofile]  validation result for : ${name} (${url}) (took ${(end - start) / 1000}s)`);
           if (!isValid || !preferredUrl) continue;
 
           const competitor_id = uuidv4();
@@ -365,21 +365,21 @@ export class CompetitorService {
           processedUrls.add(preferredUrl);
           processedNames.add(name);
 
-          console.log(`[brandprofile] ✅ Saved LLM competitor: ${name} (${preferredUrl})`);
+          console.log(`[brandprofile]  Saved LLM competitor: ${name} (${preferredUrl})`);
         } catch (err) {
-          console.error(`[brandprofile] ❌ Error saving LLM competitor ${url}:`, err);
+          console.error(`[brandprofile] Error saving LLM competitor ${url}:`, err);
         }
       }
     }
   } finally {
     if (browser) {
       await browser.close();
-      console.log(`[brandprofile] 🛑 Browser closed`);
+      console.log(`[brandprofile]  Browser closed`);
     }
   }
 
   const t1 = performance.now();
-  console.log(`[brandprofile] 🎉 Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
+  console.log(`[brandprofile]  Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
 
   return {
     mainWebsite: {
@@ -650,9 +650,7 @@ const report = await prisma.report.findUnique({
       //     cumulative_layout_shift: getAuditValue("cumulative-layout-shift"),
       //     time_to_interactive: getAuditValue("interactive"),
       //     audit_details: mainPageSpeedData.audit_details,
-      //     revenue_loss_percent: mainPageSpeedData.revenueLossPercent ?? null,
-      //   },
-      // });
+      
     }
 
     const competitors = await prisma.competitor_details.findMany({
@@ -682,7 +680,7 @@ const report = await prisma.report.findUnique({
         logo_url?: string | null;
         primary_offering?: string | null;
         unique_selling_point?: string | null;
-        ctr_loss_percent?: number | string | boolean | object | null; // ✅ Add this line
+        ctr_loss_percent?: number | string | boolean | object | null; //  Add this line
       };
       website_audit: {
         performance_insights: {
@@ -703,13 +701,13 @@ const report = await prisma.report.findUnique({
         brandAuditseo: any;
         meta_description: string | null;
         page_title: string | null;
-        meta_keywords?: string | null; // ✅ Add this line
+        meta_keywords?: string | null; //  Add this line
         schema_markup_status: any;
         isCrawlable: boolean | null;
         headingAnalysis: any;
         alt_text_coverage: any;
         h1_heading: string | null;
-        AI_Discoverability?: string | null; // ✅ Add this line
+        AI_Discoverability?: string | null; //  Add this line
       };
     }
     const competitorResults: CompetitorResult[] = [];
@@ -843,7 +841,7 @@ const report = await prisma.report.findUnique({
             },
           });
 
-          console.warn(`⚠️ Fallback for ${competitor_website_url}: ${errorMsg}`);
+          console.warn(` Fallback for ${competitor_website_url}: ${errorMsg}`);
         }
       })
     );
@@ -1080,7 +1078,7 @@ const combinedResults = {
      
         
 
-//           console.warn(`⚠️ Fallback for ${competitor_website_url}`);
+//           console.warn(` Fallback for ${competitor_website_url}`);
         
 //       )
 //     );

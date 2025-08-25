@@ -50,7 +50,6 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     }
 
     console.log("Website audit analysis saved successfully");
-    console.log("----------------------------------------------------------------------------------");
 
     // Extract directly from mainPageSpeedData
     const auditMap = Object.fromEntries(
@@ -129,8 +128,8 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       seo_revenue_loss_percentage,
       categorie_scrores: categoryScores,
       speed_health: auditMap,
-
     };
+
     const combine_data = {
       full_report: website_health,
       data_for_llm: website_data,
@@ -138,7 +137,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
     await prisma.report.upsert({
       where: {
-        report_id: report_id, // this must be a UNIQUE constraint or @id in the model
+        report_id: report_id, 
       },
       update: {
         website_id: website_id,
@@ -169,6 +168,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     }
 
 
+  console.log("----------------------------------------------------------------------------------");
 
     return res.status(201).json({
       message: "Website audit completed",

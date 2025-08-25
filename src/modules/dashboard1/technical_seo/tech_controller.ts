@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 
 export const technical_seo = async (req: Request, res: Response) => {
-  console.log("🚀 technical seo started:", req.body);
+  console.log("technical seo started:", req.body);
 
   const { website_id, user_id, maxDepth = 0, report_id } = req.body;
   const website_url = await getWebsiteUrlById(user_id, website_id);

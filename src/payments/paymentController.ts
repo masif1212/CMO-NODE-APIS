@@ -4,7 +4,6 @@
 import { Request, Response } from "express";
 import { Checkout, Webhooks } from "checkout-sdk-node";
 import { PrismaClient } from "@prisma/client";
-import { report } from "process";
 
 const prisma = new PrismaClient();
 const cko = new Checkout(process.env.CHECKOUT_SECRET_KEY!);

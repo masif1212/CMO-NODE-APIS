@@ -24,7 +24,4 @@ paymentRouter.get("/history", authenticateToken, getPaymentHistory);
 // Webhook route for Checkout.com
 paymentRouter.post("/webhook", express.raw({ type: "application/json" }), webhookHandler);
 
-
-
-
 export default paymentRouter;
