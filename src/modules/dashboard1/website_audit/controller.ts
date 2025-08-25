@@ -65,11 +65,12 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
     const categoryScores = {
       performance_insight: mainPageSpeedData.audit_details.categoryScores.performance,
-      seo: mainPageSpeedData.audit_details.categoryScores.seo,
+      seo_scores: mainPageSpeedData.audit_details.categoryScores.seo,
       accessibility: mainPageSpeedData.audit_details.categoryScores.accessibility,
-      best_practices: mainPageSpeedData.audit_details.categoryScores["best_practices"],
+      best_practices_scrores: mainPageSpeedData.audit_details.categoryScores["best_practices"],
       mobileFriendliness: mainPageSpeedData.audit_details.categoryScores.mobileFriendliness,
     };
+
     const website = await prisma.user_websites.findUnique({
       where: { website_id },
     });
@@ -126,7 +127,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     const website_data = {
       revenueLossPercent: saved.revenue_loss_percent,
       seo_revenue_loss_percentage,
-      categories: categoryScores,
+      categorie_scrores: categoryScores,
       speed_health: auditMap,
 
     };
@@ -135,7 +136,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       data_for_llm: website_data,
     };
 
-    const record = await prisma.report.upsert({
+    await prisma.report.upsert({
       where: {
         report_id: report_id, // this must be a UNIQUE constraint or @id in the model
       },

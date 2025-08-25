@@ -26,5 +26,7 @@ export const adduserwebsite = async (req: Request, res: Response) => {
   const website_url= req.body.website_url;
   const data = await add_userwebsite(user_id, website_url,);
   console.log("User website added:", data);
+  console.log("----------------------------------------------------------------------------------");
+
   res.status(200).json(data );
 };

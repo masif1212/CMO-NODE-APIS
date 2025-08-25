@@ -534,7 +534,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     },
     update: {
       website_url,
-      // H1_text: h1Text,
+      H1_text: h1Text,
       page_title: JSON.stringify(meta.page_title),
       logo_url: finalLogoUrl,
       meta_description: meta.meta_description,
@@ -564,7 +564,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     create: {
       report_id,
       website_url,
-      // H1_text: h1Text,
+      H1_text: h1Text,
       page_title: JSON.stringify(meta.page_title),
       logo_url: finalLogoUrl,
       meta_description: meta.meta_description,
@@ -627,7 +627,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
 
   
 
-    console.log("Returning result:", result); // Debug log
+  console.log("Returning result:", result); // Debug log
     return result;
   } catch (error: any) {
     const result = {

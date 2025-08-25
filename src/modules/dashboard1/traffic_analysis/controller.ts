@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { saveUserRequirement } from "./service";
 import { saveTrafficAnalysis } from "./service";
 import { PrismaClient } from "@prisma/client";
-import { generate_d1_recommendation, generated1_strengthandIssue } from "../llm_dashboard1";
+import { generate_d1_recommendation, generated1_strengthandIssue } from "../llm/llm_dashboard1";
 const prisma = new PrismaClient();
 
 export const startGoogleAuth = (req: Request, res: Response) => {

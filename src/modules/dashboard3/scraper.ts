@@ -57,6 +57,8 @@ if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
   console.log("Schema logo URL is invalid, falling back...");
   finalLogoUrl = null; // Clear it so fallback logic runs
 }
+const h1Text = $("h1").first().text().trim() || "Not Found";
+
 
 // Step 2: If no valid schema logo, try scraping from HTML
 if (!finalLogoUrl) {
@@ -145,7 +147,7 @@ const keyPages = await Promise.all(
         const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
         const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
         const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
-
+        const h1Text = $("h1").first().text().trim() || "Not Found";
         const isMultipleTitle = title.includes("needs attention");
         const isMissing = [title, meta_description, og_title, meta_keywords].some(
           (v) => !v || v.trim().toLowerCase() === "not found"
@@ -161,7 +163,7 @@ const keyPages = await Promise.all(
           });
         }
 
-        return { url: pageUrl, title, meta_description, og_title, meta_keywords };
+        return { url: pageUrl, title, meta_description, og_title, meta_keywords,h1Text };
       }
     } catch (err : any) {
       console.warn("Error fetching key page:", pageUrl, err.message);
@@ -194,6 +196,7 @@ const keyPages = await Promise.all(
       website_url: url,
       page_title: $('title').text() || null,
       logo_url:  finalLogoUrl|| null,
+      H1_text:h1Text || null,
       meta_description: $('meta[name="description"]').attr('content') || null,
       meta_keywords: $('meta[name="keywords"]').attr('content') || null,
       og_title: $('meta[property="og:title"]').attr('content') || null,

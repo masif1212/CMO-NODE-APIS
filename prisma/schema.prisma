@@ -39,6 +39,23 @@ model users {
   payment_methods        paymentMethods[]
 }
 
+model roles {
+  role_id          String             @id @default(uuid())
+  role_name        String?            @unique
+  description      String?
+  updated_at       DateTime           @default(now()) @updatedAt
+  user_roles       user_roles[]
+  role_permissions role_permissions[]
+}
+
+model user_roles {
+  user_id String
+  role_id String
+  users   users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  roles   roles  @relation(fields: [role_id], references: [role_id])
+
+  @@id([user_id, role_id])
+}
 model analysisServices {
   id          String   @id @default(uuid())
   type        String?  @unique
@@ -142,14 +159,7 @@ model magic_links {
   users         users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-model roles {
-  role_id          String             @id @default(uuid())
-  role_name        String?            @unique
-  description      String?
-  updated_at       DateTime           @default(now()) @updatedAt
-  user_roles       user_roles[]
-  role_permissions role_permissions[]
-}
+
 
 model permissions {
   permission_id    String             @id @default(uuid())
@@ -168,14 +178,6 @@ model role_permissions {
   @@id([role_id, permission_id])
 }
 
-model user_roles {
-  user_id String
-  role_id String
-  users   users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  roles   roles  @relation(fields: [role_id], references: [role_id])
-
-  @@id([user_id, role_id])
-}
 
 model sessions {
   session_id  String   @id @default(uuid())
@@ -348,6 +350,7 @@ model competitor_details {
   scraped_data_id            String?
   name                       String?
   website_url                String?
+  H1_text                    String?              @db.LongText
   competitor_website_url     String?               @db.LongText
   industry                   String?               @db.LongText
   region                     String?               @db.LongText
@@ -403,6 +406,8 @@ model user_requirements {
   ip_address          String?       @db.LongText
   user_agent          String?       @db.LongText
   industry            String?       @db.LongText
+  industry_size       String?       @db.LongText
+  focus_areas        String?        @db.LongText
   region_of_operation String?       @db.LongText
   target_location     String?       @db.LongText
   target_audience     String?       @db.LongText
@@ -488,6 +493,7 @@ model report {
   dashboard1_Freedata    String?                  @db.LongText
   dashboard_paiddata     String?                  @db.LongText
   strengthandissues_d1   String?                  @db.LongText
+  three_burning_issues   String?                  @db.LongText
   recommendationbymo1    String?                  @db.LongText
   dashboard2_data        Json?
   strengthandissues_d2   String?                  @db.LongText
@@ -502,7 +508,6 @@ model report {
   user_websites          user_websites?           @relation(fields: [website_id], references: [website_id], onDelete: Cascade)
   competitor_details     competitor_details[]     @relation
   analysis_status        analysis_status[]        @relation
-  totalpayment              totalpayment[]           @relation
   // cmoRecommendations CmoRecommendationOnReports[]
 
   payments    payments[] @relation("ReportToPayments")
@@ -514,18 +519,6 @@ model report {
   @@index([website_id, updated_at])
 }
 
-
-model totalpayment {
-  id           String   @id @default(uuid())
-  report_id    String?
-  details      Json?
-  created_at   DateTime @default(now())
-  total_amount  Int?
-  
-  report       report?   @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
-}
-
-
 model email_templates {
   template_id   String   @id @default(uuid())
   template_name String?  @unique
@@ -535,7 +528,6 @@ model email_templates {
   updated_at    DateTime @default(now()) @updatedAt
 }
 
-
 model propmt_templates {
   template_id   String   @id @default(uuid())
   template_name String?  @unique
@@ -543,7 +535,6 @@ model propmt_templates {
   created_at    DateTime @default(now())
   updated_at    DateTime @default(now()) @updatedAt
 }
-
 
 model cmo_recommendation {
   user_id       String ?  
@@ -555,15 +546,3 @@ model cmo_recommendation {
   // reports          CmoRecommendationOnReports[]
 
 }
-
-// model CmoRecommendationOnReports {
-//   id                   String            @id @default(uuid())
-//   report_id            String
-//   cmo_recommendation_id String
-
-//   // Relations
-//   report               report            @relation(fields: [report_id], references: [report_id])
-//   // cmoRecommendation    cmo_recommendation @relation(fields: [cmo_recommendation_id], references: [id])
-
-//   @@unique([report_id, cmo_recommendation_id]) // prevents duplicates
-// }

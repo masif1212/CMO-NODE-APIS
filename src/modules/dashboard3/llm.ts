@@ -1,7 +1,6 @@
 
 import OpenAI from 'openai';
 import 'dotenv/config';
-import axios from 'axios';
 
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
@@ -17,65 +16,253 @@ export async function fetchCompetitorsFromLLM(
   existingNames: string[] = []
 ): Promise<string>
 
-{
-  const prompt = `
-You are an expert market research assistant specializing in competitor analysis. Your task is to identify **maximun 6 unique, famous, market-leading competitors** for the given main website, ranked in order of prominence (most renowned and established first). The competitors must be:
-
-### Selection Logic:
-1. **First**,   **look for **top local or regional competitors ** that are active and well-known in target location of main website thats is  ${userRequirement.target_location} and serves the same audience as  ${userRequirement.target_audience}.
-2. **Second**,if no local competitors are found check for **globally recognized market leaders** in the same industry. Only include them if they **offer products/services in the specified target location**.
-
-- **Real, active, well-known businesses** with operational websites that return an HTTP 200 status.
-- **Market leaders or top-tier** in the same industry as the given website  and has  audience in {${userRequirement.target_location}}|| ''}.
-- Not included in: ${existingUrls.join(', ') || 'none'} (URLs), ${existingNames.join(', ') || 'none'} (names).
-- Each must include a valid, accessible **homepage URL** (e.g., https://example.com).
-
-**Main Website **:
-- Website URL: ${scrapedMain.website_url ?? 'Unknown'}
-**main website title: ${scrapedMain.page_title ?? 'Unknown'}
-**main website meta description: ${scrapedMain.meta_description ?? 'Unknown'}
-**main website meta keywords: ${scrapedMain.meta_keywords ?? 'Unknown'}
--
-
-**Output Format**:
-Return a valid **JSON array** of  6 competitors, ordered by prominence (most famous first).
-**Example Output for Daraz.pk.**:
 
 
-  {
-    "website_url": "https://www.aliexpress.com",
-    "industry": "E-commerce",
-    "primary_offering": "Online marketplace for diverse products",
-    "usp": "Low-cost global marketplace with fast shipping",
-  },
-  {
-    "name": "Temu",
-    "website_url": "https://www.temu.com",
-    "industry": "E-commerce",
-    "primary_offering": "Online marketplace for affordable products",
-    "usp": "Competitive pricing with rapid market expansion",
-  },
-  {
-    "name": "PriceOye",
-    "website_url": "https://priceoye.pk",
-    "industry": "E-commerce",
-    "primary_offering": "Electronics and gadgets marketplace",
-    "usp": "Price comparison and deals for Pakistani consumers",
-  }
-  
-  },
-  
 
+ {
+//   const prompt = `
+// You are an expert market research assistant specializing in competitor analysis. Your task is to identify **a maximum of 6 unique, direct competitors** for the given main website. These competitors must operate in the **same market, offer similar services, and target similar business sizes and niches**.
+
+// ---
+
+// ### STRICT Selection Rules:
+
+// 1. Competitors MUST:
+//    - Be in the **same industry** and offer services similar to the main website.
+//    - Target a similar audience: ${userRequirement.target_audience}.
+//    - Have an **active presence or serve clients in ${userRequirement.target_location}**.
+
+// 2. Evidence of regional presence MUST be clear on their website. Acceptable proofs include:
+//    - Physical office address in ${userRequirement.target_location}.
+//    - Contact page with local phone numbers.
+//    - Client case studies/testimonials from ${userRequirement.target_location}.
+//    - Service descriptions explicitly mentioning ${userRequirement.target_location}.
+
+// 3. If NO evidence of regional presence → EXCLUDE the competitor (even if global).
+
+// 4. If fewer than 3 local/regional competitors exist, then:
+//    - Include global agencies ONLY if their website clearly states they serve clients in ${userRequirement.target_location} or have a branch there.
+
+// 5. Exclude any companies already listed in:
+//    - URLs: ${existingUrls.join(', ') || 'none'}
+//    - Names: ${existingNames.join(', ') || 'none'}
+
+// 6. Only include **real, active, well-known businesses with websites returning HTTP 200**.
+
+// ---
+
+// ### Ranking Logic:
+// - Rank from **most established and recognized in ${userRequirement.target_location}** to least.
+
+// ---
+
+// ### Output Fields for Each Competitor:
+// - "name": Official company name
+// - "website_url": Homepage URL
+// - "industry": Broad industry classification
+// - "primary_offering": Main service offering relevant to the main website’s business
+// - "usp": Unique selling point or differentiator (short)
+// - "regional_presence_proof": Exact text/evidence from their site showing presence in ${userRequirement.target_location}
+
+// ---
+
+// **Main Website Info**:
+// - URL: ${scrapedMain.website_url ?? 'Unknown'}
+// - Title: ${scrapedMain.page_title ?? 'Unknown'}
+// - Meta Description: ${scrapedMain.meta_description ?? 'Unknown'}
+// - Meta Keywords: ${scrapedMain.meta_keywords ?? 'Unknown'}
+
+// ---
+
+// ### Output Format:
+// Return as a valid **JSON array of up to 6 objects**, ordered by prominence (most relevant and established first). 
+// Do NOT include explanations, text, or markdown. No extra commentary.
+
+// ---
+
+// **Example Output**:
+// [
+//   {
+//     "name": "Prism Digital",
+//     "website_url": "https://example.com",
+//     "industry": "Digital Marketing",
+//     "primary_offering": "SEO, PPC, and content marketing for SMEs and B2B clients",
+//     "usp": "Full-service digital marketing with bilingual capability",
+//     "regional_presence_proof": "Contact page lists Dubai office address"
+//   },
+//   {
+//     "name": "Synergy Advertising",
+//     "website_url": "https://www.example.com",
+//     "industry": "Advertising and Digital Marketing",
+//     "primary_offering": "Integrated marketing campaigns for brands and startups",
+//     "usp": "Strong PR integration and brand storytelling",
+//     "regional_presence_proof": "Case studies highlight Pakistani clients"
+//   }
+// ]
+
+
+// ---
+
+
+// Return the result strictly as raw JSON. Do **not** wrap it in code blocks or markdown. Do **not** explain anything. Just output the JSON object.
+// `;
+
+const prompt =`You are an expert market research assistant specializing in competitor analysis. Your task is to identify *a maximum of 6 unique, direct competitors* for the given main website. These competitors must operate in the *same market, offer similar services, and target similar business sizes and niches*.
 
 ---
 
-Return the result strictly as raw JSON. Do **not** wrap it in code blocks or markdown. Do **not** explain anything. Just output the JSON object.
-`;
+### INPUT DATA:
+- *User Inputs*:
+   - Target Location: ${userRequirement.target_location}
+   - Target Audience: ${userRequirement.target_audience}
+   - Claimed Industry: ${userRequirement.industry}
+   -  primary offering ${userRequirement.brand_offering}
+
+
+- *Scraped Website Data*:
+   - URL: ${scrapedMain.website_url ?? 'Unknown'}
+   - Meta Title: ${scrapedMain.page_title ?? 'Not available'}
+   - Meta Description: ${scrapedMain.meta_description ?? 'Not available'}
+   - Meta Keywords: ${scrapedMain.meta_keywords ?? 'Not available'}
+   - Primary H1: ${scrapedMain.h1 ?? 'Not available'}
+
+---
+
+### BALANCING RULE:
+- If user input about industry or niche seems *vague or inconsistent*, use scraped meta data and H1 to infer or validate the industry and services.
+- When determining competitors:
+   - Prioritize *scraped website info first*, then use user input as secondary context.
+   - If both are available and aligned, proceed as usual.
+   - If there is conflict, assume scraped data is more reliable.
+
+---
+
+### STRICT SELECTION RULES:
+1. Competitors MUST:
+   - Be in the same industry and offer services similar to the main website (validated using both user input and scraped meta/H1 data).
+   - Target a similar audience: ${userRequirement.target_audience} (or inferred audience from scraped description).
+   - Have an active presence or serve clients in ${userRequirement.target_location}.
+
+2. Evidence of regional presence MUST be clear on their website. Acceptable proofs include:
+   - Physical office address in ${userRequirement.target_location}.
+   - Contact page with local phone numbers.
+   - Client case studies/testimonials from ${userRequirement.target_location}.
+   - Service descriptions explicitly mentioning ${userRequirement.target_location}.
+
+3. If NO evidence of regional presence → EXCLUDE the competitor (even if global).
+
+4. If fewer than 3 local/regional competitors exist, include global agencies ONLY if their site clearly states they serve ${userRequirement.target_location}.
+
+5. Exclude any companies already listed in:
+   - URLs: ${existingUrls.join(', ') || 'none'}
+   - Names: ${existingNames.join(', ') || 'none'}
+
+6. Only include real, active, well-known businesses with websites returning HTTP 200.
+
+---
+
+### RANKING LOGIC:
+- Rank from *most established and recognized in ${userRequirement.target_location}* to least.
+
+---
+
+### OUTPUT FIELDS FOR EACH COMPETITOR:
+- "name": Official company name
+- "website_url": Homepage URL
+- "industry": Broad industry classification (validated against scraped + user input)
+- "primary_offering": Main service offering relevant to the main website’s business
+- "usp": Unique selling point or differentiator (short)
+- "regional_presence_proof": Exact text/evidence from their site showing presence in ${userRequirement.target_location}
+
+---
+
+### OUTPUT FORMAT:
+Return as a valid *JSON array of up to 6 objects*, ordered by prominence (most relevant and established first). 
+Do NOT include explanations, text, or markdown.
+
+---
+
+### Example Output:
+[
+  {
+    "name": "Prism Digital",
+    "website_url": "https://www.prism-me.com",
+    "industry": "Digital Marketing",
+    "primary_offering": "SEO, PPC, and content marketing for SMEs and B2B clients",
+    "usp": "Full-service digital marketing with bilingual capability",
+    "regional_presence_proof": "Contact page lists Dubai office address"
+  },
+  {
+    "name": "Synergy Advertising",
+    "website_url": "https://www.synergyadvertising.com.pk",
+    "industry": "Advertising and Digital Marketing",
+    "primary_offering": "Integrated marketing campaigns for brands and startups",
+    "usp": "Strong PR integration and brand storytelling",
+    "regional_presence_proof": "Case studies highlight Pakistani clients"
+  }
+]'`
+
+// const prompt = `Role: Expert market research assistant for competitor discovery.
+
+// Objective:
+// Identify up to six (6) *in-region* competitors for the Main Website. "In-region" means headquartered in, physically operating in, or explicitly serving customers in *${userRequirement.target_location || 'the specified location'}* (ISO country code: ${userRequirement.target_country_code || 'N/A'})—*not* generic global brands with no regional presence.
+
+// Selection policy (apply in order):
+// 1) *Local/Regional First* — Prefer competitors that clearly operate in ${userRequirement.target_location || 'the region'} and serve ${userRequirement.target_audience || 'the same audience'}.
+// 2) *Global Only If Locally Active* — Include a global brand *only* if you find explicit evidence that it operates in or ships/services to ${userRequirement.target_location || 'the region'} (e.g., local office/store page, service areas page, country selector set to ${userRequirement.target_country_code || 'the country'}, local currency checkout, localized legal pages, local phone/address, verified Google Business Profile).
+// 3) *Exclusions* — Exclude the Main Website, its sub-brands, directories/aggregators unless they directly compete, and anything already in:
+//    • URLs: ${Array.isArray(existingUrls) && existingUrls.length ? existingUrls.join(', ') : 'none'}
+//    • Names: ${Array.isArray(existingNames) && existingNames.length ? existingNames.join(', ') : 'none'}
+
+// Hard constraints (must all hold):
+// - Real, active, well-known businesses in the *same industry* as the Main Website, with an operational homepage expected to return HTTP 200 (https preferred).
+// - *In-region presence is mandatory* for inclusion. If in doubt, *exclude*.
+// - No duplicates by name or domain (case-insensitive; normalize domains by removing leading "www." before comparing).
+// - If fewer than six valid in-region competitors exist, return only those. Do *not* fabricate.
+
+// Evidence to consider for in-region validation (cite in output):
+// - A local address/branches page or footer address for ${userRequirement.target_location || 'the region'} (e.g., "Contact/Stores/Locations").
+// - Country or region-specific site/ccTLD (e.g., .pk), locale subpath/subdomain (e.g., /pk/, pk.example.com), or a country selector where ${userRequirement.target_country_code || 'the country code'} is available.
+// - Local currency (e.g., PKR), local language content, region-specific legal/policy pages, support phone numbers with local dialing code.
+// - Google Business Profile (if applicable), or reputable directory profile explicitly tied to the region.
+
+// Main Website context:
+// - URL: ${scrapedMain?.website_url ?? 'Unknown'}
+// - Title: ${scrapedMain?.page_title ?? 'Unknown'}
+// - Meta description: ${scrapedMain?.meta_description ?? 'Unknown'}
+// - Meta keywords: ${scrapedMain?.meta_keywords ?? 'Unknown'}
+
+// Output format (strict JSON only; no markdown, no explanations):
+// Return a JSON *array* (max 6) ordered by prominence (most renowned first). Each object MUST be exactly:
+
+// {
+//   "name": "Brand name",
+//   "website_url": "https://example.com",
+//   "industry": "Concise industry label",
+//   "primary_offering": "One-line description of what they sell/do",
+//   "usp": "Strongest differentiator in this region",
+//   "region_scope": "${userRequirement.target_location || 'Region'}",
+//   "operates_in_region": true,
+//   "presence_evidence": [
+//     "Brief bullet(s) of concrete, verifiable evidence of local presence (e.g., 'Stores in Lahore – /stores', 'PK country selector', 'PKR pricing', 'Google Business Profile: <brand name>')"
+//   ]
+// }
+
+// Rules:
+// - Only include entries with "operates_in_region": true and at least one item in "presence_evidence".
+// - Use absolute homepage URLs with scheme (https:// preferred).
+// - Use *valid JSON*: double quotes, no comments, no trailing commas.
+// - If no suitable competitors are found, output [].
+// `;
 
 
 
 
-// console.log("prompt",prompt)
+
+
+
+
+console.log("prompt",prompt)
  
     try {
     const response = await openai.responses.create({
@@ -86,10 +273,10 @@ Return the result strictly as raw JSON. Do **not** wrap it in code blocks or mar
           type: 'web_search_preview',
           search_context_size: 'high',
          
-          // user_location: {
-          //   type: 'approximate',
-          //   region: userRequirement.target_location  || 'Unknown',
-          // },
+          user_location: {
+            type: 'approximate',
+            region: userRequirement.target_location  || 'Unknown',
+          },
         },
         
       ],

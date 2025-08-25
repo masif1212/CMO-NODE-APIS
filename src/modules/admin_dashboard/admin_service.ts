@@ -237,8 +237,6 @@ export const getUserdata = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-
 // add or update  service
 export async function addOrUpdateAnalysisService(req: Request, res: Response) {
   try {
@@ -329,10 +327,6 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
     return res.status(500).json({ error: "Server error" });
   }
 }
-
-
-
-
 
 export async function Deactivateuser(req: Request, res: Response) {
   try {

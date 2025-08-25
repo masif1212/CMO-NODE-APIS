@@ -2,9 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import * as microdata from 'microdata-node';
 import * as $rdf from 'rdflib';
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
 
 interface Schema {
   '@context'?: string;

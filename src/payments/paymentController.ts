@@ -274,25 +274,3 @@ export const webhookHandler = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export async function totalpayment(req: Request, res: Response) {
-  try {
-    const { report_id, detail, totalpayment} = req.body;
-    if (!report_id || typeof report_id !== 'string') {
-      
-      return res.json("User ID is required");
-    }
-    
-      const user = await prisma.totalpayment.create({
-        data: { 
-          report_id: report_id,
-          details: detail,
-          total_amount: totalpayment
-        }
-  });
-    
-    return res.json(user);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server error" });
-  }
-}

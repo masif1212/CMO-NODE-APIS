@@ -5,7 +5,9 @@ import cors from "cors";
 import session from "express-session";
 import usersRouter from "./modules/users/router";
 import pageSpeedRouter from "./modules/dashboard1/website_audit/router";
-import authRouter, { dashboardRouter1 } from "./modules/dashboard1/traffic_analysis/router";
+import authRouter from "./modules/dashboard1/traffic_analysis/router";
+import { dashboardRouter1 } from "./modules/dashboard1/llm/router";
+
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/dashboard2/youtube/router";

@@ -26,9 +26,6 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
 
     if (!report) throw new Error("Missing report object");
 
-
-
-
 console.log("fetching data from db...")
     const [scrapedData, pageSpeedData, traffic] = await Promise.all([
       report?.scraped_data_id
@@ -47,7 +44,9 @@ console.log("fetching data from db...")
             page_title: true,
             homepage_alt_text_coverage: true,
             raw_html: true,
+            H1_text: true,
           },
+
         })
         : Promise.resolve(null),
 
@@ -91,21 +90,12 @@ console.log("fetching data from db...")
         meta_keywords: scrapedData.meta_keywords || "N/A",
         homepage_alt_text_coverage: scrapedData.homepage_alt_text_coverage || "N/A",
         status_message: scrapedData.status_code,
+        h1_text:scrapedData.H1_text || "N/A",
         ip_address: scrapedData.ip_address,
         response_time_ms: scrapedData.response_time_ms,
         status_code: scrapedData.status_code,
       };
-      try {
-        let h1Text = "Not Found";
-        if (scrapedData?.raw_html) {
-          const $ = cheerio.load(scrapedData.raw_html);
-          h1Text = $("h1").first().text().trim() || "Not Found";
-        }
-        onpage_opptimization.h1Text = { h1Text };
-      } catch (error) {
-        console.error("Error extracting <h1> from raw_html:", error);
-        onpage_opptimization.h1Text = { h1: [], count: 0 };
-      }
+
     }
 
     // Technical SEO

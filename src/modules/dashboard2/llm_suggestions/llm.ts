@@ -49,23 +49,18 @@ export const generatesocialmediareport = async (
           meta_description: true,
           meta_keywords: true,
           page_title: true,
-          raw_html: true,
+          H1_text: true,
         },
       }),
     ]);
 
-    let h1Text = "Not Found";
-    if (scraped?.raw_html) {
-      const $ = cheerio.load(scraped.raw_html);
-      h1Text = $("h1").first().text().trim() || "Not Found";
-    }
-
+   
     const allDataforrecommendation = {
       meta_data: {
         title: scraped?.page_title ?? "N/A",
         meta_description: scraped?.meta_description ?? "N/A",
         meta_keywords: scraped?.meta_keywords ?? "n/a",
-        h1_heading: h1Text,
+        h1_heading: scraped?.H1_text?? "N/A",
       },
       social_media_data: report?.dashboard2_data ?? "n/a",
     };

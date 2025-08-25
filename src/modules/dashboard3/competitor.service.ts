@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { scrapeWebsiteCompetitors, fetchBrands } from "./scraper";
 import { fetchCompetitorsFromLLM, extractCompetitorDataFromLLM, createComparisonPrompt } from "./llm";
 import { parseCompetitorData } from "./parser";
-import { getPageSpeedData } from "../dashboard1/website_audit/service";
+import { getPageSpeedData ,getWebsiteUrlById} from "../dashboard1/website_audit/service";
 import OpenAI from "openai";
 import "dotenv/config";
 import * as cheerio from "cheerio";
@@ -13,6 +13,7 @@ import {fetchSocialMediaData} from "./social_media_anaylsis"
 import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
 import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
 import { UserRequirement, ProcessedResult} from "./brandprofile_interface";
+import { unknown } from "zod";
 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -91,31 +92,7 @@ function safeParse(jsonStr: any) {
   }
 }
 
-async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
-  const website = await prisma.user_websites.findUnique({
-    where: {
-      user_id_website_id: {
-        user_id,
-        website_id,
-      },
-    },
-    select: {
-      website_url: true,
-    },
-  });
 
-  if (!website?.website_url) {
-    throw new Error(`No URL found for user_id: ${user_id} and website_id: ${website_id}`);
-  }
-  // console.log("website_url",website.website_url)
-  return website.website_url;
-}
-
-async function extractH1(rawHtml: string | null): Promise<string> {
-  if (!rawHtml) return "Not Found";
-  const $ = cheerio.load(rawHtml);
-  return $("h1").first().text().trim() || "Not Found";
-}
 
 export class CompetitorService {
   static async brandprofile(
@@ -161,7 +138,9 @@ export class CompetitorService {
 
   const userRequirement: UserRequirement = {
     industry: userRequirementRaw?.industry ?? "Unknown",
+    target_location:userRequirementRaw?.target_location?? "unknown",
     primary_offering: userRequirementRaw?.primary_offering ?? "Unknown",
+    brand_offering:userRequirementRaw?.primary_offering ?? "unknown",
     USP: userRequirementRaw?.USP ?? "Unknown",
     competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
       ? userRequirementRaw.competitor_urls.filter(
@@ -455,11 +434,12 @@ export class CompetitorService {
           page_title: true,
           homepage_alt_text_coverage: true,
           schema_analysis: true,
-          raw_html: true,
+          // raw_html: true,
           isCrawlable: true,
           headingAnalysis: true,
           logo_url: true,
           ctr_loss_percent: true,
+          H1_text:true,
         },
       }),
     
@@ -481,7 +461,7 @@ export class CompetitorService {
     }
 
     if (main_website_scrapeddata) {
-      const main_h1_heading = main_website_scrapeddata.raw_html ? (await extractH1(main_website_scrapeddata.raw_html)) || null : null;
+      const main_h1_heading = main_website_scrapeddata.H1_text
 
       const main_schema_markup_status: SchemaMarkupStatus = {
         url: main_website_url,
@@ -558,7 +538,7 @@ export class CompetitorService {
           throw new Error(`Scrape failed for ${competitor_website_url}: ${scraped}`);
         }
 
-        const h1_heading = scraped.raw_html ? (await extractH1(scraped.raw_html)) || null : null;
+        const h1_heading = scraped.H1_text
         const schema_markup_status: SchemaMarkupStatus = {
           url: competitor_website_url,
           message: scraped.schema_analysis ? "Structured data detected" : "No structured data detected",
@@ -764,8 +744,7 @@ const report = await prisma.report.findUnique({
           });
 
           const { categories, audits, audit_details, revenueLossPercent } = pageSpeedData;
-          const rawHtml = competitorDataMap.get(competitor_id)?.raw_html ?? null;
-          const h1_heading = await extractH1(rawHtml);
+          const h1_heading = competitorDataMap.get(competitor_id)?.H1_text ?? null;
 
           competitorResults.push({
             competitor_id,
@@ -823,7 +802,6 @@ const report = await prisma.report.findUnique({
           });
         } catch (err) {
           const rawHtml = competitorDataMap.get(competitor_id)?.raw_html ?? null;
-          const h1_heading = await extractH1(rawHtml);
           const errorMsg = err instanceof Error ? err.message : String(err);
 
           competitorResults.push({
@@ -860,7 +838,7 @@ const report = await prisma.report.findUnique({
               isCrawlable: competitorDataMap.get(competitor_id)?.isCrawlable ?? null,
               headingAnalysis: competitorDataMap.get(competitor_id)?.headingAnalysis ?? null,
               alt_text_coverage: competitorDataMap.get(competitor_id)?.homepage_alt_text_coverage ?? null,
-              h1_heading,
+              h1_heading: competitorDataMap.get(competitor_id)?.H1_text ?? null,
               AI_Discoverability: "True",
             },
           });
@@ -900,7 +878,6 @@ const report = await prisma.report.findUnique({
       return aIndex - bIndex; // Both are preferred, maintain order
     });
 
-    const mainH1Heading = await extractH1(websiteScraped?.raw_html ?? null);
     const dashboarddata: Record<string, any> = {
       mainWebsite:
         mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData)
@@ -953,7 +930,7 @@ const report = await prisma.report.findUnique({
                 isCrawlable: websiteScraped?.isCrawlable || null,
                 headingAnalysis: websiteScraped?.headingAnalysis || null,
                 alt_text_coverage: websiteScraped?.homepage_alt_text_coverage || null,
-                h1_heading: mainH1Heading || null,
+                h1_heading: websiteScraped?.H1_text || null,
                 AI_Discoverability: geo_llm?.geo_llm || "False",
               },
             }

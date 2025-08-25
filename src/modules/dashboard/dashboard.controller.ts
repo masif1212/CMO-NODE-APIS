@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { d1_burning_issues } from "../dashboard1/llm/controller";
 
 const prisma = new PrismaClient();
 
@@ -176,9 +177,6 @@ const formattedRecommendations = recommendations.map((rec) => {
   }
 };
 
-
-
-
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const reportId = req.query.report_id as string;
 
@@ -215,6 +213,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       recommendation_by_mo_dashboard1: {
         strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
         recommendations: safeParse(reportData?.recommendationbymo1),
+        three_burining_issue:safeParse(reportData?.three_burning_issues)
       },
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
