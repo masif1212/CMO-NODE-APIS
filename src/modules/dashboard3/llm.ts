@@ -1,7 +1,7 @@
 
 import OpenAI from 'openai';
 import 'dotenv/config';
-
+import {deepClean} from "../../utils/clean_text"
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export const openai = new OpenAI({
@@ -202,59 +202,6 @@ Do NOT include explanations, text, or markdown.
   }
 ]'`
 
-// const prompt = `Role: Expert market research assistant for competitor discovery.
-
-// Objective:
-// Identify up to six (6) *in-region* competitors for the Main Website. "In-region" means headquartered in, physically operating in, or explicitly serving customers in *${userRequirement.target_location || 'the specified location'}* (ISO country code: ${userRequirement.target_country_code || 'N/A'})—*not* generic global brands with no regional presence.
-
-// Selection policy (apply in order):
-// 1) *Local/Regional First* — Prefer competitors that clearly operate in ${userRequirement.target_location || 'the region'} and serve ${userRequirement.target_audience || 'the same audience'}.
-// 2) *Global Only If Locally Active* — Include a global brand *only* if you find explicit evidence that it operates in or ships/services to ${userRequirement.target_location || 'the region'} (e.g., local office/store page, service areas page, country selector set to ${userRequirement.target_country_code || 'the country'}, local currency checkout, localized legal pages, local phone/address, verified Google Business Profile).
-// 3) *Exclusions* — Exclude the Main Website, its sub-brands, directories/aggregators unless they directly compete, and anything already in:
-//    • URLs: ${Array.isArray(existingUrls) && existingUrls.length ? existingUrls.join(', ') : 'none'}
-//    • Names: ${Array.isArray(existingNames) && existingNames.length ? existingNames.join(', ') : 'none'}
-
-// Hard constraints (must all hold):
-// - Real, active, well-known businesses in the *same industry* as the Main Website, with an operational homepage expected to return HTTP 200 (https preferred).
-// - *In-region presence is mandatory* for inclusion. If in doubt, *exclude*.
-// - No duplicates by name or domain (case-insensitive; normalize domains by removing leading "www." before comparing).
-// - If fewer than six valid in-region competitors exist, return only those. Do *not* fabricate.
-
-// Evidence to consider for in-region validation (cite in output):
-// - A local address/branches page or footer address for ${userRequirement.target_location || 'the region'} (e.g., "Contact/Stores/Locations").
-// - Country or region-specific site/ccTLD (e.g., .pk), locale subpath/subdomain (e.g., /pk/, pk.example.com), or a country selector where ${userRequirement.target_country_code || 'the country code'} is available.
-// - Local currency (e.g., PKR), local language content, region-specific legal/policy pages, support phone numbers with local dialing code.
-// - Google Business Profile (if applicable), or reputable directory profile explicitly tied to the region.
-
-// Main Website context:
-// - URL: ${scrapedMain?.website_url ?? 'Unknown'}
-// - Title: ${scrapedMain?.page_title ?? 'Unknown'}
-// - Meta description: ${scrapedMain?.meta_description ?? 'Unknown'}
-// - Meta keywords: ${scrapedMain?.meta_keywords ?? 'Unknown'}
-
-// Output format (strict JSON only; no markdown, no explanations):
-// Return a JSON *array* (max 6) ordered by prominence (most renowned first). Each object MUST be exactly:
-
-// {
-//   "name": "Brand name",
-//   "website_url": "https://example.com",
-//   "industry": "Concise industry label",
-//   "primary_offering": "One-line description of what they sell/do",
-//   "usp": "Strongest differentiator in this region",
-//   "region_scope": "${userRequirement.target_location || 'Region'}",
-//   "operates_in_region": true,
-//   "presence_evidence": [
-//     "Brief bullet(s) of concrete, verifiable evidence of local presence (e.g., 'Stores in Lahore – /stores', 'PK country selector', 'PKR pricing', 'Google Business Profile: <brand name>')"
-//   ]
-// }
-
-// Rules:
-// - Only include entries with "operates_in_region": true and at least one item in "presence_evidence".
-// - Use absolute homepage URLs with scheme (https:// preferred).
-// - Use *valid JSON*: double quotes, no comments, no trailing commas.
-// - If no suitable competitors are found, output [].
-// `;
-
 
 
 
@@ -374,16 +321,23 @@ const competitor_data = await prisma.report.findUnique({
       select: {
         
         dashboard3_data: true,
+        dashboard3_socialmedia:true
       
       },
     });
 
+  const mergedData = {
+  dashboard3_data:competitor_data?.dashboard3_data,
+  socialmedia: competitor_data?.dashboard3_socialmedia,
+};
 
+// Deep clean the merged object
+const clean_data =deepClean (JSON.stringify(mergedData));
  return `
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
 ### Input Data
-- ${competitor_data?.dashboard3_data || 'No competitor comparison data available.'}
+- ${clean_data || 'No competitor comparison data available.'}
 Note if website REVENUE LOSS IS IN NEGATVE it means that it is good and all the website keypoints  (lcp/fcp etc) are better than the threshold value.
 If seo revenue loss is zero its good , and if its positive it means it is bad 
 ### Task
@@ -397,8 +351,14 @@ Each object must contain:
     (Tie search ranking issues to traffic/conversion loss. Use bounce rate, click-through rate, high-exit pages, etc.)
   - 'Big Idea'  
     (Evaluate clarity and strength of homepage messaging vs competitors. Does the site clearly differentiate itself?)
+  -  'Social Media Analysis'
+    (what platforms competitors are using and what should main website use to improve our productivity, add a brief summary of evalution)
+  - 'Paid Ads '  
+    (Do competitor have paid ads? What types of ad can we use )
   - 'Performance Comparison'  
     (Use metrics like Core Web Vitals, Largest Contentful Paint, Accessibility, Mobile Experience, etc.)
+
+    
 - **how_to_close_the_gap**: A detailed plan (5-6 sentences) that includes:
   - Which **competitor** is performing better and **how**
   - A **technical or strategic fix**
@@ -407,7 +367,7 @@ Each object must contain:
   - The **business impact** of closing this gap (e.g., more traffic, better UX, higher conversions)
 
 ### Notes:
-- The following 4 tags are **mandatory** but not limited and must be included **exactly once** each in the final JSON array. Each tag should have its own unique, non-overlapping recommendation:
+- The following 6 tags are **mandatory** but not limited and must be included **exactly once** each in the final JSON array. Each tag should have its own unique, non-overlapping recommendation:
 - If other meaningful gaps are identified based on the input data, you may include additional recommendations with **new, unique tags** that reflect those issues. However, the 4 tags above are **required** and must appear in the output exactly once, each addressing a distinct gap.
 - Mention the **best-performing competitor** when available. If not, fallback to industry best practices (e.g., LCP < 2.5s, meta description ≤ 160 characters, alt text on all homepage images).
 - Do **not** mention external tools or APIs (e.g., Lighthouse, Google Search Console).

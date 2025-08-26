@@ -2,8 +2,6 @@ import { Request, Response } from "express";
 import { checkBrokenLinks, getWebsiteUrlById } from "./tech_service";
 import { PrismaClient, Prisma } from "@prisma/client";
 
-
-
 const prisma = new PrismaClient();
 
 

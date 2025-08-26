@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
-import * as cheerio from "cheerio";
-
+import {deepClean} from "../../../utils/clean_text"
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
@@ -47,7 +46,6 @@ export const generatesocialmediareport = async (
         where: { scraped_data_id: report?.scraped_data_id ?? undefined },
         select: {
           meta_description: true,
-          meta_keywords: true,
           page_title: true,
           H1_text: true,
         },
@@ -59,19 +57,19 @@ export const generatesocialmediareport = async (
       meta_data: {
         title: scraped?.page_title ?? "N/A",
         meta_description: scraped?.meta_description ?? "N/A",
-        meta_keywords: scraped?.meta_keywords ?? "n/a",
         h1_heading: scraped?.H1_text?? "N/A",
       },
       social_media_data: report?.dashboard2_data ?? "n/a",
     };
-
+    const clean_data = deepClean(JSON.stringify(allDataforrecommendation))
+    console.log("clean_data",clean_data)
     const llmResponse = await openai.chat.completions.create({
       model: model,
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: brandPulsePrompt },
-        { role: "user", content: JSON.stringify(allDataforrecommendation) },
+        { role: "user", content: JSON.stringify(clean_data) },
       ],
     });
 
@@ -91,10 +89,10 @@ export const generatesocialmediareport = async (
     // Save cleaned response
     await prisma.report.upsert({
       where: { report_id },
-      update: { strengthandissues_d2: JSON.stringify(cleanedContent) },
+      update: { recommendationbymo2: JSON.stringify(cleanedContent) },
       create: {
         report_id,
-        strengthandissues_d2: JSON.stringify(cleanedContent),
+        recommendationbymo2: JSON.stringify(cleanedContent),
         user_websites: { connect: { website_id } },
       },
     });
@@ -112,7 +110,7 @@ export const generatesocialmediareport = async (
       });
     }
 
-    console.log("LLM response saved successfully for website_id:", website_id);
+    console.log("LLM response saved successfully for report_id:", report_id);
     return { recommendation_by_mo_dashboard2: cleanedContent };
   } catch (err) {
     console.error("LLM Audit Error:", err);
@@ -120,41 +118,103 @@ export const generatesocialmediareport = async (
   }
 };
 
-export const brandPulsePrompt = `Analyze the brand tone and messaging style across the following platforms: website, Instagram, Facebook, and YouTube. Carefully read and compare the content from each platform, and generate a structured JSON output that includes:
+export const brandPulsePrompt = `Analyze the brand tone, messaging style, and cross-channel presence across the following platforms: website, Instagram, Facebook, and YouTube. Carefully review the content from each platform, then generate a structured JSON output with the following sections:
 
-Platform-wise Tone Analysis: Brief summary of the tone and style used on each platform. Mention any emotional tone (e.g. inspiring, humorous, professional), voice (e.g. conversational, authoritative), and communication style (e.g. visual-heavy, slogan-driven).
+1. **Brand Voice Summary (Core Identity)**  
+   - Provide a unified overview of the brand’s overall voice, tone, emotional quality, and communication style.
 
-Persona Alignment: Determine whether the brand’s tone and content aligns with a specific audience persona, such as Gen Z consumers, corporate buyers, eco-conscious families, small business owners, etc.
+2. **Platform-wise Overview**  
+   For each platform (website, Instagram, Facebook, YouTube), summarize in the same format:
+   - Tone & Style (e.g. professional, playful, inspiring)  
+   - Emotional Appeal (e.g. motivating, humorous, trust-building)  
+   - Communication Format (e.g. slogan-driven, visual-heavy, story-led)
 
-Consistency Evaluation: Rate the overall brand tone consistency across all platforms on a scale of 1 to 5, where 1 is very inconsistent and 5 is highly consistent.
+3. **Persona Alignment**  
+   - Identify the perceived target persona(s) (e.g. Gen Z trend-seekers, eco-conscious parents, corporate buyers, etc.).  
+   - Mention if personas differ by platform.
 
-Key Findings: List 3–5 bullet points highlighting:
-- Matches or mismatches in tone across platforms
-- Unique or standout phrases, CTAs, or slogans
-- Any contradictions in messaging or positioning
-- Observations about visual tone (if applicable)
+4. **Consistency Evaluation**  
+   - Rate consistency across all platforms on a scale of 1–5 (1 = very inconsistent, 5 = highly consistent).  
+   - Mention any areas where tone or style diverges.
 
-Actionable Recommendation: Provide a one-sentence recommendation to improve tone consistency and alignment with the target persona.
+5. **Industry Platform Usage**  
+   - Identify which platforms are most dominant in this industry.  
+   - Suggest which platform(s) this brand should prioritize more for visibility and impact.
+
+6. **Omnichannel Experience**  
+   - Evaluate how well the platforms connect to create a seamless brand journey.  
+   - Note strengths and gaps (e.g. strong Instagram ↔ website funnel, weak YouTube integration).  
+
+7. **Industry Advertising Insights**  
+   - Highlight common types of ads running in this industry (e.g. performance-driven video ads, influencer collaborations, carousel product ads).  
+   - Suggest which ad formats the brand should focus on.
+
+8. **Key Findings**  
+   Provide 3–5 bullet points covering:  
+   - Matches/mismatches in tone across platforms  
+   - Unique or standout CTAs/slogans  
+   - Any contradictions in messaging  
+   - Observations about visual or ad strategy
+
+9. **Actionable Recommendation**  
+   - One-sentence suggestion on how to unify voice, optimize platform mix, and align with the target persona.
 
 Return the response in the following JSON format:
 
-Expected JSON Format:
-
 {
-  "Brand Pulse Sync: Voice & Tone Harmony Check”": {
-    "website": "Brief summary of tone & style used on the website",
-    "social_media_platform1": "Brief summary of tone on Instagram",
-    "social_media_platform2": "Brief summary of tone on Facebook",
-    "social_media_platform3": "Brief summary of tone on YouTube"
-  },
-  "persona_alignment": "Describe the perceived target persona (e.g. Gen Z lifestyle audience, professional B2B buyers, health-conscious parents, etc.)",
+  "brand_voice_summary": "Unified overview of brand’s voice and tone",
   
-  "overall_consistency_score": "Rating from 1 (inconsistent) to 5 (very consistent)",
+  "platform_overview": {
+    "website":
+    { "tone_style":"",
+       "emotional_appeal":"",
+       "communication_format" : "" ,
+       "engagement": ""
+    },
+    "instagram":  { "tone_style":"",
+       "emotional_appeal":"",
+       "communication_format" : "" ,
+       "engagement": ""
+    },
+    "facebook": { "tone_style":"",
+       "emotional_appeal":"",
+       "communication_format" : "" ,
+       "engagement": ""
+    },
+    "youtube":  { "tone_style":"",
+       "emotional_appeal":"",
+       "communication_format" : "" ,
+       "engagement": ""
+    },
+  },
+  
+  "persona_alignment": "Description of target persona(s)",
+
+  "overall_consistency": {
+   "overall_consistency_score": "",
+   "visual": "★★★★☆" 
+   "justification" : ""
+
+  
+  },
+
+  "industry_platform_usage": {
+    "dominant_platforms": ["List of top platforms in this industry"],
+    "recommended_focus": "Which platform(s) the brand should prioritize"
+  },
+
+  "omnichannel_experience": "Evaluation of cross-platform journey, strengths and gaps",
+
+  "industry_ads": {
+    "common_ad_types": ["List of common ad types in the industry"],
+    "recommended_ad_focus": "Which ad type(s) to prioritize"
+  },
+
   "key_findings": [
-    "Finding 1: tone match/mismatch across platforms",
-    "Finding 2: notable phrase, CTA, or slogan",
-    "Finding 3: contradiction in tone or messaging",
-    "Finding 4: additional tone-related insight (optional)"
+    "Finding 1",
+    "Finding 2",
+    "Finding 3"
   ],
-  "recommendation": "One-sentence suggestion to align or enhance brand tone consistency"
+
+  "recommendation": "One-sentence actionable suggestion"
 }` as const;

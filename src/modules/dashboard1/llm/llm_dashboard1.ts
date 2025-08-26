@@ -153,7 +153,7 @@ await prisma.analysis_status.create({
   });
 }
 
-    console.log("LLM response saved successfully for website_id:", website_id);
+    console.log("LLM response saved successfully for report_id:", report_id);
 
     return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
   } catch (err) {
@@ -161,7 +161,6 @@ await prisma.analysis_status.create({
     return ({ error: "Internal Server Error" });
   }
 };
-
 
 export const generate_d1_burning_issues= async (website_id: string, user_id: string, report_id:string) => {
   if (!website_id || !user_id) {
@@ -197,54 +196,12 @@ export const generate_d1_burning_issues= async (website_id: string, user_id: str
     let parsedData: any = {};
 try {
   parsedData = JSON.parse(report?.dashboard1_Freedata || '{}');
-  // console.log("parsedData",parsedData)
 } catch (e) {
   console.error("Failed to parse dashboard data:", e);
 }
 
-    // const allDataforrecommendation: any = {
-    //   top_of_funnel: {
-    //     Site_Speedcore_Web_Vitals_and_mobile_Experience : parsedData?.dashboard_summary?.data_for_llm ?? "N/A",
-    //     Search_Discoverability: {
-    //       schema: scraped?.schema_analysis ?? "None",
-    //       AI_discovilibilty: report?.geo_llm ?? "None",
-    //       appears_accross_bing: traffic?.top_sources ?? "N/A",
-    //       title: scraped?.page_title ?? "N/A",
-    //       description: scraped?.meta_description ?? "N/A",
-    //       heading_hierarchy: scraped?.headingAnalysis ?? "N/A",
-    //       keywords: scraped?.meta_keywords ?? "N/A",
-    //       og: {
-    //         title: scraped?.og_title ?? "N/A",
-    //         description: scraped?.og_description ?? "N/A",
-    //         image: scraped?.og_image ? "Present" : "Missing",
-    //       },
-    //     },
-    //   },
-    //   middle_of_funnel: {
-    //     Messaging_Content_Clarity: {
-    //       h1: scraped?.H1_text?? "N/A",
-    //       heading_hierarchy: scraped?.headingAnalysis ?? "N/A", 
-    //       homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
-    //       no_of_broken_links: analysis?.total_broken_links ?? "N/A",
-    //     },
-    //     Conversion_optimization: {
-    //       bounce_rate: traffic?.overall_bounce_rate ?? "N/A",
-    //       high_bounce_pages: traffic?.high_bounce_pages ?? "N/A",
-    //       engagement_rate: traffic?.engagement_rate ?? "N/A",
-    //     },
-    //   },
-    //   bottom_of_funnel: {
-    //     Behavior_Funnel_Analysis: {
-    //       avg_session_duration_in_seconds: traffic?.avg_session_duration ?? "N/A",
-    //       engaged_sessions: traffic?.engaged_sessions ?? "N/A",
-    //       bounce_rate: traffic?.overall_bounce_rate ?? "N/A",
-    //       total_visitors: traffic?.total_visitors ?? "N/A",
-    //       unique_visitors: traffic?.unassigned ?? "N/A",
-    //       new_vs_returning: traffic?.new_vs_returning ?? "N/A",
-    //       top_devices: traffic?.top_devices ?? "N/A",
-    //     },
-    //   },
-    // };
+
+    
     const allDataforburningissues: any = {
       website_audit: {
         
@@ -268,14 +225,9 @@ try {
       OnPage_Optimization: {
         title: scraped?.page_title ?? "N/A",
         description: scraped?.meta_description ?? "N/A",
-        // heading_hierarchy: scraped?.headingAnalysis ?? "N/A",
         // keywords: scraped?.meta_keywords ?? "N/A",
         h1: scraped?.H1_text?? "N/A",
-        // og: {
-        //   title: scraped?.og_title ?? "N/A",
-        //   description: scraped?.og_description ?? "N/A",
-        //   image: scraped?.og_image ? "Present" : "Missing",
-        // },
+       
         homepage_alt_text_coverage: scraped?.homepage_alt_text_coverage ?? "N/A",
       },
       technical_seo: {
@@ -290,13 +242,13 @@ try {
       },
     };
    
-    console.log("allDataforrecommendation",allDataforburningissues)
+    // console.log("allDataforrecommendation",allDataforburningissues)
   
 
     console.log("Generating LLM response (funnel recommendation)…");
     const funnelLLMResponse = await openai.chat.completions.create({
       model: model,
-      temperature: 0.5,
+      temperature: 0.8,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: three_issues_prompt },
@@ -307,11 +259,11 @@ try {
     let funnelRecommendations;
     try {
       funnelRecommendations = funnelLLMResponse.choices[0].message.content
-        ? JSON.parse(funnelLLMResponse.choices[0].message.content)
-        : { top_of_funnel: {}, middle_of_funnel: {}, bottom_of_funnel: {} };
+      
+        
     } catch (parseError) {
       console.error("Failed to parse funnel LLM response:", parseError);
-      funnelRecommendations = { top_of_funnel: {}, middle_of_funnel: {}, bottom_of_funnel: {} };
+      funnelRecommendations = { };
     }
 
     const fullLLMResponse = {
@@ -338,7 +290,7 @@ try {
      
 
 
-    console.log("LLM response saved successfully for website_id:", website_id);
+    console.log("LLM response saved successfully for report_id:", report_id);
 
     return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
   } catch (err) {
@@ -346,7 +298,6 @@ try {
     return ({ error: "Internal Server Error" });
   }
 };
-
 
 export const generated1_strengthandIssue = async (website_id: string, user_id: string, report_id:string) => {
   if (!website_id || !user_id) {
@@ -495,7 +446,7 @@ if (existing) {
   });
 }
 
-    console.log("LLM response saved successfully for website_id:", website_id);
+    console.log("LLM response saved successfully for report_id:", report_id);
 
     return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
   } catch (err) {
@@ -697,6 +648,7 @@ Guidelines:
   3. A practical recommendation to fix it.
 - Rank issues by urgency (most critical first).
 - Do not include positive points, general comments, or extra text.
+- Never mention any thrird party application like pagespeed , sumrush etc.
 - Respond strictly in JSON format.
 
 Output format:

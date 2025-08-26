@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
+import { fetchSocialMediaData } from '../dashboard3/social_media_anaylsis';
+import { deepClean } from '../../utils/clean_text';
 
 
 interface CMORecommendationInput {
@@ -75,15 +77,18 @@ export class CMORecommendationService {
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
   const competitor_analysis = reports.map(r => r.dashboard3_data).filter(Boolean);
+  const social_media_anaylsis = reports.map(r => r.dashboard2_data).filter(Boolean);
 
   return {
     website_audit_data,
     seo_audit,
     competitor_analysis,
+    
     requirement,
     website,
     reports,
-    logo_url: scraped_data?.logo_url || null
+    logo_url: scraped_data?.logo_url || null,
+    social_media_anaylsis
   };
 }
 
@@ -96,7 +101,8 @@ public async generateCMORecommendation(input: CMORecommendationInput): Promise<C
         requirement,
         website,
         reports,
-        logo_url
+        logo_url,
+        social_media_anaylsis
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
 
       
@@ -220,12 +226,17 @@ if (requirement?.industry || requirement?.target_location) {
   };
 }
 
+if (social_media_anaylsis)
+{
+  allData.social_media_data = social_media_anaylsis
+}
 // 🧠 Competitor comparison
 if (competitor_data) {
   allData.competitor_comparison = competitor_data;
 }
 
-console.log("✅ allData prepared:", allData);
+const clean_data = deepClean(JSON.stringify(allData))
+// console.log("✅ allData prepared:", clean_data);
 function extractFirstJSONObject(text: string): string | null {
   const match = text.match(/\{[\s\S]*\}/);
   return match ? match[0] : null;
@@ -245,7 +256,7 @@ const executiveCMOPrompt = `
  - Unique Selling Proposition (USP): ${requirement?.USP || 'N/A'}
 
  ### Data Inputs
-S${allData ? '-' : ''}
+S${clean_data ? '-' : ''}
 
 
 Your task is to generate a *structured JSON report* based on the given input data. The output must help executive stakeholders understand the brand’s position, performance risks, and growth levers.
@@ -367,7 +378,7 @@ Return a *valid JSON object* with the following keys in this exact order:
       "market_suggestions":
       {
     "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
-    "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
+    "expansion_opportunities": "Suggest specific regional or audience segments or social media platform and content within or outside the target location that show high potential based on interest or performance signals."
       },
 
    "channel_budget_suggestions": 

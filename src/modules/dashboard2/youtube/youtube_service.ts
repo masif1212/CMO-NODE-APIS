@@ -1,7 +1,5 @@
 import { google, youtube_v3 } from "googleapis";
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
 export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
   console.log("youtubeUrl", youtube_handle);
 
@@ -206,39 +204,7 @@ async function fetchYouTubeChannelData(channelId: string): Promise<youtube_v3.Sc
   return data.items?.[0] || null;
 }
 
-// async function fetchVideosLast30Days(channelId: string): Promise<{ videoId: string, publishedAt: string }[]> {
-//   const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });
-//   const publishedAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-//   let nextPageToken: string | undefined = undefined;
-//   const videos: { videoId: string, publishedAt: string }[] = [];
-
-//   do {
-//     const res = await youtube.search.list({
-//       channelId,
-//       part: ["id", "snippet"],
-//       maxResults: 50,
-//       order: "date",
-//       type: ["video"],
-//       publishedAfter,
-//       pageToken: nextPageToken,
-//     });
-
-//     const data: youtube_v3.Schema$SearchListResponse = res.data;
-
-//     for (const item of data.items || []) {
-//       const videoId = item.id?.videoId;
-//       const publishedAt = item.snippet?.publishedAt;
-//       if (videoId && publishedAt) {
-//         videos.push({ videoId, publishedAt });
-//       }
-//     }
-    
-//     nextPageToken = data.nextPageToken ?? undefined;
-//   } while (nextPageToken);
-
-//   return videos;
-// }
 
 async function fetchVideoMetrics(videoIds: string[]): Promise<youtube_v3.Schema$Video[]> {
   const youtube = google.youtube({ version: "v3", auth: process.env.YOUTUBE_API_KEY });

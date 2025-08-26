@@ -6,20 +6,17 @@ import { parseCompetitorData } from "./parser";
 import { getPageSpeedData ,getWebsiteUrlById} from "../dashboard1/website_audit/service";
 import OpenAI from "openai";
 import "dotenv/config";
-import * as cheerio from "cheerio";
 import { performance } from "perf_hooks";
 import puppeteer from "puppeteer";
 import {fetchSocialMediaData} from "./social_media_anaylsis"
 import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";
 import { isValidCompetitorUrl, processSeoAudits } from "./competitors_validation";
 import { UserRequirement, ProcessedResult} from "./brandprofile_interface";
-import { unknown } from "zod";
-
+import {safeParse} from "../../utils/safeParse"
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
-    const mode = process.env.MODE;
 
 const prisma = new PrismaClient();
 
@@ -83,16 +80,6 @@ function createLimiter(concurrency: number) {
   };
 }
 
-function safeParse(jsonStr: any) {
-  try {
-    return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-  } catch (e) {
-    console.error("JSON parse failed:", e);
-    return jsonStr;
-  }
-}
-
-
 
 export class CompetitorService {
   static async brandprofile(
@@ -141,6 +128,7 @@ export class CompetitorService {
     target_location:userRequirementRaw?.target_location?? "unknown",
     primary_offering: userRequirementRaw?.primary_offering ?? "Unknown",
     brand_offering:userRequirementRaw?.primary_offering ?? "unknown",
+    
     USP: userRequirementRaw?.USP ?? "Unknown",
     competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls)
       ? userRequirementRaw.competitor_urls.filter(
@@ -236,7 +224,8 @@ export class CompetitorService {
           );
         }
         start = Date.now();
-        name = competitorData?.name || scraped?.page_title || originalUrl;
+        name = competitorData?.name || scraped?.website_name || originalUrl;
+
         end = Date.now();
         console.log(`[brandprofile]  Competitor name: ${name} (extracted in ${(end - start) / 1000}s)`);
 
@@ -245,6 +234,7 @@ export class CompetitorService {
           console.log(`[brandprofile]  Duplicate competitor skipped: ${name}`);
           continue;
         }
+
         start = Date.now();
         const competitor_id = uuidv4();
         await prisma.competitor_details.create({
@@ -384,7 +374,7 @@ export class CompetitorService {
   return {
     mainWebsite: {
       brand_profile: {
-        title: scrapedMain.page_title ?? "Unknown",
+        title: scrapedMain.website_name ?? "Unknown",
         industry: userRequirement.industry,
         unique_selling_point: userRequirement.USP,
         primary_offering: userRequirement.primary_offering,
@@ -398,8 +388,7 @@ export class CompetitorService {
 }
 
 
-
-  static async seo_audit(user_id: string, website_id: string,report_id:string): Promise<SeoAuditResponse> {
+static async seo_audit(user_id: string, website_id: string,report_id:string): Promise<SeoAuditResponse> {
     const response: SeoAuditResponse = {
       mainWebsite: {
         brand_profile: {
@@ -432,6 +421,7 @@ export class CompetitorService {
         select: {
           meta_description: true,
           page_title: true,
+
           homepage_alt_text_coverage: true,
           schema_analysis: true,
           // raw_html: true,
@@ -998,107 +988,6 @@ const combinedResults = {
     return dashboarddata;
   }
 
- 
-  
-// static async social_media(user_id: string, website_id: string,report_id:string) {
-//     if (!website_id || !user_id || !report_id) {
-//       throw new Error("website_id report_id,and user_id are required");
-//     }
-
-//     console.log(`competitors website_audit-Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
-//     const website_url = await getWebsiteUrlById(user_id, website_id);
-//     if (!website_url) {
-//       throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
-//     }
-
-
-// const report = await prisma.report.findUnique({
-//       where: { report_id: report_id }, // You must have 'report_id' from req.body
-//       select: { scraped_data_id: true }
-//     });
-//     const [websiteScraped] = await Promise.all([
-      
-//       prisma.website_scraped_data.findUnique({ where: {scraped_data_id:report?.scraped_data_id?? undefined }}),
-
-     
-      
-//     ]);
-//     const main_website= fetchSocialMediaData(websiteScraped?.facebook_handle,websiteScraped?.instagram_handle,websiteScraped?.youtube_handle),
-
-    
-
-//     const competitors = await prisma.competitor_details.findMany({
-//       where: { report_id},
-      
-//       orderBy: { order_index: "asc" },
-//       take: 7,
-//     });
-
-//     console.log(
-//       `competitors website_audit - Fetched ${competitors.length} competitors for website_id: ${website_id}, URLs: ${competitors
-//         .map((c) => c.competitor_website_url)
-//         .filter(Boolean)
-//         .join(", ")}`
-//     );
-
-    
-
-//     const competitorDataMap = new Map(competitors.map((item) => [item.competitor_id, item]));
-    
-//     // const competitorResults: CompetitorResult[] = [];
-//     const processedUrls = new Set<string>([website_url]);
-
-//     // const pLimit = require("p-limit");
-//     // const limit = pLimit(7); // Now this works
-//     const limit = createLimiter(7); // Use our new helper function
-//     const competitorTasks = competitors.map((competitor) =>
-//       limit(async () => {
-//         const { competitor_id, name, competitor_website_url, usp, primary_offering, industry,facebook_handle,instagram_handle,youtube_handle } = competitor;
-//         if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
-//           console.log(`Skipping competitor ${competitor_id} due to duplicate URL: ${competitor_website_url}`);
-//           return;
-//         }
-//         processedUrls.add(competitor_website_url);
-
-//         try {
-//           console.log(`Fetching PageSpeed data for ${competitor_website_url}`);
-//           const social_media = await fetchSocialMediaData(facebook_handle,instagram_handle,youtube_handle);
-
-     
-//           await prisma.competitor_details.update({
-//             where: { competitor_id },
-//             data: {
-//               social_media_data: social_media,
-//             },
-//           });
-
-
-
-
-     
-        
-
-//           console.warn(` Fallback for ${competitor_website_url}`);
-        
-//       )
-//     );
-
-//     const socila_media = {
-//   main_website: main_website,
-//   competitordata: social_media,
-
-
-   
-
-//     return dashboarddata;
-
-
-//     } 
-
-//   }
-
-
-
 
 static async social_media(user_id: string, website_id: string, report_id: string) {
   if (!website_id || !user_id || !report_id) {
@@ -1254,7 +1143,7 @@ static async social_media(user_id: string, website_id: string, report_id: string
         update: { recommendationbymo3: JSON.stringify(parsed) },
         create: { website_id,report_id, recommendationbymo3: JSON.stringify(parsed) },
       });
-      console.log("LLM response saved successfully for website_id:", website_id);
+      console.log("LLM response saved successfully for report_id:", report_id);
     } catch (err) {
       console.error("Error parsing JSON response:", err);
       parsed = { recommendations: [] };
@@ -1263,6 +1152,10 @@ static async social_media(user_id: string, website_id: string, report_id: string
     return parsed;
   }
 }
+
+
+
+
 
 function isValidPageSpeedData(data: any): data is PageSpeedData {
   return typeof data === "object" && data !== null && "categories" in data && typeof data.categories === "object" && "audits" in data && typeof data.audits === "object" && "audit_details" in data && typeof data.audit_details === "object";

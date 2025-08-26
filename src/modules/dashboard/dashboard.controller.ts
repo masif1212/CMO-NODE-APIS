@@ -1,37 +1,33 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import { d1_burning_issues } from "../dashboard1/llm/controller";
-
+import { safeParse } from "../../utils/safeParse";
 const prisma = new PrismaClient();
+const brandFields = [
+  "dashboard1_Freedata",
+  "dashboard_paiddata",
+  "strengthandissues_d1",
+  "recommendationbymo1",
+  "traffic_analysis_id",
+];
+const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
+const competitorFields = ["dashboard3_data", "recommendationbymo3"];
+const renameFields: Record<string, string> = {
+  dashboard1_Freedata: "website_audit",
+  dashboard_paiddata: "seo_audit",
+  strengthandissues_d1: "strength_and_issues",
+  traffic_analysis_id: "traffic_analysis",
+  recommendationbymo1: "recommendationbymo",
+  dashboard2_data: "social_data",
+  strengthandissues_d2: "social_issues",
+  recommendationbymo2: "recommendationbymo",
+  dashboard3_data: "competitor_data",
+  recommendationbymo3: "recommendationbymo",
+  cmorecommendation: "cmo_recommendation",
+};
 
 
-
-export const getUserDashboard = async (req: Request, res: Response) => {
-  const brandFields = [
-    "dashboard1_Freedata",
-    "dashboard_paiddata",
-    "strengthandissues_d1",
-    "recommendationbymo1",
-    "traffic_analysis_id",
-  ];
-  const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
-  const competitorFields = ["dashboard3_data", "recommendationbymo3"];
-  const cmoFields = ["cmorecommendation"];
-
-  const renameFields: Record<string, string> = {
-    dashboard1_Freedata: "website_audit",
-    dashboard_paiddata: "seo_audit",
-    strengthandissues_d1: "strength_and_issues",
-    traffic_analysis_id: "traffic_analysis",
-    recommendationbymo1: "recommendationbymo",
-    dashboard2_data: "social_data",
-    strengthandissues_d2: "social_issues",
-    recommendationbymo2: "recommendationbymo",
-    dashboard3_data: "competitor_data",
-    recommendationbymo3: "recommendationbymo",
-    cmorecommendation: "cmo_recommendation",
-  };
-
+export const getUserDashboard = async (req: Request, res: Response) =>
+   {
   const userId = req.query.user_id;
   if (typeof userId !== "string") {
     return res.status(400).json({ error: "Invalid or missing user_id" });
@@ -79,35 +75,35 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       orderBy: { created_at: "desc" },
     });
 
-  
-const formattedRecommendations = recommendations.map((rec) => {
-  let websiteMeta = null;
-  let firstReportId: string | null = null;
 
-  for (const site of userWebsites) {
-    const foundReport = site.report.find((r) =>
-      (rec.report_ids as string[]).includes(r.report_id)
-    );
-    if (foundReport) {
-      websiteMeta = {
-        website_id: site.website_id,
-        website_url: site.website_url,
-        website_name: site.website_name,
+    const formattedRecommendations = recommendations.map((rec) => {
+      let websiteMeta = null;
+      let firstReportId: string | null = null;
+
+      for (const site of userWebsites) {
+        const foundReport = site.report.find((r) =>
+          (rec.report_ids as string[]).includes(r.report_id)
+        );
+        if (foundReport) {
+          websiteMeta = {
+            website_id: site.website_id,
+            website_url: site.website_url,
+            website_name: site.website_name,
+          };
+          firstReportId = foundReport.report_id; // 👈 pick first report_id
+          break;
+        }
+      }
+
+      return {
+        report_id: firstReportId,
+        ...websiteMeta,
+        created_at: rec.created_at,
+        updated_at: rec.updated_at,
+        report_ids: rec.report_ids,   // keep all if needed
+        id: rec.id,         // 🔹 adds website info
       };
-      firstReportId = foundReport.report_id; // 👈 pick first report_id
-      break;
-    }
-  }
-
-  return {
-    report_id: firstReportId,
-    ...websiteMeta,   
-    created_at: rec.created_at,
-    updated_at: rec.updated_at,
-    report_ids: rec.report_ids,   // keep all if needed
-    id: rec.id,         // 🔹 adds website info
-  };
-});
+    });
 
     let totalSpend = 0;
 
@@ -209,11 +205,10 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       ...(onpage_optimization && { onpage_optimization }),
       ...(technical_seo && { technical_seo }),
       ...otherSeoFields,
-      // recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
       recommendation_by_mo_dashboard1: {
         strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
         recommendations: safeParse(reportData?.recommendationbymo1),
-        three_burining_issue:safeParse(reportData?.three_burning_issues)
+        three_burining_issue: safeParse(reportData?.three_burning_issues)
       },
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
@@ -232,15 +227,6 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-function safeParse(input: any) {
-  try {
-    if (typeof input === 'string') return JSON.parse(input);
-    return input ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export const getaudit = async (req: Request, res: Response) => {
   const website_id = req.query.website_id;

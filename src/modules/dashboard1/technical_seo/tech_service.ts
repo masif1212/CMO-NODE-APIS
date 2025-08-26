@@ -1,4 +1,3 @@
-import axios from "axios";
 import puppeteer, { Browser } from "puppeteer";
 import { PrismaClient } from "@prisma/client";
 // import { CreateWebsiteAnalysisDto } from "./schema";

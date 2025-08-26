@@ -305,6 +305,7 @@ model website_scraped_data {
   scraped_data_id            String               @id @default(uuid())
   report_id                  String?              @unique
   website_url                String?
+  website_name               String?
   H1_text                    String?              @db.LongText
   isCrawlable                Boolean?
   headingAnalysis            Json?
@@ -347,6 +348,7 @@ model competitor_details {
   scraped_data_id            String?
   name                       String?
   website_url                String?
+  website_name               String?
   H1_text                    String?               @db.LongText
   competitor_website_url     String?               @db.LongText
   industry                   String?               @db.LongText

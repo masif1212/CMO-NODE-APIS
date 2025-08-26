@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { CreateUserDto, UpdateUserDto } from "./schema";
-import { parse } from 'tldts';
+import {getDomainRoot} from "../../utils/extractDomain"
 const prisma = new PrismaClient();
 
 export const createUser = async (data: CreateUserDto) => {
@@ -68,28 +68,12 @@ function normalizeUrl(url: string): string {
   }
 }
 
-function extractDomain(url: string): string {
-  const parsed = parse(url);
-  if (!parsed.domain) {
-    throw new Error("Could not extract domain from URL: " + url);
-  }
-  return parsed.domain;
-}
-
-function extractCompanyName(url: string): string {
-  const parsed = parse(url);
-  if (!parsed.domain) {
-    throw new Error("Could not extract domain from URL: " + url);
-  }
-  // remove the TLD (.com, .net, etc.)
-  return parsed.domain.split(".")[0];
-}
-
 export async function add_userwebsite(user_id: string, rawUrl: string) {
   const websiteUrl = normalizeUrl(rawUrl);
-  const website_name = extractCompanyName(rawUrl);
-  const domain = extractDomain(websiteUrl);
-  console.log("domain", domain);
+  const domain = getDomainRoot(websiteUrl);
+  const website_name = domain.split(".")[0];
+  
+  console.log("domain", domain, "website_name",website_name);
 
   let existingWebsite = await prisma.user_websites.findFirst({
     where: {

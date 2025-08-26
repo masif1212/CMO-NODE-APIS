@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { parse } from 'tldts';
 // For root domain extraction
+import {getDomainRoot} from "../../../utils/extractDomain"
 import { report } from '@prisma/client';
 // For root domain extraction
 dotenv.config();
@@ -10,10 +11,10 @@ dotenv.config();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const prisma = new PrismaClient();
 
-const getDomainRoot = (url: string): string => {
-  const parsed = parse(url);
-  return parsed.domain || '';
-};
+// const getDomainRoot = (url: string): string => {
+//   const parsed = parse(url);
+//   return parsed.domain || '';
+// };
 
 export const fetchBrands = async (
   user_id: string,
@@ -111,7 +112,7 @@ Format:
       tools: [
         {
           type: 'web_search_preview',
-          search_context_size: 'medium',
+          search_context_size: 'high',
           user_location: {
             type: 'approximate',
             region: target_location || 'Unknown',

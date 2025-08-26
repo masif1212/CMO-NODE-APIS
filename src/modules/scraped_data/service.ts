@@ -278,7 +278,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
-
+  const website_name = domain.split(".")[0];
   console.log("domain", domain);
 
   let statusCode: number = 0;
@@ -535,6 +535,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
     update: {
       website_url,
       H1_text: h1Text,
+      website_name,
       page_title: JSON.stringify(meta.page_title),
       logo_url: finalLogoUrl,
       meta_description: meta.meta_description,
@@ -565,6 +566,7 @@ export async function scrapeWebsite(user_id: string, website_id:string ,report_i
       report_id,
       website_url,
       H1_text: h1Text,
+      website_name,
       page_title: JSON.stringify(meta.page_title),
       logo_url: finalLogoUrl,
       meta_description: meta.meta_description,

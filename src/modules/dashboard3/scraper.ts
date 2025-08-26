@@ -1,21 +1,16 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { PrismaClient } from '@prisma/client';
-import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
+import { validateComprehensiveSchema, SchemaOutput } from "../scraped_data/schema_validation";
 import { OpenAI } from 'openai';
 import dotenv from 'dotenv';
-import {getRobotsTxtAndSitemaps,evaluateHeadingHierarchy,isLogoUrlValid,parseSitemap,isCrawlableByLLMBots,getStatusMessage} from "../scraped_data/service"
+import {getRobotsTxtAndSitemaps,evaluateHeadingHierarchy,isLogoUrlValid,parseSitemap,isCrawlableByLLMBots} from "../scraped_data/service"
+import {getDomainRoot} from "../../utils/extractDomain"
 
-
-import { parse } from 'tldts'; // For root domain extraction
 dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const getDomainRoot = (url: string): string => {
-  const parsed = parse(url);
-  return parsed.domain || '';
-};
 
 
 
@@ -49,8 +44,7 @@ export async function scrapeWebsiteCompetitors(url: string) {
      const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(url);
         const isCrawlable = await isCrawlableByLLMBots(url);
     
-    // Fallback logo detection if needed
-   // Step 1: Try to use logo from schema
+  
 let finalLogoUrl = schemaAnalysisData.logo ?? null;
 console.log("finalLogoUrlfromschema",finalLogoUrl)
 if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
@@ -189,7 +183,8 @@ const keyPages = await Promise.all(
     CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4)) : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
-
+   const domain = getDomainRoot(url)
+   const website_name = domain.split(".")[0];
   // console.log("CTR_Loss_Percent",CTR_Loss_Percent)
     console.log("homepage_alt_text_coverage",homepage_alt_text_coverage)
     return {
@@ -197,6 +192,7 @@ const keyPages = await Promise.all(
       page_title: $('title').text() || null,
       logo_url:  finalLogoUrl|| null,
       H1_text:h1Text || null,
+      website_name:website_name || null,
       meta_description: $('meta[name="description"]').attr('content') || null,
       meta_keywords: $('meta[name="keywords"]').attr('content') || null,
       og_title: $('meta[property="og:title"]').attr('content') || null,
@@ -364,8 +360,8 @@ Format:
       return brandDomain === normalizedUserDomain;
     });
 
-
-  
+    
+    
 
 
     

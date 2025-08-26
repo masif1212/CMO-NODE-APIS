@@ -12,8 +12,8 @@ export function parseCompetitorData(aiResponse: string): {
 
         // Step 1: Strip Markdown code blocks
         const cleanResponse = aiResponse
-            .replace(/^```(?:json)?\s*/i, '') // Remove opening code block
-            .replace(/```$/, '')             // Remove closing code block
+            .replace(/^```(?:json)?\s*/i, '') 
+            .replace(/```$/, '')             
             .trim();
 
         // Step 2: Attempt direct JSON parse

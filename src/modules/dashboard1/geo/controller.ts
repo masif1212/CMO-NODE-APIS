@@ -2,8 +2,9 @@
 import { fetchBrands } from './service';
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { safeParse } from "../../../utils/safeParse";
+
 const prisma = new PrismaClient();
-import * as cheerio from "cheerio";
 
 export const getLegalAIBrandsController = async (req: Request, res: Response) => {
   try {
@@ -72,15 +73,7 @@ console.log("fetching data from db...")
     console.log("report.traffic_analysis_id", report.traffic_analysis_id)
     console.log("data fetch")
 
-    function safeParse(jsonStr: any) {
-      try {
-        return typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-      } catch (e) {
-        console.error("JSON parse failed:", e);
-        return jsonStr;
-      }
-    }
-
+    
     // On Page Optimization
     const onpage_opptimization: Record<string, any> = {};
     if (scrapedData) {

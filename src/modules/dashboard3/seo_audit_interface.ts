@@ -7,7 +7,6 @@ export interface SchemaMarkupStatus {
   };
 }
 
-
 export interface SeoAudit {
   h1_heading: string | null;
   meta_title: string | null;
@@ -28,7 +27,6 @@ export interface SeoAudit {
   schema_markup_status: SchemaMarkupStatus | null;
   AI_Discoverability: string;
 }
-
 
 export interface ProcessedResultseo {
   competitor_id?: string; // Optional for main website
