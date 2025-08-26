@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { OpenAI } from "openai";
-import {deepClean} from "../../../utils/clean_text"
+import {sanitizeAndStringify} from "../../../utils/clean_text"
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = process.env.OPENAI_MODEL || "gpt-4.1";
@@ -61,7 +61,7 @@ export const generatesocialmediareport = async (
       },
       social_media_data: report?.dashboard2_data ?? "n/a",
     };
-    const clean_data = deepClean(JSON.stringify(allDataforrecommendation))
+    const clean_data = sanitizeAndStringify(allDataforrecommendation)
     console.log("clean_data",clean_data)
     const llmResponse = await openai.chat.completions.create({
       model: model,
@@ -147,7 +147,7 @@ export const brandPulsePrompt = `Analyze the brand tone, messaging style, and cr
 
 7. **Industry Advertising Insights**  
    - Highlight common types of ads running in this industry (e.g. performance-driven video ads, influencer collaborations, carousel product ads).  
-   - Suggest which ad formats the brand should focus on.
+   - Suggest which ad formats the brand should focus on (detail).
 
 8. **Key Findings**  
    Provide 3–5 bullet points covering:  
@@ -200,7 +200,7 @@ Return the response in the following JSON format:
 
   "industry_platform_usage": {
     "dominant_platforms": ["List of top platforms in this industry"],
-    "recommended_focus": "Which platform(s) the brand should prioritize"
+    "recommended_focus": "Which platform(s) the brand should prioritize(in detail)"
   },
 
   "omnichannel_experience": "Evaluation of cross-platform journey, strengths and gaps",

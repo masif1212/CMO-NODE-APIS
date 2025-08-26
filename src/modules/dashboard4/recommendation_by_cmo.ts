@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import { fetchSocialMediaData } from '../dashboard3/social_media_anaylsis';
-import { deepClean } from '../../utils/clean_text';
+import { sanitizeAndStringify } from '../../utils/clean_text';
 
 
 interface CMORecommendationInput {
@@ -83,7 +83,6 @@ export class CMORecommendationService {
     website_audit_data,
     seo_audit,
     competitor_analysis,
-    
     requirement,
     website,
     reports,
@@ -235,7 +234,7 @@ if (competitor_data) {
   allData.competitor_comparison = competitor_data;
 }
 
-const clean_data = deepClean(JSON.stringify(allData))
+const clean_data = sanitizeAndStringify(allData)
 // console.log("✅ allData prepared:", clean_data);
 function extractFirstJSONObject(text: string): string | null {
   const match = text.match(/\{[\s\S]*\}/);
@@ -439,7 +438,7 @@ NOTE: Never mention a third api like pagespeed , semrush etc
       let rawText = response.choices[0]?.message?.content || 'No response generated.';
       rawText = stripCodeFences(rawText);
       const rawText2 = extractFirstJSONObject(rawText);
-      console.log("rawText",rawText)
+      // console.log("rawText",rawText)
 
       // rawText = rawText.replace(/^json|$/g, '').trim();
       const responseContent = JSON.parse(rawText2 || '{}');

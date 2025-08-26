@@ -1,7 +1,7 @@
 
 import OpenAI from 'openai';
 import 'dotenv/config';
-import {deepClean} from "../../utils/clean_text"
+import {sanitizeAndStringify,} from "../../utils/clean_text"
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export const openai = new OpenAI({
@@ -209,7 +209,7 @@ Do NOT include explanations, text, or markdown.
 
 
 
-console.log("prompt",prompt)
+// console.log("prompt",prompt)
  
     try {
     const response = await openai.responses.create({
@@ -332,7 +332,8 @@ const competitor_data = await prisma.report.findUnique({
 };
 
 // Deep clean the merged object
-const clean_data =deepClean (JSON.stringify(mergedData));
+const clean_data =sanitizeAndStringify (mergedData);
+console.log("clean_data",clean_data)
  return `
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
@@ -355,6 +356,8 @@ Each object must contain:
     (what platforms competitors are using and what should main website use to improve our productivity, add a brief summary of evalution)
   - 'Paid Ads '  
     (Do competitor have paid ads? What types of ad can we use )
+  - 'Emerging Channels'
+    (Look at whether competitors are leveraging TikTok, podcasts, newsletters, or niche communities — and whether the brand should.)  
   - 'Performance Comparison'  
     (Use metrics like Core Web Vitals, Largest Contentful Paint, Accessibility, Mobile Experience, etc.)
 

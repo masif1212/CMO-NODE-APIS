@@ -1,22 +1,56 @@
-export function cleanText(text: any): string {
-  if (typeof text !== "string") {
-    return String(text ?? ""); // gracefully handle null/undefined/non-strings
-  }
-  return text
-    .replace(/\s+/g, " ")        // collapse multiple spaces/newlines
-    .replace(/[^\x20-\x7E]/g, "") // strip non-ASCII chars (emojis, weird unicode)
-    .trim();
-}
+export function sanitizeAndStringify(input: any): string {
+  console.log("🔹 [sanitizeAndStringify] Original Input:", JSON.stringify(input));
 
-export function deepClean(obj: any): any {
-  if (typeof obj === "string") {
-    return cleanText(obj);
-  } else if (Array.isArray(obj)) {
-    return obj.map(deepClean);
-  } else if (obj && typeof obj === "object") {
-    return Object.fromEntries(
-      Object.entries(obj).map(([k, v]) => [k, deepClean(v)])
-    );
+  function cleanText(text: string): string {
+    const cleaned = text
+      .replace(/\s+/g, " ")        // collapse multiple spaces/newlines
+      .replace(/[^\x20-\x7E]/g, "")
+       // strip non-ASCII chars
+       .replace(/[.,!?;:()'"-]/g, "")
+      .trim();
+
+    // if (original !== cleaned) {
+    //   console.log(`✂️ [cleanText] Modifing string...`);
+    // }
+
+    return cleaned;
   }
-  return obj; // numbers, booleans, null stay as-is
+
+  function pruneData(obj: any): any {
+    if (!obj || typeof obj !== "object") return obj;
+
+    const entries = Object.entries(obj);
+    const filtered = entries.filter(
+      ([_, v]) => v != null && v !== "" && v !== "N/A" && v !== "n/a"
+    );
+
+    // if (filtered.length < entries.length) {
+    //   console.log("🗑️ [pruneData] Some values were pruned!", {
+    //     before: obj,
+    //     after: Object.fromEntries(filtered),
+    //   });
+    // }
+
+    return Object.fromEntries(filtered.map(([k, v]) => [k, deepClean(v)]));
+  }
+
+  function deepClean(value: any): any {
+    if (typeof value === "string") {
+      return cleanText(value);
+    } else if (Array.isArray(value)) {
+      const cleanedArr = value.map(deepClean);
+      // if (JSON.stringify(value) !== JSON.stringify(cleanedArr)) {
+      //   // console.log("🔄 [deepClean] Array modified:");
+      // }
+      return cleanedArr;
+    } else if (value && typeof value === "object") {
+      return pruneData(value);
+    }
+    return value; // keep numbers, booleans, nulls as-is
+  }
+
+  const cleaned = deepClean(input);
+
+  console.log("✅ [sanitizeAndStringify] Final Cleaned ");
+  return JSON.stringify(cleaned);
 }
