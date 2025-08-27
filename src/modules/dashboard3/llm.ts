@@ -4,6 +4,7 @@ import 'dotenv/config';
 import {sanitizeAndStringify,} from "../../utils/clean_text"
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
+
 export const openai = new OpenAI({
      apiKey: process.env.OPENAI_API_KEY
 });
@@ -15,8 +16,6 @@ export async function fetchCompetitorsFromLLM(
   existingUrls: string[] = [],
   existingNames: string[] = []
 ): Promise<string>
-
-
 
 
  {

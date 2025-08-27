@@ -216,5 +216,5 @@ Return the response in the following JSON format:
     "Finding 3"
   ],
 
-  "recommendation": "One-sentence actionable suggestion"
+  "recommendation": "actionable suggestions"
 }` as const;

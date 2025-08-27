@@ -208,8 +208,9 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       recommendation_by_mo_dashboard1: {
         strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
         recommendations: safeParse(reportData?.recommendationbymo1),
-        three_burining_issue: safeParse(reportData?.three_burning_issues)
+        three_burning_issues: safeParse(reportData?.three_burning_issues)
       },
+
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
       competitors: { ...competitor_data, competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia) },

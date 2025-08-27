@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
-import { fetchSocialMediaData } from '../dashboard3/social_media_anaylsis';
 import { sanitizeAndStringify } from '../../utils/clean_text';
 
 
@@ -133,7 +132,6 @@ console.log("datafor_llm", datafor_llm)
 
 
 
-// Utility function to safely parse and merge multiple JSON entries
 const parseFirstValidJSON = (arr: any[]): any => {
   for (const val of arr) {
     try {
@@ -159,14 +157,9 @@ let fullcompetitor_data: any = parseFirstValidJSON(competitor_analysis);
 
 const competitor_data = fullcompetitor_data?.llmData;
 
-// if (!webdatafor_llm) {
-//   throw new Error("Missing data_for_llm in dashboard1_Freedata");
-// }
-
 
 const allData: any = {};
 
-// 🧠 Analytics block with LLM-based formula and explanations
 if (webdatafor_llm) {
   allData.Analytics = {
     website_revenue_loss: `*Formula:*
@@ -371,13 +364,13 @@ Return a *valid JSON object* with the following keys in this exact order:
     
     "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
     "industry_benchmark": "Provide benchmark values for the industry (e.g., SaaS = 40% returning users).",
-    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
+    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc.(suggestion should be in detail and depth insist of generic)"
   },
 
       "market_suggestions":
       {
     "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
-    "expansion_opportunities": "Suggest specific regional or audience segments or social media platform and content within or outside the target location that show high potential based on interest or performance signals."
+    "expansion_opportunities": "Suggest specific regional or audience segments or social media platform and content within or outside the target location that show high potential based on interest or performance signals.(suggestion should be in detail and depth insist of generic)"
       },
 
    "channel_budget_suggestions": 
@@ -385,7 +378,7 @@ Return a *valid JSON object* with the following keys in this exact order:
       "channel": "Paid Search",
       "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS",
       "channel": "SEO",
-      "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords"
+      "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords(suggestion should be in detail and depth insist of generic)"
     
     },
     
@@ -465,7 +458,6 @@ NOTE: Never mention a third api like pagespeed , semrush etc
             data: {
               user_id: input.user_id,
               report_ids: input.report_ids, // saves as JSON array
-              // cmorecommendation: JSON.stringify(cmo_recommendation),
             },
           });
      
