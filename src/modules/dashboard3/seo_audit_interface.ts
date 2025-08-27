@@ -3,12 +3,13 @@ export interface SchemaMarkupStatus {
   message: string;
   schemas: {
     summary: Array<{ type: string; format: string; isValid: boolean }>;
-    details: { [key: string]: Array<{ type: string; format: string; isValid: boolean }> };
+    // details: { [key: string]: Array<{ type: string; format: string; isValid: boolean }> };
   };
 }
 
 export interface SeoAudit {
   h1_heading: string | null;
+  website_name:string | null;
   meta_title: string | null;
   meta_description: string | null;
   alt_text_coverage: number | null;

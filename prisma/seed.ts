@@ -86,12 +86,10 @@ const servicesData = [
   { type: 'sma', report: 'dashboard2_data', name : "Social Media Analsis", price: 6.0, description: 'Data from dashboard 2' },
   { type: 'crca', report: 'cmorecommendation', name : "CMO recommendation", price: 4.0, description: 'Final CMO recommendation' },
   { type: 'cwa', report: 'dashboard1_Freedata', name : "Comprehensive Website Audit", price: 0, description: 'Data from dashboard 1 free analysis' },
-  { type: 'sism', report: 'strengthandissues_d2', name : "Strength and Issues (Social Media)", price: 6.0, description: 'Recommendations by MO 2' },
   { type: 'sa', report: 'dashboard_paiddata', name : "SEO audit", price: 12.0, description: 'Paid dashboard analysis data' },
   { type: 'ca', report: 'dashboard3_data', name : "Competitior Analysis", price: 14.0, description: 'Data from dashboard 3' },
   { type: 'ta', report: 'traffic_analysis_id', name :"Traffic Anaylsis", price: 4.0, description: 'traffic analysis' },
-  { type: 'rs', report: 'recommendationbymo', name : "Recommendation", price: 4.0, description: 'Recommendations by MO ' },
-  { type: 'dd', report: 'dashboard4_data', price: 140.0, description: 'Data from dashboard 4' },
+  { type: 'rs', report: 'recommendationbymo2', name : "Recommendation", price: 4.0, description: 'Recommendations by MO ' },
 ];
 
 if (existingServices.length === 0) {

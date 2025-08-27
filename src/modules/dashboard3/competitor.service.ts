@@ -395,6 +395,7 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
           website_url: null,
           logo_url: null,
           ctr_loss_percent: null,
+          
         },
         seo_audit: {} as SeoAudit,
       },
@@ -421,7 +422,7 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
         select: {
           meta_description: true,
           page_title: true,
-
+          website_name:true,
           homepage_alt_text_coverage: true,
           schema_analysis: true,
           // raw_html: true,
@@ -458,7 +459,7 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
         message: main_website_scrapeddata.schema_analysis ? "Structured data detected" : "No structured data detected",
         schemas: {
           summary: main_website_scrapeddata.schema_analysis ? [{ type: "Organization", format: "JSON-LD", isValid: true }] : [],
-          details: main_website_scrapeddata.schema_analysis ? { Organization: [{ type: "Organization", format: "JSON-LD", isValid: true }] } : {},
+          // details: main_website_scrapeddata.schema_analysis ? { Organization: [{ type: "Organization", format: "JSON-LD", isValid: true }] } : {},
         },
       };
 
@@ -471,6 +472,7 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
         },
         seo_audit: {
           h1_heading: main_h1_heading,
+          website_name:main_website_scrapeddata.website_name,
           meta_title: main_website_scrapeddata.page_title || null,
           meta_description: main_website_scrapeddata.meta_description || null,
           alt_text_coverage: main_website_scrapeddata.homepage_alt_text_coverage,
@@ -488,6 +490,7 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
         seo_audit: {
           h1_heading: null,
           meta_title: null,
+          website_name:null,
           meta_description: null,
           alt_text_coverage: null,
           isCrawlable: false,
@@ -534,12 +537,13 @@ static async seo_audit(user_id: string, website_id: string,report_id:string): Pr
           message: scraped.schema_analysis ? "Structured data detected" : "No structured data detected",
           schemas: {
             summary: scraped.schema_analysis ? [{ type: "Organization", format: "JSON-LD", isValid: true }] : [],
-            details: scraped.schema_analysis ? { Organization: [{ type: "Organization", format: "JSON-LD", isValid: true }] } : {},
+            // details: scraped.schema_analysis ? { Organization: [{ type: "Organization", format: "JSON-LD", isValid: true }] } : {},
           },
         };
 
         const seo_audit: SeoAudit = {
           h1_heading: h1_heading || null,
+          website_name:scraped.website_name || null,
           meta_title: scraped.page_title || null,
           meta_description: scraped.meta_description || null,
           alt_text_coverage: scraped.homepage_alt_text_coverage,
@@ -663,6 +667,7 @@ const report = await prisma.report.findUnique({
     interface CompetitorResult {
       competitor_id: any;
       brand_profile: {
+        website_name:string,
         title: string;
         website_url: string;
         revenueLossPercent?: number | null;
@@ -689,6 +694,7 @@ const report = await prisma.report.findUnique({
       };
       seo_audit: {
         brandAuditseo: any;
+        website_name:string
         meta_description: string | null;
         page_title: string | null;
         meta_keywords?: string | null; //  Add this line
@@ -737,6 +743,8 @@ const report = await prisma.report.findUnique({
           competitorResults.push({
             competitor_id,
             brand_profile: {
+              website_name: competitorDataMap.get(competitor_id)?.website_name ?? "",
+              
               title: name ?? "",
               website_url: competitor_website_url,
               revenueLossPercent: revenueLossPercent || null,
@@ -777,6 +785,7 @@ const report = await prisma.report.findUnique({
               },
             },
             seo_audit: {
+              website_name:competitorDataMap.get(competitor_id)?.website_name ?? "",
               brandAuditseo: Array.isArray(audit_details?.seoAudits) ? processSeoAudits(audit_details.seoAudits) : null,
               meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
               page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
@@ -795,7 +804,8 @@ const report = await prisma.report.findUnique({
           competitorResults.push({
             competitor_id,
             brand_profile: {
-              title: name ?? "",
+              website_name:competitorDataMap.get(competitor_id)?.website_name ?? "",
+              title: competitorDataMap.get(competitor_id)?.page_title ?? "",
               website_url: competitor_website_url,
               revenueLossPercent: null,
               logo_url: competitorDataMap.get(competitor_id)?.logo_url ?? null,
@@ -819,6 +829,7 @@ const report = await prisma.report.findUnique({
             },
             seo_audit: {
               brandAuditseo: null,
+              website_name:competitorDataMap.get(competitor_id)?.website_name ?? "",
               meta_description: competitorDataMap.get(competitor_id)?.meta_description ?? null,
               page_title: competitorDataMap.get(competitor_id)?.page_title ?? null,
               meta_keywords: competitorDataMap.get(competitor_id)?.meta_keywords ?? null,
@@ -871,6 +882,7 @@ const report = await prisma.report.findUnique({
         mainPageSpeedData && isValidPageSpeedData(mainPageSpeedData)
           ? {
               brand_profile: {
+                website_name:websiteScraped?.website_name,
                 title: websiteScraped?.page_title || "Unknown",
                 website_url: website_url,
                 revenueLossPercent: mainPageSpeedData.revenueLossPercent || null,
@@ -913,6 +925,7 @@ const report = await prisma.report.findUnique({
               seo_audit: {
                 brandAuditseo: Array.isArray(mainPageSpeedData.audit_details?.seoAudits) ? processSeoAudits(mainPageSpeedData.audit_details.seoAudits) : null,
                 meta_description: websiteScraped?.meta_description || null,
+                website_name:websiteScraped?.website_name || null,
                 page_title: websiteScraped?.page_title || null,
                 schema_markup_status: safeParse(websiteScraped?.schema_analysis) || null,
                 isCrawlable: websiteScraped?.isCrawlable || null,
@@ -935,6 +948,7 @@ const report = await prisma.report.findUnique({
     ? {
         ...dashboarddata.mainWebsite,
         seo_audit: {
+          website_name:dashboarddata.mainWebsite.seo_audit.website_name,
           meta_description: dashboarddata.mainWebsite.seo_audit.meta_description,
           page_title: dashboarddata.mainWebsite.seo_audit.page_title,
           schema_markup_status: dashboarddata.mainWebsite.seo_audit.schema_markup_status,
@@ -951,6 +965,7 @@ const report = await prisma.report.findUnique({
         ...competitor,
         seo_audit: competitor.seo_audit
           ? {
+              website_name:competitor.seo_audit.website_name,
               meta_description: competitor.seo_audit.meta_description,
               page_title: competitor.seo_audit.page_title,
               schema_markup_status: competitor.seo_audit.schema_markup_status,

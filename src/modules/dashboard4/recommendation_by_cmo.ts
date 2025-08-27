@@ -25,7 +25,74 @@ export class CMORecommendationService {
     this.model = model;
   }
 
-  private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
+//   private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
+//   const [website, requirement, reports] = await Promise.all([
+//     this.prisma.user_websites.findUnique({
+//       where: { website_id },
+//       select: { user_id: true, website_url: true },
+//     }),
+//     this.prisma.user_requirements.findFirst({
+//       where: { website_id },
+//       select: {
+//         industry: true,
+//         region_of_operation: true,
+//         target_location: true,
+//         target_audience: true,
+//         primary_offering: true,
+//         USP: true,
+//       },
+//     }),
+//     this.prisma.report.findMany({
+//       where: {
+//         report_id: { in: report_ids },
+//       },
+//     }),
+    
+
+//   ]);
+
+
+
+//   if (!website || website.user_id !== user_id) {
+//     throw new Error('Invalid user_id or website_id');
+//   }
+
+
+//   const firstScrapedDataId = reports.find(r => r.scraped_data_id)?.scraped_data_id;
+
+// if (!firstScrapedDataId) {
+//   throw new Error('No scraped_data_id found in any report');
+// }
+//   // 🟢 Use the first scraped_data_id in the query
+//   const scraped_data = await this.prisma.website_scraped_data.findUnique({
+//     where: {
+//       scraped_data_id: firstScrapedDataId,
+//     },
+//     select:{
+//       logo_url:true
+//     }
+//   });
+//   // Combine multiple report sections (this is just a sample logic)
+//   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
+//   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
+//   const competitor_analysis = reports.map(r => r.dashboard3_data).filter(Boolean);
+//   const social_media_anaylsis = reports.map(r => r.dashboard2_data).filter(Boolean);
+
+//   return {
+//     website_audit_data,
+//     seo_audit,
+//     competitor_analysis,
+//     requirement,
+//     website,
+//     reports,
+//     logo_url: scraped_data?.logo_url || null,
+//     social_media_anaylsis
+//   };
+// }
+
+
+
+private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
   const [website, requirement, reports] = await Promise.all([
     this.prisma.user_websites.findUnique({
       where: { website_id },
@@ -47,32 +114,25 @@ export class CMORecommendationService {
         report_id: { in: report_ids },
       },
     }),
-    
-
   ]);
 
-
-
   if (!website || website.user_id !== user_id) {
-    throw new Error('Invalid user_id or website_id');
+    throw new Error("Invalid user_id or website_id");
   }
 
+  // ✅ Find the first report that has a scraped_data_id
+  const firstScrapedDataId = reports.find(r => r.scraped_data_id)?.scraped_data_id;
 
-    const firstScrapedDataId = reports[0]?.scraped_data_id;
-  if (!firstScrapedDataId) {
-    throw new Error('No scraped_data_id found in reports');
+  let scraped_data: { logo_url: string | null } | null = null;
+
+  if (firstScrapedDataId) {
+    scraped_data = await this.prisma.website_scraped_data.findUnique({
+      where: { scraped_data_id: firstScrapedDataId },
+      select: { logo_url: true },
+    });
   }
 
-  // 🟢 Use the first scraped_data_id in the query
-  const scraped_data = await this.prisma.website_scraped_data.findUnique({
-    where: {
-      scraped_data_id: firstScrapedDataId,
-    },
-    select:{
-      logo_url:true
-    }
-  });
-  // Combine multiple report sections (this is just a sample logic)
+  // Combine multiple report sections
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
   const competitor_analysis = reports.map(r => r.dashboard3_data).filter(Boolean);
@@ -85,10 +145,11 @@ export class CMORecommendationService {
     requirement,
     website,
     reports,
-    logo_url: scraped_data?.logo_url || null,
-    social_media_anaylsis
+    logo_url: scraped_data?.logo_url || null, 
+    social_media_anaylsis,
   };
 }
+
 
 public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
     try {
@@ -98,7 +159,7 @@ public async generateCMORecommendation(input: CMORecommendationInput): Promise<C
         competitor_analysis: competitor_analysis,
         requirement,
         website,
-        reports,
+        // reports,
         logo_url,
         social_media_anaylsis
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
@@ -106,7 +167,6 @@ public async generateCMORecommendation(input: CMORecommendationInput): Promise<C
       
 
       function stripCodeFences(text: string): string {
-        // Remove leading and trailing code fences (with optional language)
         return text
           .replace(/^\s*```(?:json)?\s*/i, '') // Remove opening
           .replace(/\s*```\s*$/i, '')          // Remove closing
