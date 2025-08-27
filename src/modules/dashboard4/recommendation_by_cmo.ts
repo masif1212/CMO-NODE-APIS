@@ -498,8 +498,10 @@ Return a *valid JSON object* with the following keys in this exact order:
 
 ---
 Your output is a strategic intelligence memo. Structure it strictly as valid JSON. Prioritize clarity, business impact, and next-step relevance.
+NOTE: Do not mention or refer to any third-party tools (such as PageSpeed, Semrush, etc.). 
+  Always write in full words, not short forms or abbreviations. 
+  Keep the language simple, clear, and easy for anyone to understand.
 
-NOTE: Never mention a third api like pagespeed , semrush etc
 `;
 
 

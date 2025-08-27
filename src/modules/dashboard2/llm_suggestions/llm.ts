@@ -164,6 +164,9 @@ export const brandPulsePrompt = `Analyze the brand tone, messaging style, and cr
 9. **Actionable Recommendation**  
    - One-sentence suggestion on how to unify voice, optimize platform mix, and align with the target persona.
 
+
+Always write in full words, not short forms or abbreviations. 
+Keep the language simple, clear, and easy for anyone to understand.   
 Return the response in the following JSON format:
 
 {
