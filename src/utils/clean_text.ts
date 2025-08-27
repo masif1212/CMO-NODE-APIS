@@ -39,9 +39,7 @@ export function sanitizeAndStringify(input: any): string {
       return cleanText(value);
     } else if (Array.isArray(value)) {
       const cleanedArr = value.map(deepClean);
-      // if (JSON.stringify(value) !== JSON.stringify(cleanedArr)) {
-      //   // console.log("🔄 [deepClean] Array modified:");
-      // }
+      
       return cleanedArr;
     } else if (value && typeof value === "object") {
       return pruneData(value);

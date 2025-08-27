@@ -374,7 +374,8 @@ export class CompetitorService {
   return {
     mainWebsite: {
       brand_profile: {
-        title: scrapedMain.website_name ?? "Unknown",
+        website_name:scrapedMain.website_name,
+        title: scrapedMain.page_title ?? "Unknown",
         industry: userRequirement.industry,
         unique_selling_point: userRequirement.USP,
         primary_offering: userRequirement.primary_offering,
