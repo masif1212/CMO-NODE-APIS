@@ -3,7 +3,6 @@ import { OpenAI } from "openai";
 import {sanitizeAndStringify} from "../../../utils/clean_text"
 const prisma = new PrismaClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const model = process.env.OPENAI_MODEL || "gpt-4.1";
 
 function cleanStringValues(obj: any): any {
   if (Array.isArray(obj)) {
@@ -33,39 +32,45 @@ export const generatesocialmediareport = async (
     return { error: "Missing website_id or user_id" };
   }
 
-  console.log("Report generation started for website_id:", website_id);
+  console.log("Report generation started for report_id:", report_id);
 
   const report = await prisma.report.findUnique({
     where: { report_id },
     select: { scraped_data_id: true, dashboard2_data: true },
   });
-
+  
+  console.log("scraped Id", report?.scraped_data_id);
+  
   try {
-    const [scraped] = await Promise.all([
-      prisma.website_scraped_data.findUnique({
-        where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+    let scraped = null;
+  
+    // ✅ Only call findUnique if scraped_data_id exists
+    if (report?.scraped_data_id) {
+      scraped = await prisma.website_scraped_data.findUnique({
+        where: { scraped_data_id: report.scraped_data_id },
         select: {
           meta_description: true,
           page_title: true,
           H1_text: true,
         },
-      }),
-    ]);
-
-   
+      });
+    }
+  
     const allDataforrecommendation = {
       meta_data: {
         title: scraped?.page_title ?? "N/A",
         meta_description: scraped?.meta_description ?? "N/A",
-        h1_heading: scraped?.H1_text?? "N/A",
+        h1_heading: scraped?.H1_text ?? "N/A",
       },
       social_media_data: report?.dashboard2_data ?? "n/a",
     };
+  
+    // console.log("Recommendation Data", allDataforrecommendation);
     const clean_data = sanitizeAndStringify(allDataforrecommendation)
     console.log("clean_data",clean_data)
     const llmResponse = await openai.chat.completions.create({
-      model: model,
-      temperature: 0.5,
+      model: "gpt-5",
+      // temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: brandPulsePrompt },
@@ -124,7 +129,7 @@ export const brandPulsePrompt = `Analyze the brand tone, messaging style, and cr
    - Provide a unified overview of the brand’s overall voice, tone, emotional quality, and communication style.
 
 2. **Platform-wise Overview**  
-   For each platform (website, Instagram, Facebook, YouTube), summarize in the same format:
+   For each platform (website(if meta data exit), Instagram, Facebook, YouTube), summarize in the same format:
    - Tone & Style (e.g. professional, playful, inspiring)  
    - Emotional Appeal (e.g. motivating, humorous, trust-building)  
    - Communication Format (e.g. slogan-driven, visual-heavy, story-led)
@@ -165,12 +170,7 @@ Return the response in the following JSON format:
   "brand_voice_summary": "Unified overview of brand’s voice and tone",
   
   "platform_overview": {
-    "website":
-    { "tone_style":"",
-       "emotional_appeal":"",
-       "communication_format" : "" ,
-       "engagement": ""
-    },
+  
     "instagram":  { "tone_style":"",
        "emotional_appeal":"",
        "communication_format" : "" ,

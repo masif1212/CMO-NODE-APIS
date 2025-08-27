@@ -358,8 +358,36 @@ Return a *valid JSON object* with the following keys in this exact order:
    "Brand voice alignment: Are you sounding premium, helpful, or confused?"
 "
  }
- 
-   
+ "content_Strategy": {
+  "analysis": "Evaluate whether the brand has defined content pillars or is producing scattered one-off blogs without strategic clustering.",
+  "general_recommendation": "Develop 2–3 strong content pillars aligned with  revenue drivers. Each pillar should have one comprehensive guide (pillar page) and 5–7 supporting blogs or assets that target specific subtopics.",
+  "pillars": [
+    {
+      "pillar_theme": "Customer Retention for SaaS",
+      "pillar_page": "Ultimate Guide to SaaS Customer Retention",
+      "cluster_examples": [
+        "Top 5 retention metrics SaaS companies should track",
+        "Onboarding flows that reduce churn by 20%",
+        "Case study: How SaaS X improved retention with loyalty programs"
+      ]
+    },
+    {
+      "pillar_theme": "Digital Marketing for Small Businesses",
+      "pillar_page": "Complete Handbook on SMB Digital Marketing",
+      "cluster_examples": [
+        "Facebook vs. Google Ads for SMBs",
+        "How to track ROI on a small budget",
+        "Local SEO strategies to dominate your city"
+      ]
+    }
+  ],
+  "recommendations": [
+    "Audit existing blogs and group them into logical clusters under new pillar pages.",
+    "Fill missing clusters by targeting long-tail, bottom-funnel keywords (e.g., 'pricing', 'alternatives', 'best tools').",
+    "Cross-link all cluster blogs to their pillar page to improve topical authority."
+  ]
+}
+
   "retention_strategy": {
     
     "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
@@ -376,7 +404,7 @@ Return a *valid JSON object* with the following keys in this exact order:
    "channel_budget_suggestions": 
     {
       "channel": "Paid Search",
-      "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS",
+      "suggestion": "check if there are paid ad or not and then give suggestion based on it , what paid ads should be run (facebook , google etc), there content etc , there extimated buget ",
       "channel": "SEO",
       "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords(suggestion should be in detail and depth insist of generic)"
     
@@ -419,9 +447,7 @@ NOTE: Never mention a third api like pagespeed , semrush etc
       console.log('Calling OpenAI for CMO recommendation...');
 
       const response = await this.openai.chat.completions.create({
-        model: this.model,
-        temperature: 0.5,
-        max_tokens: 8000,
+        model: "gpt-5",
         messages: [
           { role: 'system', content: executiveCMOPrompt },
           { role: 'user', content: JSON.stringify(allData) },
@@ -431,9 +457,7 @@ NOTE: Never mention a third api like pagespeed , semrush etc
       let rawText = response.choices[0]?.message?.content || 'No response generated.';
       rawText = stripCodeFences(rawText);
       const rawText2 = extractFirstJSONObject(rawText);
-      // console.log("rawText",rawText)
 
-      // rawText = rawText.replace(/^json|$/g, '').trim();
       const responseContent = JSON.parse(rawText2 || '{}');
       console.log('Saving response to database...');
       const cmo_recommendation = {

@@ -330,7 +330,6 @@ const competitor_data = await prisma.report.findUnique({
   socialmedia: competitor_data?.dashboard3_socialmedia,
 };
 
-// Deep clean the merged object
 const clean_data =sanitizeAndStringify (mergedData);
 console.log("clean_data",clean_data)
  return `

@@ -27,7 +27,7 @@ export interface SchemaOutput {
   logo?: string | null;
   schemas: {
     summary: ValidationResult[];
-    details: GroupedResults;
+    // details: GroupedResults;
   };
 }
 
@@ -201,7 +201,7 @@ try {
       logo: logoUrl ?? null,
       schemas: {
         summary,
-        details: groupedResults
+        // details: groupedResults
       }
     };
 
@@ -212,7 +212,7 @@ try {
       logo: null,
       schemas: {
         summary: [],
-        details: {}
+        // details: {}
       }
     };
   }

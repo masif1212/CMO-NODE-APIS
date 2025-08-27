@@ -11,6 +11,7 @@ const brandFields = [
 ];
 const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
 const competitorFields = ["dashboard3_data", "recommendationbymo3"];
+
 const renameFields: Record<string, string> = {
   dashboard1_Freedata: "website_audit",
   dashboard_paiddata: "seo_audit",
