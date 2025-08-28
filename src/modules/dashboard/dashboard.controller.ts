@@ -105,10 +105,14 @@ export const getUserDashboard = async (req: Request, res: Response) =>
     //     id: rec.id,         // 🔹 adds website info
     //   };
     // });
-    const formattedRecommendations = recommendations.map((rec) => {
+
+
+
+const formattedRecommendations = recommendations.map((rec) => {
   let websiteMeta = null;
   let firstReportId: string | null = null;
   let firstReportPayment = 0;
+  let firstReportColumns: any[] = [];
 
   for (const site of userWebsites) {
     const foundReport = site.report.find((r) =>
@@ -129,6 +133,11 @@ export const getUserDashboard = async (req: Request, res: Response) =>
         0
       );
 
+      // ✅ also collect columns (details)
+      firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
+        Array.isArray(p.detail) ? p.detail : [p.detail]
+      );
+
       break; // stop after first match
     }
   }
@@ -140,9 +149,12 @@ export const getUserDashboard = async (req: Request, res: Response) =>
     updated_at: rec.updated_at,
     report_ids: rec.report_ids,
     id: rec.id,
-    total_payment: firstReportPayment, // 👈 now included
+    total_payment: firstReportPayment, // 💰 total of first report
+    columns: firstReportColumns,       // 📊 details of first report
   };
 });
+
+
     let totalSpend = 0;
 
     for (const site of userWebsites) {
