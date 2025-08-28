@@ -539,6 +539,7 @@ model cmo_recommendation {
   user_id           String?
   id                String   @id @default(uuid())
   report_ids        Json?
+  
   cmorecommendation String?  @db.LongText
   created_at        DateTime @default(now())
   updated_at        DateTime @default(now()) @updatedAt

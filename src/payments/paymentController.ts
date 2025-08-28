@@ -209,6 +209,8 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
       },
     });
 
+    
+
     if (payment.status === "Authorized" || payment.status === "Captured") {
       res.json({ success: true, payment: paymentRecord });
     } else {

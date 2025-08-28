@@ -26,7 +26,10 @@ const renameFields: Record<string, string> = {
   cmorecommendation: "cmo_recommendation",
 };
 
-
+  type PaymentDetail = {
+          type?: string;
+          price?: string;
+        };
 export const getUserDashboard = async (req: Request, res: Response) =>
    {
   const userId = req.query.user_id;
@@ -77,36 +80,54 @@ export const getUserDashboard = async (req: Request, res: Response) =>
     });
 
 
-    // const formattedRecommendations = recommendations.map((rec) => {
-    //   let websiteMeta = null;
-    //   let firstReportId: string | null = null;
-
-    //   for (const site of userWebsites) {
-    //     const foundReport = site.report.find((r) =>
-    //       (rec.report_ids as string[]).includes(r.report_id)
-    //     );
-    //     if (foundReport) {
-    //       websiteMeta = {
-    //         website_id: site.website_id,
-    //         website_url: site.website_url,
-    //         website_name: site.website_name,
-    //       };
-    //       firstReportId = foundReport.report_id; // 👈 pick first report_id
-    //       break;
-    //     }
-    //   }
-
-    //   return {
-    //     report_id: firstReportId,
-    //     ...websiteMeta,
-    //     created_at: rec.created_at,
-    //     updated_at: rec.updated_at,
-    //     report_ids: rec.report_ids,   // keep all if needed
-    //     id: rec.id,         // 🔹 adds website info
-    //   };
-    // });
+  
 
 
+// const formattedRecommendations = recommendations.map((rec) => {
+//   let websiteMeta = null;
+//   let firstReportId: string | null = null;
+//   let firstReportPayment = 0;
+//   let firstReportColumns: any[] = [];
+
+//   for (const site of userWebsites) {
+//     const foundReport = site.report.find((r) =>
+//       (rec.report_ids as string[]).includes(r.report_id)
+//     );
+
+//     if (foundReport) {
+//       websiteMeta = {
+//         website_id: site.website_id,
+//         website_url: site.website_url,
+//         website_name: site.website_name,
+//       };
+//       firstReportId = foundReport.report_id;
+
+//       // ✅ grab total payment for the first report only
+//       firstReportPayment = (foundReport.payments ?? []).reduce(
+//         (sum, p) => sum + (p.amount ?? 0),
+//         0
+//       );
+
+//       // ✅ also collect columns (details)
+//       firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
+//         Array.isArray(p.detail) ? p.detail : [p.detail]
+//       );
+
+//       break; 
+//     }
+//   }
+
+//   return {
+//     report_id: firstReportId,
+//     ...websiteMeta,
+//     created_at: rec.created_at,
+//     updated_at: rec.updated_at,
+//     report_ids: rec.report_ids,
+//     id: rec.id,
+//     total_payment: firstReportPayment, // 💰 total of first report
+//     columns: firstReportColumns,       // 📊 details of first report
+//   };
+// });
 
 const formattedRecommendations = recommendations.map((rec) => {
   let websiteMeta = null;
@@ -132,11 +153,13 @@ const formattedRecommendations = recommendations.map((rec) => {
         (sum, p) => sum + (p.amount ?? 0),
         0
       );
+    
 
-      // ✅ also collect columns (details)
-      firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
-        Array.isArray(p.detail) ? p.detail : [p.detail]
-      );
+     firstReportColumns = (foundReport.payments ?? [])
+  .flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail]))
+  .filter((d): d is PaymentDetail => 
+    typeof d === "object" && d !== null && "type" in d && (d as any).type === "CMO recommendation"
+  );
 
       break; // stop after first match
     }
@@ -149,11 +172,10 @@ const formattedRecommendations = recommendations.map((rec) => {
     updated_at: rec.updated_at,
     report_ids: rec.report_ids,
     id: rec.id,
-    total_payment: firstReportPayment, // 💰 total of first report
-    columns: firstReportColumns,       // 📊 details of first report
+    total_payment: firstReportPayment,
+    columns: firstReportColumns, // 👈 only CMO recommendation objects
   };
 });
-
 
     let totalSpend = 0;
 
