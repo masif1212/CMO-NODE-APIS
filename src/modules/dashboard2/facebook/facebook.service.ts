@@ -140,7 +140,7 @@ function calculateEngagementStats(posts: any[], followerCount: number) {
 export const getFacebookPostsFromScrapedData = async (
   facebook_handle: string,
   max_posts: number = 3,
-  retry_attempts: number = 2,
+  retry_attempts: number = 4,
   delay: number = 2
 ) => {
   const headers = { 'x-api-key': API_KEY };
@@ -159,7 +159,7 @@ export const getFacebookPostsFromScrapedData = async (
   let cursor: string | null = null;
   let attempt = 0;
   let previous_cursor: string | null = null;
-  let empty_post_retries = 3;
+  let empty_post_retries = 4;
 
   try {
     while (total_posts < max_posts && empty_post_retries > 0) {
@@ -185,7 +185,7 @@ export const getFacebookPostsFromScrapedData = async (
 
           const reactions = Number(post.reactionCount || 0);
           const comments = Number(post.commentCount || 0);
-          const shares = Number(post.shareCount || 0); // ✅ Add shares
+          const shares = Number(post.shareCount || 0); 
 
             const engagement = reactions + comments + shares;
 
@@ -204,7 +204,6 @@ export const getFacebookPostsFromScrapedData = async (
             comments,
             shares
           });
-
           total_engagement += engagement;
           total_posts++;
         }
@@ -235,7 +234,7 @@ export const getFacebookPostsFromScrapedData = async (
     }
 
     const { engagementRate, engagementToFollowerRatio, message, perPostEngagement } =
-      calculateEngagementStats(posts, followerCount);
+    calculateEngagementStats(posts, followerCount);
 
     return {
       facebook_data: {
@@ -245,7 +244,6 @@ export const getFacebookPostsFromScrapedData = async (
         engagementToFollowerRatio,
         message,
         perPostEngagement,
-        // posts
       },
     };
   } catch (error: any) {
@@ -261,7 +259,7 @@ export const getFacebookProfileFromScrapedData = async (facebook_handle: string)
   try {
     console.log("calling facebook profile endpoint")
     const response = await axios.get(url, { headers });
-    console.log("profile fetch",response)
+    // console.log("profile fetch",response)
     return extractFacebookProfileInfo(response.data);
   } catch (error: any) {
     return { error: `Failed to fetch profile: ${error.message}` };
@@ -270,6 +268,7 @@ export const getFacebookProfileFromScrapedData = async (facebook_handle: string)
 
 
 const extractFacebookProfileInfo = (data: any) => {
+  // console.log("data",data)
   try {
     const profileInfo: Record<string, any> = {
       name: data.name || 'N/A',
@@ -277,6 +276,7 @@ const extractFacebookProfileInfo = (data: any) => {
       likeCount: data.likeCount || 'N/A',
       followerCount: data.followerCount || 'N/A',
       rating: data.rating || 'N/A',
+      isBusinessPageActive:data.isBusinessPageActive,
       ratingCount: data.ratingCount || 'N/A',
       address: data.address || 'N/A',
       email: data.email || 'N/A',
@@ -286,8 +286,7 @@ const extractFacebookProfileInfo = (data: any) => {
       pageIntroduction: data.pageIntro || 'N/A',
       category: data.category || 'N/A',
       accountStatus: data.account_status || 'N/A',  
-      adLibrary : data.adLibrary || 'N/A'
-      
+      adLibrary : data.adLibrary || 'N/A'      
     };
 
     return profileInfo;

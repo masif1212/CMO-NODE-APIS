@@ -34,17 +34,17 @@ export const getInstagramPostsFromScrapedData = async (
 
   console.log('Extracting Instagram username from handle:', instagram_handle);
   let handle = extractInstagramUsername(instagram_handle);
-  console.log('Extracted handle:', instagram_handle);
+  // console.log('Extracted handle:', instagram_handle);
 
   const headers = { 'x-api-key': API_KEY };
-  console.log('Headers set:', headers);
+  // console.log('Headers set:', headers);
 
   const get_instagram_profile = async (handle: string) => {
     const url = `${INSTAGRAM_PROFILE_URL}?handle=${handle}`;
-    console.log('Fetching profile from URL:', url);
+    // console.log('Fetching profile from URL:', url);
 
     try {
-      console.log('Sending profile request with headers:', headers);
+      // console.log('Sending profile request with headers:', headers);
       const response = await axios.get(url, { headers });
       // console.log('Profile response received:', JSON.stringify(response.data, null, 2));
       const profile_info = response.data?.data?.user || {};
@@ -101,7 +101,6 @@ export const getInstagramPostsFromScrapedData = async (
     let attempt = 0;
     let previous_cursor: string | null = null;
     let empty_post_retries = 3;
-    // console.log('Initialized variables: total_posts:', total_posts, 'total_engagement:', total_engagement, 'posts:', posts, 'cursor:', cursor, 'empty_post_retries:', empty_post_retries);
 
     let last_response_data = null; // Store the last API response for posts
 
@@ -134,7 +133,7 @@ export const getInstagramPostsFromScrapedData = async (
 
         for (const post of fetched_posts) {
           if (total_posts >= max_posts) {
-            console.log('Max posts limit reached:', max_posts);
+            // console.log('Max posts limit reached:', max_posts);
             break;
           }
 
@@ -199,9 +198,9 @@ export const getInstagramPostsFromScrapedData = async (
     }
 
     const calculateEngagementStats = (posts: any[], followerCount: number) => {
-      console.log('Calculating engagement stats for posts:', posts, 'followerCount:', followerCount);
+      // console.log('Calculating engagement stats for posts:', posts, 'followerCount:', followerCount);
       if (!followerCount || followerCount === 0) {
-        console.log('No followers, returning default stats');
+        // console.log('No followers, returning default stats');
         return {
           engagementRate: '0.00%',
           engagementToFollowerRatio: '0.0000',

@@ -4,7 +4,7 @@ export function sanitizeAndStringify(input: any): string {
   function cleanText(text: string): string {
     const cleaned = text
       .replace(/\s+/g, " ")        // collapse multiple spaces/newlines
-      .replace(/[^\x20-\x7E]/g, "")
+      .replace(/[^\x20-\x7E/n]/g, "")
        // strip non-ASCII chars
        .replace(/[.,!?;:()'"-]/g, "")
       .trim();

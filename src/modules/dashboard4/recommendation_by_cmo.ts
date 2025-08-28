@@ -25,73 +25,6 @@ export class CMORecommendationService {
     this.model = model;
   }
 
-//   private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
-//   const [website, requirement, reports] = await Promise.all([
-//     this.prisma.user_websites.findUnique({
-//       where: { website_id },
-//       select: { user_id: true, website_url: true },
-//     }),
-//     this.prisma.user_requirements.findFirst({
-//       where: { website_id },
-//       select: {
-//         industry: true,
-//         region_of_operation: true,
-//         target_location: true,
-//         target_audience: true,
-//         primary_offering: true,
-//         USP: true,
-//       },
-//     }),
-//     this.prisma.report.findMany({
-//       where: {
-//         report_id: { in: report_ids },
-//       },
-//     }),
-    
-
-//   ]);
-
-
-
-//   if (!website || website.user_id !== user_id) {
-//     throw new Error('Invalid user_id or website_id');
-//   }
-
-
-//   const firstScrapedDataId = reports.find(r => r.scraped_data_id)?.scraped_data_id;
-
-// if (!firstScrapedDataId) {
-//   throw new Error('No scraped_data_id found in any report');
-// }
-//   // 🟢 Use the first scraped_data_id in the query
-//   const scraped_data = await this.prisma.website_scraped_data.findUnique({
-//     where: {
-//       scraped_data_id: firstScrapedDataId,
-//     },
-//     select:{
-//       logo_url:true
-//     }
-//   });
-//   // Combine multiple report sections (this is just a sample logic)
-//   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
-//   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
-//   const competitor_analysis = reports.map(r => r.dashboard3_data).filter(Boolean);
-//   const social_media_anaylsis = reports.map(r => r.dashboard2_data).filter(Boolean);
-
-//   return {
-//     website_audit_data,
-//     seo_audit,
-//     competitor_analysis,
-//     requirement,
-//     website,
-//     reports,
-//     logo_url: scraped_data?.logo_url || null,
-//     social_media_anaylsis
-//   };
-// }
-
-
-
 private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
   const [website, requirement, reports] = await Promise.all([
     this.prisma.user_websites.findUnique({
@@ -131,6 +64,7 @@ private async fetchRecommendations(user_id: string, website_id: string, report_i
       select: { logo_url: true },
     });
   }
+  const competitor_social_media : any = reports.map(r => r.dashboard3_socialmedia).filter(Boolean);
 
   // Combine multiple report sections
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
@@ -147,6 +81,7 @@ private async fetchRecommendations(user_id: string, website_id: string, report_i
     reports,
     logo_url: scraped_data?.logo_url || null, 
     social_media_anaylsis,
+    competitor_social_media
   };
 }
 
@@ -161,7 +96,8 @@ public async generateCMORecommendation(input: CMORecommendationInput): Promise<C
         website,
         // reports,
         logo_url,
-        social_media_anaylsis
+        social_media_anaylsis,
+        competitor_social_media
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
 
       
@@ -188,7 +124,7 @@ for (const entry of seo_audit) {
 
 
 const datafor_llm = fullreportseo?.datafor_llm;
-console.log("datafor_llm", datafor_llm)
+// console.log("datafor_llm", datafor_llm)
 
 
 
@@ -270,13 +206,6 @@ if (datafor_llm?.geo) {
   allData.Geo = datafor_llm.geo;
 }
 
-// 🧠 Industry and location, optional fields
-if (requirement?.industry || requirement?.target_location) {
-  allData.user_industry_and_target_location = {
-    industry: requirement?.industry ?? "N/A",
-    Target_location: requirement?.target_location ?? "N/A",
-  };
-}
 
 if (social_media_anaylsis)
 {
@@ -287,6 +216,9 @@ if (competitor_data) {
   allData.competitor_comparison = competitor_data;
 }
 
+if (competitor_social_media) {
+  allData.competitor_social_media = competitor_social_media;
+}
 const clean_data = sanitizeAndStringify(allData)
 // console.log("✅ allData prepared:", clean_data);
 function extractFirstJSONObject(text: string): string | null {
@@ -306,9 +238,6 @@ const executiveCMOPrompt = `
  - Target Audience: ${requirement?.target_audience || 'N/A'}
  - Primary Offering: ${requirement?.primary_offering || 'N/A'}
  - Unique Selling Proposition (USP): ${requirement?.USP || 'N/A'}
-
- ### Data Inputs
-S${clean_data ? '-' : ''}
 
 
 Your task is to generate a *structured JSON report* based on the given input data. The output must help executive stakeholders understand the brand’s position, performance risks, and growth levers.
@@ -330,9 +259,7 @@ Return a *valid JSON object* with the following keys in this exact order:
                "High-level overview":"High-level overview of current brand performance" ,
                "challenges_opportunities" :"Key challenges & growth opportunities in plain English",
                "A one-liner verdict" :" Here’s what you need to fix now to grow faster""
-                },
-                
-                       
+                },                  
 
   "brand_health_overview": {
     "overview": "Website performance metrics are strong",
@@ -377,9 +304,6 @@ Return a *valid JSON object* with the following keys in this exact order:
     },
     "summary": "Overall, First Crust leads in speed, SEO, and accessibility, but TBT and on-page SEO require targeted fixes"
   }
-
-
-
   "swot_analysis": {
     "strengths": ["..."],
     "weaknesses": ["..."],
@@ -418,7 +342,7 @@ Return a *valid JSON object* with the following keys in this exact order:
    "Brand voice alignment: Are you sounding premium, helpful, or confused?"
 "
  }
- "content_Strategy": {
+ "content_Strategy(minium 4)": {
   "analysis": "Evaluate whether the brand has defined content pillars or is producing scattered one-off blogs without strategic clustering.",
   "general_recommendation": "Develop 2–3 strong content pillars aligned with  revenue drivers. Each pillar should have one comprehensive guide (pillar page) and 5–7 supporting blogs or assets that target specific subtopics.",
   "pillars": [
@@ -470,8 +394,7 @@ Return a *valid JSON object* with the following keys in this exact order:
     
     },
     
-      
-  
+ 
 }
 \\\`json
 ---
@@ -503,16 +426,13 @@ NOTE: Do not mention or refer to any third-party tools (such as PageSpeed, Semru
   Keep the language simple, clear, and easy for anyone to understand.
 
 `;
-
-
-
-      console.log('Calling OpenAI for CMO recommendation...');
+console.log('Calling OpenAI for CMO recommendation...');
 
       const response = await this.openai.chat.completions.create({
         model: "gpt-5",
         messages: [
           { role: 'system', content: executiveCMOPrompt },
-          { role: 'user', content: JSON.stringify(allData) },
+          { role: 'user', content: JSON.stringify(clean_data) },
         ],
       });
       console.log("open ai response fetch")

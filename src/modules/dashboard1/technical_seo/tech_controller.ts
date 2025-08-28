@@ -25,7 +25,6 @@ export const technical_seo = async (req: Request, res: Response) => {
   const report = await prisma.report.findUnique({
     where: { report_id },
     select: {
-      // report_id: true,
       website_id: true,
       website_analysis_id: true
     },

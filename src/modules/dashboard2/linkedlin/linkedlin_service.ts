@@ -8,15 +8,9 @@ const linkedlin_PROFILE_URL = 'https://api.scrapecreators.com/v1/linkedin/compan
 
 const headers = { 'x-api-key': API_KEY };
 
-
-
-
-
-
-
 export const getlinkedinProfileFromScrapedData = async (linkedlin_handle: any) => {
   const cleanUrl = linkedlin_handle.trim().replace(/^https?:\/\//, '');
-  console.log("cleanUrl", cleanUrl);
+  // console.log("cleanUrl", cleanUrl);
   const url = `${linkedlin_PROFILE_URL}?url=https://${cleanUrl}`;
   console.log("url", url);
 
@@ -33,9 +27,7 @@ export const getlinkedinProfileFromScrapedData = async (linkedlin_handle: any) =
 
 
     const totalPosts = data?.posts.length;
-    console.log("totalPosts", totalPosts);
-
-
+    // console.log("totalPosts", totalPosts);
     return {
       linkedlin_data: {
         ...data,
