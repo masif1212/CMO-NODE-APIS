@@ -20,10 +20,8 @@ export interface ScrapeResult {
   scraped_data_id?: string;
 }
 
-function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
-  // hasH1: boolean;
+export function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   totalHeadings: number;
-  // headingLevelsUsed: string[];
   headingOrderUsed: string[];
   hasMultipleH1s: boolean;
   skippedHeadingLevels: boolean;
@@ -98,7 +96,7 @@ function evaluateHeadingHierarchy($: cheerio.CheerioAPI): {
   };
 }
 
-async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
+export async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   try {
     const response = await axios.head(logoUrl, {
       timeout: 20000,
@@ -110,7 +108,7 @@ async function isLogoUrlValid(logoUrl: string): Promise<boolean> {
   }
 }
 
-async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
+export async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
   try {
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
     const { data: robotsTxt } = await axios.get(robotsUrl);
@@ -139,12 +137,11 @@ async function isCrawlableByLLMBots(baseUrl: string): Promise<boolean> {
 
     return true;
   } catch {
-    // If robots.txt is missing or can't be fetched, assume crawlable
     return true;
   }
 }
 
-async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
+export async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   try {
     // console.log("getRobotsTxtAndSitemaps")
     const robotsUrl = new URL("/robots.txt", baseUrl).href;
@@ -172,7 +169,7 @@ async function getRobotsTxtAndSitemaps(baseUrl: string): Promise<string[]> {
   }
 }
 
-async function parseSitemap(sitemapUrl: string): Promise<string[]> {
+export async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   try {
     // console.log("parseSitemap")
     const { data } = await axios.get(sitemapUrl);
@@ -200,7 +197,7 @@ async function parseSitemap(sitemapUrl: string): Promise<string[]> {
   }
 }
 
-async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
+export async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
     where: {
@@ -221,72 +218,72 @@ async function getWebsiteUrlById(user_id: string, website_id: string): Promise<s
   return website.website_url;
 }
 
+export function getStatusMessage(code: number): string {
+  const messages: Record<number, string> = {
+    400: "Bad Request",
+    401: "Unauthorized - Authentication required",
+    402: "Payment Required",
+    405: "Method Not Allowed",
+    406: "Not Acceptable",
+    407: "Proxy Authentication Required",
+    408: "Request Timeout",
+    409: "Conflict",
+    410: "Gone",
+    411: "Length Required",
+    412: "Precondition Failed",
+    413: "Payload Too Large",
+    414: "URI Too Long",
+    415: "Unsupported Media Type",
+    416: "Range Not Satisfiable",
+    417: "Expectation Failed",
+    418: "I'm a teapot 🍵",
+    421: "Misdirected Request",
+    422: "Unprocessable Entity",
+    423: "Locked",
+    424: "Failed Dependency",
+    425: "Too Early",
+    426: "Upgrade Required",
+    428: "Precondition Required",
+    431: "Request Header Fields Too Large",
+    451: "Unavailable For Legal Reasons",
+    403: "Access denied",
+    404: "Page not found",
+    429: "Scraping blocked",
+    500: "Internal Server Error",
+    501: "Not Implemented",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Timeout",
+    505: "HTTP Version Not Supported",
+    506: "Variant Also Negotiates",
+    507: "Insufficient Storage",
+    508: "Loop Detected",
+    510: "Not Extended",
+    511: "Network Authentication Required",
+    521: "Web server is down",
+    522: "Webside is down",
+    523: "Origin is unreachable",
+    524: "A timeout occurred",
+    525: "SSL handshake failed",
+    526: "Invalid SSL certificate",
+  };
+  if (messages[code]) return messages[code];
+  if (code >= 500 && code <= 599) return `Server error (${code})`;
+  if (code >= 400 && code <= 499) return `Client error (${code})`;
+  return `Unhandled status code (${code})`;
+}
+
 export async function scrapeWebsite(user_id: string, website_id: string, report_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
   const domain = new URL(website_url).hostname;
-
+  const website_name = domain.split(".")[0];
   console.log("domain", domain);
 
   let statusCode: number = 0;
   let ipAddress: string = "N/A";
   let html: string = "";
   let message: string = "Unknown error";
-
-  function getStatusMessage(code: number): string {
-    const messages: Record<number, string> = {
-      400: "Bad Request",
-      401: "Unauthorized - Authentication required",
-      402: "Payment Required",
-      405: "Method Not Allowed",
-      406: "Not Acceptable",
-      407: "Proxy Authentication Required",
-      408: "Request Timeout",
-      409: "Conflict",
-      410: "Gone",
-      411: "Length Required",
-      412: "Precondition Failed",
-      413: "Payload Too Large",
-      414: "URI Too Long",
-      415: "Unsupported Media Type",
-      416: "Range Not Satisfiable",
-      417: "Expectation Failed",
-      418: "I'm a teapot 🍵",
-      421: "Misdirected Request",
-      422: "Unprocessable Entity",
-      423: "Locked",
-      424: "Failed Dependency",
-      425: "Too Early",
-      426: "Upgrade Required",
-      428: "Precondition Required",
-      431: "Request Header Fields Too Large",
-      451: "Unavailable For Legal Reasons",
-      403: "Access denied",
-      404: "Page not found",
-      429: "Scraping blocked",
-      500: "Internal Server Error",
-      501: "Not Implemented",
-      502: "Bad Gateway",
-      503: "Service Unavailable",
-      504: "Gateway Timeout",
-      505: "HTTP Version Not Supported",
-      506: "Variant Also Negotiates",
-      507: "Insufficient Storage",
-      508: "Loop Detected",
-      510: "Not Extended",
-      511: "Network Authentication Required",
-      521: "Web server is down",
-      522: "Webside is down",
-      523: "Origin is unreachable",
-      524: "A timeout occurred",
-      525: "SSL handshake failed",
-      526: "Invalid SSL certificate",
-    };
-    if (messages[code]) return messages[code];
-    if (code >= 500 && code <= 599) return `Server error (${code})`;
-    if (code >= 400 && code <= 499) return `Client error (${code})`;
-    return `Unhandled status code (${code})`;
-  }
 
   try {
     const response = await axios.get(website_url);
@@ -437,7 +434,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
   };
 
   try {
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url, report_id);
+    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url);
     const isCrawlable = await isCrawlableByLLMBots(website_url);
 
     let finalLogoUrl = schemaAnalysisData.logo ?? null;
@@ -462,10 +459,86 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         }
       }
     }
+    let h1Text = "Not Found";
 
-    const record = await prisma.website_scraped_data.create({
-      data: {
+    if (html) {
+      try {
+        console.log("parsing HTML...");
+
+        h1Text = $("h1").first().text().trim() || "Not Found";
+        console.log("H1 Text:", h1Text);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.warn("Cheerio failed to parse HTML:", err.message);
+        } else {
+          console.warn("Cheerio failed to parse HTML:", err);
+        }
+        // Skips setting h1Text if error happens
+      }
+    } else {
+      console.warn("Cheerio.load not available or raw_html missing");
+    }
+
+    await prisma.user_requirements.upsert({
+      where: {
+        website_id,
+      },
+      update: {
+        facebook_handle: facebook,
+        instagram_handle: instagram,
+        youtube_handle: youtube,
+        tiktok_handle: tiktok,
+        twitter_handle: twitter,
+      },
+      create: {
+        user_id,
+        website_id,
+        facebook_handle: facebook,
+        instagram_handle: instagram,
+        youtube_handle: youtube,
+        tiktok_handle: tiktok,
+        twitter_handle: twitter,
+      },
+    });
+    const record = await prisma.website_scraped_data.upsert({
+      where: {
+        report_id: report_id, // or just `report_id` if shorthand is allowed
+      },
+      update: {
         website_url,
+        H1_text: h1Text,
+        website_name,
+        page_title: JSON.stringify(meta.page_title),
+        logo_url: finalLogoUrl,
+        meta_description: meta.meta_description,
+        meta_keywords: meta.meta_keywords,
+        og_title: meta.og_title,
+        og_description: meta.og_description,
+        og_image: meta.og_image,
+        twitter_handle: twitter,
+        facebook_handle: facebook,
+        instagram_handle: instagram,
+        linkedin_handle: linkedin,
+        youtube_handle: youtube,
+        tiktok_handle: tiktok,
+        isCrawlable,
+        headingAnalysis,
+        ctr_loss_percent: CTR_Loss_Percent,
+        sitemap_pages: filteredPages,
+        schema_analysis: JSON.stringify(schemaAnalysisData),
+        homepage_alt_text_coverage,
+        other_links: otherLinks.length > 0 ? otherLinks : "not found",
+        raw_html: html,
+        status_code: statusCode,
+        ip_address: ipAddress,
+        response_time_ms: responseTimeMs,
+        status_message: message,
+      },
+      create: {
+        report_id,
+        website_url,
+        H1_text: h1Text,
+        website_name,
         page_title: JSON.stringify(meta.page_title),
         logo_url: finalLogoUrl,
         meta_description: meta.meta_description,
@@ -500,6 +573,24 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
       status_code: statusCode,
       status_message: message,
       scraped_data_id: record.scraped_data_id,
+      social_media_handlers: {
+        facebook_handle: record.facebook_handle,
+        instagram_handle: record.instagram_handle,
+        youtube_handle: record.youtube_handle,
+      },
+      onpage_opptimization: {
+        h1_text: h1Text,
+        metaDataWithoutRawHtml: {
+          homepage_alt_text_coverage: record.homepage_alt_text_coverage,
+          meta_description: record.meta_description,
+          meta_keywords: record.meta_keywords,
+          page_title: record.page_title,
+          ctr_loss_percent: record.ctr_loss_percent,
+          og_title: record.og_title,
+          og_description: record.og_description,
+          og_image: record.og_image,
+        },
+      },
     };
 
     console.log("Returning result:", result); // Debug log

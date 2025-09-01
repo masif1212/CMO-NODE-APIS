@@ -9,3 +9,42 @@
 {"level":"error","message":"Max retry attempts reached. Error fetching posts: response.get is not a function","timestamp":"2025-08-05T05:26:08.129Z"}
 {"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-05T05:54:35.829Z"}
 {"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-05T06:00:09.242Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 500","timestamp":"2025-08-11T13:59:56.016Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-11T14:07:01.157Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-11T14:07:01.193Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-11T14:07:01.366Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-11T14:16:37.049Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-11T14:16:44.769Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-11T14:16:44.783Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-11T14:16:45.153Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-13T09:16:01.848Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:20:34.926Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:20:37.069Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:23:41.505Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:23:42.108Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:24:37.396Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:24:39.093Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:29:11.337Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T09:29:11.948Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-13T11:47:17.743Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T12:24:26.630Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-13T12:24:29.012Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-13T12:29:10.751Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 401","timestamp":"2025-08-13T12:29:11.136Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 404","timestamp":"2025-08-13T12:42:25.507Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 404","timestamp":"2025-08-13T12:42:28.124Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 404","timestamp":"2025-08-13T12:43:46.855Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 404","timestamp":"2025-08-13T12:43:48.716Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-17T11:21:20.726Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 402","timestamp":"2025-08-17T11:21:20.757Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-17T11:23:28.613Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-17T11:23:36.222Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-17T11:23:36.254Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-17T11:30:00.467Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:27:55.347Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:27:55.382Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:31:52.844Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:32:00.704Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:32:00.717Z"}
+{"level":"error","message":"Failed to fetch profile: Request failed with status code 402","timestamp":"2025-08-18T05:32:00.773Z"}
+{"level":"error","message":"Max retry attempts reached. Error fetching posts: Request failed with status code 404","timestamp":"2025-08-18T09:22:52.025Z"}

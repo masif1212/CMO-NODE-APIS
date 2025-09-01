@@ -3,6 +3,8 @@ export interface UserRequirement {
   primary_offering: string;
   USP: string;
   competitor_urls: string[];
+  target_location:string;
+  brand_offering:string;
 }
 
 export interface BrandProfile {

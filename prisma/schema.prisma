@@ -1,7 +1,3 @@
-// ---------------------------
-// Prisma schema (updated)
-// ---------------------------
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x"]
@@ -13,24 +9,19 @@ datasource db {
 }
 
 model users {
-  user_id               String     @id @default(uuid())
-  email                 String?   @unique
-  first_name            String?
-  last_name             String?
-  user_type             String?
-  is_email_verified     Boolean   @default(false)
-  is_mfa_enabled        Boolean   @default(false)
-  account_status        String?   @default("active")
-  created_at            DateTime  @default(now())
-  updated_at            DateTime  @default(now()) @updatedAt
-  last_login            DateTime?
-  deletion_requested_at DateTime?
-
-  // --- ADD THIS FIELD ---
-  // Stores the customer ID from Checkout.com for repeat transactions.
-  checkout_customer_id String? @unique
-
-  // relations
+  user_id                String                   @id @default(uuid())
+  email                  String?                  @unique
+  first_name             String?
+  last_name              String?
+  user_type              String?
+  is_email_verified      Boolean                  @default(false)
+  is_mfa_enabled         Boolean                  @default(false)
+  account_status         String?                  @default("active")
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @default(now()) @updatedAt
+  last_login             DateTime?
+  deletion_requested_at  DateTime?
+  checkout_customer_id   String?                  @unique
   user_websites          user_websites[]
   authentication_methods authentication_methods[]
   magic_links            magic_links[]
@@ -38,50 +29,78 @@ model users {
   sessions               sessions[]
   audit_logs             audit_logs[]
   login_attempts         login_attempts[]
-  mfa_methods            mfa_methods[]
+  // mfa_methods           mfa_methods[]
   email_verifications    email_verifications[]
   api_keys               api_keys[]
   user_requirements      user_requirements[]
   analysis_status        analysis_status[]
   subscriptions          subscriptions[]
   payments               payments[]
-  payment_methods        paymentMethods[] // Relation to the new model
+  payment_methods        paymentMethods[]
 }
-// --- ADD THIS NEW MODEL ---
-// Stores different analysis services and their prices.
+
+model roles {
+  role_id          String             @id @default(uuid())
+  role_name        String?            @unique
+  description      String?
+  updated_at       DateTime           @default(now()) @updatedAt
+  user_roles       user_roles[]
+  role_permissions role_permissions[]
+}
+
+model user_roles {
+  user_id String
+  role_id String
+  users   users  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  roles   roles  @relation(fields: [role_id], references: [role_id])
+
+  @@id([user_id, role_id])
+}
+
 model analysisServices {
-  id          String     @id @default(uuid())
-  type        String?  @unique // e.g., "website_audit", "seo_report"
-  name        String?// e.g., "Website Audit"
+  id          String   @id @default(uuid())
+  type        String?  @unique
+  name        String?
   price       Decimal
   report      String?
   description String?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+
+  AnalysisServiceHistory AnalysisServiceHistory[]
 }
 
-// --- ADD THIS NEW MODEL ---
+model AnalysisServiceHistory {
+  id         String    @id @default(uuid())
+  service_id String // links to analysisServices.id
+  price      Decimal
+  valid_from DateTime
+  valid_to   DateTime?
+
+  created_at DateTime @default(now())
+
+  // Relations
+  service analysisServices @relation(fields: [service_id], references: [id])
+}
 
 model paymentMethods {
-  method_id          String     @id @default(uuid())
+  method_id          String   @id @default(uuid())
   user_id            String
-  checkout_source_id String?  @unique // The source ID from Checkout.com
-  card_type          String?// e.g., "Visa", "Mastercard"
-  last4              String?// Last 4 digits of the card
+  checkout_source_id String?  @unique
+  card_type          String?
+  last4              String?
   is_default         Boolean  @default(false)
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
-
-  // Relation to the user
-  user users @relation(fields: [user_id], references: [user_id])
+  user               users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-
-
 model payments {
-  payment_id      String        @id @default(uuid())
+  payment_id      String         @id @default(uuid())
   user_id         String
-  amount          Decimal
+  report_id       String?
+  detail          Json?
+  amount          Int?
   currency        String
   payment_method  String
   payment_status  String
@@ -91,34 +110,32 @@ model payments {
   analysis_type   String?
   created_at      DateTime       @default(now())
   updated_at      DateTime       @default(now()) @updatedAt
-  users           users          @relation(fields: [user_id], references: [user_id])
+  users           users          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   subscriptions   subscriptions? @relation(fields: [subscription_id], references: [subscription_id])
 
+  report report? @relation("ReportToPayments", fields: [report_id], references: [report_id])
 }
 
-// --- NO CHANGES NEEDED FOR THE MODELS BELOW ---
-// (Your other models remain the same)
-
 model user_websites {
-  website_id   String  @id @default(uuid())
-  user_id      String
-  website_url  String
-  website_type String?
-  website_name String?
-  domain        String? 
-  users                       users                         @relation(fields: [user_id], references: [user_id])
+  website_id        String              @id @default(uuid())
+  user_id           String
+  website_url       String
+  website_type      String?
+  website_name      String?
+  domain            String?
+  users             users               @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user_requirements user_requirements[]
+  analysis_status   analysis_status[]
+  report            report[]
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @default(now()) @updatedAt
 
-  user_requirements  user_requirements[]
-  analysis_status    analysis_status[]
-  report             report[]
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
-  @@unique([user_id, domain]) 
+  @@unique([user_id, domain])
   @@unique([user_id, website_id], name: "user_id_website_id")
 }
 
 model authentication_methods {
-  auth_id                String   @id @default(uuid())
+  auth_id                String    @id @default(uuid())
   user_id                String
   auth_type              String
   auth_provider_id       String?
@@ -128,33 +145,22 @@ model authentication_methods {
   last_used              DateTime?
   created_at             DateTime  @default(now())
   updated_at             DateTime  @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
+  users                  users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model magic_links {
-  magic_link_id String     @id @default(uuid())
+  magic_link_id String    @id @default(uuid())
   user_id       String
   token_hash    String
   expires_at    DateTime
   used_at       DateTime?
   created_at    DateTime  @default(now())
   updated_at    DateTime  @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
-}
-
-model roles {
-  role_id          String     @id @default(uuid())
-  role_name        String?            @unique
-  description      String?
-  updated_at       DateTime           @default(now()) @updatedAt
-  user_roles       user_roles[]
-  role_permissions role_permissions[]
+  users         users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model permissions {
-  permission_id    String     @id @default(uuid())
+  permission_id    String             @id @default(uuid())
   permission_name  String?            @unique
   description      String?
   updated_at       DateTime           @default(now()) @updatedAt
@@ -164,25 +170,14 @@ model permissions {
 model role_permissions {
   role_id       String
   permission_id String
-
-  roles       roles       @relation(fields: [role_id], references: [role_id])
-  permissions permissions @relation(fields: [permission_id], references: [permission_id])
+  roles         roles       @relation(fields: [role_id], references: [role_id])
+  permissions   permissions @relation(fields: [permission_id], references: [permission_id])
 
   @@id([role_id, permission_id])
 }
 
-model user_roles {
-  user_id String
-  role_id String
-
-  users users @relation(fields: [user_id], references: [user_id])
-  roles roles @relation(fields: [role_id], references: [role_id])
-
-  @@id([user_id, role_id])
-}
-
 model sessions {
-  session_id  String     @id @default(uuid())
+  session_id  String   @id @default(uuid())
   user_id     String
   token       String?  @db.LongText
   device_info Json?
@@ -190,73 +185,55 @@ model sessions {
   expires_at  DateTime
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
+  users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model audit_logs {
-  log_id            String     @id @default(uuid())
+  log_id            String   @id @default(uuid())
   user_id           String?
   action_type       String
   resource_affected String
   ip_address        String?
   device_info       Json?
   timestamp         DateTime @default(now())
-
-  users users? @relation(fields: [user_id], references: [user_id])
+  users             users?   @relation(fields: [user_id], references: [user_id], onDelete: SetNull)
 }
 
 model login_attempts {
-  attempt_id  String     @id @default(uuid())
+  attempt_id  String   @id @default(uuid())
   user_id     String
   auth_method String
   status      String
   ip_address  String?
   user_agent  String?
   timestamp   DateTime @default(now())
-
-  users users @relation(fields: [user_id], references: [user_id])
-}
-
-model mfa_methods {
-  mfa_id       String     @id @default(uuid())
-  user_id      String
-  mfa_type     String
-  secret       String
-  phone_number String?
-  is_verified  Boolean  @default(false)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
+  users       users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model email_verifications {
-  verification_id String     @id @default(uuid())
+  verification_id String    @id @default(uuid())
   user_id         String
   token_hash      String
   expires_at      DateTime
   used_at         DateTime?
   created_at      DateTime  @default(now())
   updated_at      DateTime  @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
+  users           users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model api_keys {
-  key_id        String     @id @default(uuid())
+  key_id        String    @id @default(uuid())
   user_id       String
   service_name  String
   encrypted_key String
   created_at    DateTime  @default(now())
   revoked_at    DateTime?
   updated_at    DateTime  @default(now()) @updatedAt
-
-  users users @relation(fields: [user_id], references: [user_id])
+  users         users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model system_settings {
-  setting_id    String     @id @default(uuid())
+  setting_id    String   @id @default(uuid())
   setting_key   String?  @unique
   setting_value String
   description   String?
@@ -264,7 +241,7 @@ model system_settings {
 }
 
 model data_retention_policies {
-  policy_id             String     @id @default(uuid())
+  policy_id             String   @id @default(uuid())
   data_type             String
   retention_period_days Int
   description           String?
@@ -273,7 +250,7 @@ model data_retention_policies {
 }
 
 model brand_website_analysis {
-  website_analysis_id      String     @id @default(uuid())
+  website_analysis_id      String   @id @default(uuid())
   performance_score        Float?
   seo_score                Float?
   first_contentful_paint   String?
@@ -292,11 +269,13 @@ model brand_website_analysis {
   revenue_loss_percent     Float?
   created_at               DateTime @default(now())
   updated_at               DateTime @default(now()) @updatedAt
-
+  // report                   report?  @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
+  // @@index([report_id])
 }
 
 model brand_traffic_analysis {
-  traffic_analysis_id  String     @id @default(uuid())
+  traffic_analysis_id  String   @id @default(uuid())
+  report_id            String?  @unique
   total_visitors       Int?
   organic_search       Int?
   direct               Int?
@@ -317,198 +296,166 @@ model brand_traffic_analysis {
   new_vs_returning     Json?
   created_at           DateTime @default(now())
   updated_at           DateTime @default(now()) @updatedAt
+  report               report?  @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
 
-}
-
-model brand_social_media_analysis {
-  social_media_id           String     @id @default(uuid())
-  platform_name             String
-  followers                 Int?
-  likes                     Int?
-  comments                  Int?
-  shares                    Int?
-  videos_count              Int?
-  posts_count               Int?
-  postingFrequency          Float?
-  dailyPostingGraph         Json?
-  engagement_rate           Float?
-  engagementToFollowerRatio Float?
-  data                      Json?
-  graph_data                Json?
-  created_at                DateTime @default(now())
-  updated_at                DateTime @default(now()) @updatedAt
-
+  @@index([report_id])
 }
 
 
 
 model website_scraped_data {
-  scraped_data_id            String   @id @default(uuid())
-  website_url               String?
-  isCrawlable               Boolean?
-  headingAnalysis           Json?
-  page_title                String?  @db.LongText
-  logo_url                  String?  @db.LongText
-  meta_description          String?  @db.LongText
-  meta_keywords             String?  @db.LongText
-  og_title                  String?  @db.LongText
-  og_description            String?  @db.LongText
-  og_image                  String?  @db.LongText
-  twitter_handle            String?  @db.LongText
-  facebook_handle           String?  @db.LongText
-  instagram_handle          String?  @db.LongText
-  linkedin_handle           String?  @db.LongText
-  youtube_handle            String?  @db.LongText
-  ctr_loss_percent          Json?
+  scraped_data_id            String               @id @default(uuid())
+  report_id                  String?              @unique
+  website_url                String?
+  website_name               String?
+  H1_text                    String?              @db.LongText
+  isCrawlable                Boolean?
+  headingAnalysis            Json?
+  page_title                 String?              @db.LongText
+  logo_url                   String?              @db.LongText
+  meta_description           String?              @db.LongText
+  meta_keywords              String?              @db.LongText
+  og_title                   String?              @db.LongText
+  og_description             String?              @db.LongText
+  og_image                   String?              @db.LongText
+  twitter_handle             String?              @db.LongText
+  facebook_handle            String?              @db.LongText
+  instagram_handle           String?              @db.LongText
+  linkedin_handle            String?              @db.LongText
+  youtube_handle             String?              @db.LongText
+  ctr_loss_percent           Json?
   homepage_alt_text_coverage Int?
-  sitemap_pages             Json?
-  schema_analysis           Json?
-  tiktok_handle             String?
-  other_links               Json?
-  raw_html                  String?  @db.LongText
-  ai_response               String?  @db.LongText
-  status_code               Int?
-  ip_address                String?
-  response_time_ms          Int?
-  status_message            String?  @db.LongText
-  scraped_at                DateTime @default(now())
-  updated_at                DateTime @default(now()) @updatedAt
-  competitor_details        competitor_details[] @relation("SiteCompetitors") // Added opposite relation
+  sitemap_pages              Json?
+  schema_analysis            Json?
+  tiktok_handle              String?
+  other_links                Json?
+  raw_html                   String?              @db.LongText
+  ai_response                String?              @db.LongText
+  status_code                Int?
+  ip_address                 String?
+  response_time_ms           Int?
+  status_message             String?              @db.LongText
+  scraped_at                 DateTime             @default(now())
+  updated_at                 DateTime             @default(now()) @updatedAt
+  competitor_details         competitor_details[] @relation("SiteCompetitors")
+  report                     report?              @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
+
+  @@index([report_id])
 }
 
 model competitor_details {
-  competitor_id          String   @id @default(uuid())
-  website_id             String
-  report_id              String
-  scraped_data_id        String?
-  name                   String?
-  website_url            String?
-
-  competitor_website_url String?  @db.LongText
-  industry               String?  @db.LongText
-  region                 String?  @db.LongText
-  target_audience        String?  @db.LongText
-  primary_offering       String?  @db.LongText
-  usp                    String?  @db.LongText
-  created_at             DateTime @default(now())
-  updated_at             DateTime @default(now()) @updatedAt
-  order_index            Int?
-  isCrawlable           Boolean?
-  page_title            String?  @db.LongText
-  logo_url              String?  @db.LongText
-  meta_description      String?  @db.LongText
-  meta_keywords         String?  @db.LongText
-  og_title              String?  @db.LongText
-  headingAnalysis       Json?
-  og_description        String?  @db.LongText
-  og_image              String?  @db.LongText
-  twitter_handle        String?  @db.LongText
-  facebook_handle       String?  @db.LongText
-  instagram_handle      String?  @db.LongText
-  linkedin_handle       String?  @db.LongText
+  competitor_id              String                @id @default(uuid())
+  website_id                 String
+  report_id                  String
+  scraped_data_id            String?
+  name                       String?
+  website_url                String?
+  website_name               String?
+  H1_text                    String?               @db.LongText
+  competitor_website_url     String?               @db.LongText
+  industry                   String?               @db.LongText
+  region                     String?               @db.LongText
+  target_audience            String?               @db.LongText
+  primary_offering           String?               @db.LongText
+  usp                        String?               @db.LongText
+  created_at                 DateTime              @default(now())
+  updated_at                 DateTime              @default(now()) @updatedAt
+  order_index                Int?
+  isCrawlable                Boolean?
+  page_title                 String?               @db.LongText
+  logo_url                   String?               @db.LongText
+  meta_description           String?               @db.LongText
+  meta_keywords              String?               @db.LongText
+  og_title                   String?               @db.LongText
+  headingAnalysis            Json?
+  og_description             String?               @db.LongText
+  og_image                   String?               @db.LongText
+  twitter_handle             String?               @db.LongText
+  facebook_handle            String?               @db.LongText
+  instagram_handle           String?               @db.LongText
+  linkedin_handle            String?               @db.LongText
   homepage_alt_text_coverage Int?
-  social_media_data      Json?
-  youtube_handle        String?  @db.LongText
-  tiktok_handle         String?  @db.LongText
-  ctr_loss_percent      Json?
-  revenue_loss_percent  Int?
-  sitemap_pages         Json?
-  schema_analysis       Json?
-  page_speed            Json?
-  other_links           Json?
-  raw_html              String?  @db.LongText
-  website_scraped_data   website_scraped_data? @relation("SiteCompetitors", fields: [scraped_data_id], references: [scraped_data_id])
+  social_media_data          Json?
+  youtube_handle             String?               @db.LongText
+  tiktok_handle              String?               @db.LongText
+  ctr_loss_percent           Json?
+  revenue_loss_percent       Int?
+  sitemap_pages              Json?
+  schema_analysis            Json?
+  page_speed                 Json?
+  other_links                Json?
+  raw_html                   String?               @db.LongText
+  website_scraped_data       website_scraped_data? @relation("SiteCompetitors", fields: [scraped_data_id], references: [scraped_data_id])
+  report                     report                @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
+
   @@index([website_id])
   @@index([website_id, order_index])
   @@index([scraped_data_id])
+  @@index([report_id])
 }
 
-// model competitor_data {
-//   competitor_scraped_id String   @id @default(uuid())
-//   competitor_id         String?  @unique
-//   website_id            String
-//   report_id             String
-//   isCrawlable           Boolean?
-//   website_url           String
-//   page_title            String?  @db.LongText
-//   logo_url              String?  @db.LongText
-//   meta_description      String?  @db.LongText
-//   meta_keywords         String?  @db.LongText
-//   og_title              String?  @db.LongText
-//   headingAnalysis       Json?
-//   og_description        String?  @db.LongText
-//   og_image              String?  @db.LongText
-//   twitter_handle        String?  @db.LongText
-//   facebook_handle       String?  @db.LongText
-//   instagram_handle      String?  @db.LongText
-//   linkedin_handle       String?  @db.LongText
-//   homepage_alt_text_coverage Int?
-//   youtube_handle        String?  @db.LongText
-//   tiktok_handle         String?  @db.LongText
-//   ctr_loss_percent      Json?
-//   revenue_loss_percent  Int?
-//   sitemap_pages         Json?
-//   schema_analysis       Json?
-//   page_speed            Json?
-//   other_links           Json?
-//   raw_html              String?  @db.LongText
-//   scraped_at            DateTime @default(now())
-//   updated_at            DateTime @default(now()) @updatedAt
-//   // competitor_details    competitor_details? @relation(fields: [competitor_id], references: [competitor_id]) // Made optional
-// }
-
 model user_requirements {
-  requirement_id      String     @id @default(uuid())
+  requirement_id      String        @id @default(uuid())
   user_id             String
-  website_id          String
+  website_id          String        @unique
+  facebook_handle     String?
+  instagram_handle    String?
+  twitter_handle      String?
+  youtube_handle      String?
+  linkedin_handle     String?
+  tiktok_handle       String?
+  ip_address          String?       @db.LongText
+  user_agent          String?       @db.LongText
+  industry            String?       @db.LongText
+  industry_size       String?       @db.LongText
+  focus_areas         String?       @db.LongText
+  region_of_operation String?       @db.LongText
+  target_location     String?       @db.LongText
+  target_audience     String?       @db.LongText
+  primary_offering    String?       @db.LongText
+  competitor_urls     Json?
+  USP                 String?       @db.LongText
   property_id         String?
-  access_token        String?  @db.LongText
-  refresh_token       String?  @db.LongText
+  access_token        String?       @db.LongText
+  refresh_token       String?       @db.LongText
   profile             Json?
-  session_id          String?  @db.LongText
+  session_id          String?       @db.LongText
   fetched_properties  Json?
   summary_status      String?
   summary_data        Json?
-  competitor_urls     Json?
-  ip_address          String?  @db.LongText
-  user_agent          String?  @db.LongText
-  industry            String?  @db.LongText
-  region_of_operation String?  @db.LongText
-  target_location     String?  @db.LongText
-  target_audience     String?  @db.LongText
-  primary_offering    String?  @db.LongText
-  USP                 String?  @db.LongText
-  created_at          DateTime @default(now())
-  updated_at          DateTime @default(now()) @updatedAt
-
-  users         users         @relation(fields: [user_id], references: [user_id])
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @default(now()) @updatedAt
+  users               users         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  user_websites       user_websites @relation(fields: [website_id], references: [website_id])
 }
 
 model analysis_status {
-  id                    String     @id @default(uuid())
-  user_id               String
-  website_id            String?
-  report_id             String?
-  website_audit         Boolean?  
-  trafficanaylsis       Boolean? 
-  onpageoptimization    Boolean?
-  offpageoptimization   Boolean?
-  social_media_anaylsis Boolean?
+  id                         String         @id @default(uuid())
+  user_id                    String
+  website_id                 String?
+  report_id                  String?        @unique
+  website_audit              Boolean?
+  trafficanaylsis            Boolean?
+  onpageoptimization         Boolean?
+  offpageoptimization        Boolean?
+  social_media_anaylsis      Boolean?
   competitors_identification Boolean?
-   recommendationbymo1  Boolean?
-  recommendationbymo2  Boolean?
-  recommendationbymo3  Boolean? 
-  cmo_recommendation   Boolean?  
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  user_websites user_websites? @relation(fields: [website_id], references: [website_id])
-  users         users         @relation(fields: [user_id], references: [user_id])
+  recommendationbymo1        Boolean?
+  strengthandissues_d1       Boolean?
+  recommendationbymo2        Boolean?
+  recommendationbymo3        Boolean?
+  cmo_recommendation         Boolean?
+  created_at                 DateTime       @default(now())
+  updated_at                 DateTime       @updatedAt
+  user_websites              user_websites? @relation(fields: [website_id], references: [website_id])
+  users                      users          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  report                     report?        @relation(fields: [report_id], references: [report_id], onDelete: Cascade)
 
+  @@index([report_id])
 }
 
 model plans {
-  plan_id       String     @id @default(uuid())
+  plan_id       String          @id @default(uuid())
   plan_name     String
   price         Decimal
   currency      String
@@ -528,45 +475,75 @@ model subscriptions {
   payment_status  String
   created_at      DateTime   @default(now())
   updated_at      DateTime   @default(now()) @updatedAt
-  users           users      @relation(fields: [user_id], references: [user_id])
+  users           users      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   plans           plans      @relation(fields: [plan_id], references: [plan_id])
   payments        payments[]
 }
 
 model report {
-  report_id  String @id @default(uuid())
-  website_id String
+  report_id              String               @id @default(uuid())
+  website_id             String?
+  website_analysis_id    String?              @db.LongText
+  traffic_analysis_id    String?              @db.LongText
+  onpageoptimization_id  String?              @db.LongText
+  social_media_id        String?              @db.LongText
+  competitor_scraped_id  String?              @db.LongText
+  competitor_id          String?              @db.LongText
+  geo_llm                String?              @db.LongText
+  scraped_data_id        String?
+  dashboard1_Freedata    String?              @db.LongText
+  dashboard_paiddata     String?              @db.LongText
+  strengthandissues_d1   String?              @db.LongText
+  three_burning_issues   String?              @db.LongText
+  recommendationbymo1    String?              @db.LongText
+  dashboard2_data        Json?
+  strengthandissues_d2   String?              @db.LongText
+  recommendationbymo2    String?              @db.LongText
+  dashboard3_data        String?              @db.LongText
+  dashboard3_socialmedia Json?
+  recommendationbymo3    String?              @db.LongText
+  dashboard4_data        String?              @db.LongText
+  cmorecommendation      String?              @db.LongText
+  updated_at             DateTime             @default(now()) @updatedAt
+  created_at             DateTime             @default(now())
+  user_websites          user_websites?       @relation(fields: [website_id], references: [website_id], onDelete: Cascade)
+  competitor_details     competitor_details[] @relation
+  analysis_status        analysis_status[]    @relation
+  // cmoRecommendations CmoRecommendationOnReports[]
 
-  // Your current fields
-  website_analysis_id         String? @db.LongText
-  traffic_analysis_id         String? @db.LongText
-  onpageoptimization_id       String? @db.LongText
-  social_media_id             String? @db.LongText
-  competitor_scraped_id       String? @db.LongText
-  competitor_id               String? @db.LongText
+  payments payments[] @relation("ReportToPayments")
 
-
-  geo_llm                  String? @db.LongText
-  scraped_data_id          String?
-  dashboard1_Freedata       String? @db.LongText
-  dashboard_paiddata        String? @db.LongText
-  strengthandissues_d1         String?  @db.LongText
-  recommendationbymo1         String? @db.LongText
-
-  dashboard2_data          Json?
-  strengthandissues_d2         String?  @db.LongText
-  recommendationbymo2         String? @db.LongText
-
-  dashboard3_data          String? @db.LongText
-  dashboard3_socialmedia    Json?
-  recommendationbymo3         String? @db.LongText
-
-  dashboard4_data          String? @db.LongText
-  cmorecommendation         String? @db.LongText
-
-  updated_at DateTime @updatedAt @default(now())
-  created_at DateTime @default(now())
-  user_websites user_websites @relation(fields: [website_id], references: [website_id])
+  // brand_website_analysis    brand_website_analysis[] @relation
+  brand_traffic_analysis brand_traffic_analysis[] @relation
+  website_scraped_data   website_scraped_data[]   @relation
 
   @@index([website_id, updated_at])
+}
+
+model email_templates {
+  template_id   String   @id @default(uuid())
+  template_name String?  @unique
+  subject       String?
+  description   String?  @db.LongText
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+}
+
+model propmt_templates {
+  template_id   String   @id @default(uuid())
+  template_name String?  @unique
+  description   String?  @db.LongText
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now()) @updatedAt
+}
+
+model cmo_recommendation {
+  user_id           String?
+  id                String   @id @default(uuid())
+  report_ids        Json?
+  
+  cmorecommendation String?  @db.LongText
+  created_at        DateTime @default(now())
+  updated_at        DateTime @default(now()) @updatedAt
+  // reports          CmoRecommendationOnReports[]
 }

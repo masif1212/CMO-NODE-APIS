@@ -2,9 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import * as microdata from 'microdata-node';
 import * as $rdf from 'rdflib';
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
 
 interface Schema {
   '@context'?: string;
@@ -29,7 +27,7 @@ export interface SchemaOutput {
   logo?: string | null;
   schemas: {
     summary: ValidationResult[];
-    details: GroupedResults;
+    // details: GroupedResults;
   };
 }
 
@@ -76,7 +74,7 @@ function validateSchema(schema: Schema): { isValid: boolean; error?: string } {
   return { isValid: true };
 }
 
-export async function validateComprehensiveSchema(url: string, website_id: string): Promise<SchemaOutput> {
+export async function validateComprehensiveSchema(url: string): Promise<SchemaOutput> {
   try {
     const response: AxiosResponse = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SchemaValidator/1.0)' },
@@ -203,7 +201,7 @@ try {
       logo: logoUrl ?? null,
       schemas: {
         summary,
-        details: groupedResults
+        // details: groupedResults
       }
     };
 
@@ -214,7 +212,7 @@ try {
       logo: null,
       schemas: {
         summary: [],
-        details: {}
+        // details: {}
       }
     };
   }

@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { CreateUserDto, UpdateUserDto } from "./schema";
-import { parse } from 'tldts';
+import {getDomainRoot} from "../../utils/extractDomain"
 const prisma = new PrismaClient();
 
 export const createUser = async (data: CreateUserDto) => {
@@ -51,79 +51,16 @@ export const getUserById = async (userId: string) => {
   });
 };
 
-
-// function normalizeUrl(url: string): string {
-//   try {
-//     const u = new URL(url.trim());
-//     u.pathname = u.pathname.replace(/\/+$/, ""); // Remove trailing slashes
-//     return u.origin + u.pathname;
-//   } catch (e) {
-//     throw new Error("Invalid URL: " + url);
-//   }
-// }
-
-// export async function add_userwebsite(user_id: string, rawUrl: string) {
-//   const websiteUrl = normalizeUrl(rawUrl);
-
-//   // Step 1: Check if website already exists
-//   let existingWebsite = await prisma.user_websites.findFirst({
-//     where: {
-//       website_url: websiteUrl,
-//       user_id,
-//     },
-//   });
-
-//   let website_id: string;
-
-//   if (existingWebsite) {
-//     website_id = existingWebsite.website_id;
-//   } else {
-//     // Step 2: Create new website
-//     const newWebsite = await prisma.user_websites.create({
-//       data: {
-//         website_url: websiteUrl,
-//         user_id,
-//         website_type: null,
-//         website_name: null,
-//       },
-//     });
-
-//     website_id = newWebsite.website_id;
-//   }
-//    const matchingRequirement = await prisma.user_requirements.findFirst({
-//     where: {
-//       website_id,
-      
-//     },
-//     select :{
-//       target_location:true,
-//       USP:true,
-//       primary_offering:true,
-//       industry:true,
-//       competitor_urls:true,
-//       target_audience:true
-      
-
-
-//       },
-//   });
-//   // Step 3: Always create new report (even if website is reused)
-//   const newReport = await prisma.report.create({
-//     data: {
-//       website_id,
-//     },
-//   });
-
-//   return { report_id: newReport.report_id, website_id,matchingRequirement };
-// }
-
-
-
-
-
 function normalizeUrl(url: string): string {
   try {
-    const u = new URL(url.trim());
+    let cleanUrl = url.trim();
+
+    // If URL doesn't start with http:// or https://, add https://
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = "https://" + cleanUrl;
+    }
+
+    const u = new URL(cleanUrl);
     u.pathname = u.pathname.replace(/\/+$/, ""); // Remove trailing slashes
     return u.origin + u.pathname;
   } catch (e) {
@@ -131,49 +68,45 @@ function normalizeUrl(url: string): string {
   }
 }
 
-function extractDomain(url: string): string {
-  const parsed = parse(url);
-  if (!parsed.domain) {
-    throw new Error("Could not extract domain from URL: " + url);
-  }
-  return parsed.domain;
-}
-
 export async function add_userwebsite(user_id: string, rawUrl: string) {
   const websiteUrl = normalizeUrl(rawUrl);
-  const domain = extractDomain(websiteUrl);
-  console.log("domain",domain)
-  // Step 1: Check if website with same domain exists for this user
+  const domain = getDomainRoot(websiteUrl);
+  const website_name = domain.split(".")[0];
+  
+  console.log("domain", domain, "website_name",website_name);
+
   let existingWebsite = await prisma.user_websites.findFirst({
     where: {
-      domain: domain,
+      domain,
       user_id,
     },
   });
 
   let website_id: string;
-
+  let website_exists = false;
+  let matchingRequirement = null;
+  let social_media_handlers = null;
   if (existingWebsite) {
-    // 🔹 Skip adding, reuse existing website
+    website_exists = true;
     website_id = existingWebsite.website_id;
-    console.log("website exits already..")
+    console.log("website exists already..");
   } else {
-    console.log("website does not exits already..")
-    // 🔹 Create new website if not already added
+    console.log("website does not exist already , adding domain..");
     const newWebsite = await prisma.user_websites.create({
       data: {
         website_url: websiteUrl,
-        domain: domain,
+        domain,
         user_id,
         website_type: null,
-        website_name: null,
+        website_name: website_name,
       },
     });
     website_id = newWebsite.website_id;
   }
 
-  // Step 2: Optionally fetch matching requirement (optional logic preserved)
-  const matchingRequirement = await prisma.user_requirements.findFirst({
+  // Step 2: fetch matching requirement if website exists
+  if (website_exists) {
+  const Requirement = await prisma.user_requirements.findUnique({
     where: { website_id },
     select: {
       target_location: true,
@@ -182,15 +115,47 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
       industry: true,
       competitor_urls: true,
       target_audience: true,
+      facebook_handle: true,
+      instagram_handle: true,
+      twitter_handle: true,
+      youtube_handle: true,
+      linkedin_handle: true,
+      tiktok_handle: true,
     },
   });
 
+  matchingRequirement = {
+    target_location: Requirement?.target_location,
+    USP: Requirement?.USP,
+    primary_offering: Requirement?.primary_offering,
+    industry: Requirement?.industry,
+    competitor_urls: Requirement?.competitor_urls,
+    target_audience: Requirement?.target_audience,
+  };
+
+  social_media_handlers = {
+    facebook_handle: Requirement?.facebook_handle,
+    instagram_handle: Requirement?.instagram_handle,
+    // twitter_handle: Requirement?.twitter_handle,
+    youtube_handle: Requirement?.youtube_handle,
+    // linkedin_handle: Requirement?.linkedin_handle,
+    // tiktok_handle: Requirement?.tiktok_handle,
+  };
+  }
   // Step 3: Always create new report
   const newReport = await prisma.report.create({
-    data: {
-      website_id,
-    },
+    data: { website_id },
   });
 
-  return { report_id: newReport.report_id, website_id, matchingRequirement };
+  return {
+    // message: website_exists
+    //   ? "Website already exists for this user."
+    //   : "New website successfully added.",
+    website_exists,
+    report_id: newReport.report_id,
+    website_id,
+  
+    matchingRequirement,
+    social_media_handlers,
+  };
 }

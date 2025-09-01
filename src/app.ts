@@ -5,20 +5,25 @@ import cors from "cors";
 import session from "express-session";
 import usersRouter from "./modules/users/router";
 import pageSpeedRouter from "./modules/dashboard1/website_audit/router";
-import authRouter, { dashboardRouter1 } from "./modules/dashboard1/traffic_analysis/router";
+import authRouter from "./modules/dashboard1/traffic_analysis/router";
+import { dashboardRouter1 } from "./modules/dashboard1/llm/router";
 import { errorHandler } from "./middleware/errorHandler";
 import routes from "./modules/scraped_data/router";
 import youtubeRouter from "./modules/dashboard2/youtube/router";
+import  linkledinRouter from "./modules/dashboard2/linkedlin/linkedlin_router";
+import googleAdsRouter  from "./modules/dashboard2/google_ads/google_ads_router";
+import  getfacebookAdsRouter from "./modules/dashboard2/facebook_ads/facebook_ads_router";
 import { competitorRouter } from "./modules/dashboard3/competitor.routes";
 import geo_llm from "./modules/dashboard1/geo/router";
 import userRequirementsRouter from "./modules/form_data/router";
 import mainDashboard from "./modules/dashboard/dashboard.router";
 import technicalSeoRouter from "./modules/dashboard1/technical_seo/tech_router";
-// import dashboard4Router from "./modules/dashboard4/router";
 import cmoRecommendationRouter from "./modules/dashboard4/router";
 import paymentRouter from "./payments/paymentRoutes";
 import facebookRoutes from './modules/dashboard2/facebook/facebook_router';
 import instagramRoutes from './modules/dashboard2/instagram/instagram_router';
+import { dashboardRouter2 } from "./modules/dashboard2/llm_suggestions/router";
+import  getUserdata  from "./modules/admin_dashboard/admin_router";
 
 const app = express();
 
@@ -52,8 +57,11 @@ app.use(
   })
 );
 
+//admin dashboard routes
 
-// Main dashboard route
+app.use("/api/admin", getUserdata);
+
+// user dashboard route
 app.use("/api/main_dashboard", mainDashboard);
 app.use("/api/payment", paymentRouter);
 
@@ -74,19 +82,21 @@ app.use("/api/technical_seo", technicalSeoRouter);
 
 app.use("/api/geo", geo_llm);
 
-app.use("/api/dashboardRouter1", dashboardRouter1); // recommendation by mo for dashboard 1
-
+app.use("/api/dashboard1", dashboardRouter1); // recommendation by mo for dashboard 1
 //dashboard2 routes
 
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use("/api/youtube", youtubeRouter);
+app.use("/api/linkedlin", linkledinRouter);
+app.use("/api/google_ads", googleAdsRouter);
+app.use("/api/facebook_ads", getfacebookAdsRouter); // Note: This is a function, not a router
+app.use("/api/dashboardRouter2", dashboardRouter2); 
 
 //dashboard3 routes
 app.use("/api/competitors", competitorRouter);
 
 //dashboard4 routes
-// app.use("/api/recommendationbycmo", dashboard4Router);
 app.use("/api/cmo-recommendation", cmoRecommendationRouter);
 
 // Global error handler

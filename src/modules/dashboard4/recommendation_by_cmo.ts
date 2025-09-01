@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
+import { sanitizeAndStringify } from '../../utils/clean_text';
 
 
 interface CMORecommendationInput {
@@ -24,10 +25,7 @@ export class CMORecommendationService {
     this.model = model;
   }
 
-
-
-
-  private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
+private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {
   const [website, requirement, reports] = await Promise.all([
     this.prisma.user_websites.findUnique({
       where: { website_id },
@@ -49,35 +47,30 @@ export class CMORecommendationService {
         report_id: { in: report_ids },
       },
     }),
-    
-
   ]);
 
-
-
   if (!website || website.user_id !== user_id) {
-    throw new Error('Invalid user_id or website_id');
+    throw new Error("Invalid user_id or website_id");
   }
 
+  // ✅ Find the first report that has a scraped_data_id
+  const firstScrapedDataId = reports.find(r => r.scraped_data_id)?.scraped_data_id;
 
-    const firstScrapedDataId = reports[0]?.scraped_data_id;
-  if (!firstScrapedDataId) {
-    throw new Error('No scraped_data_id found in reports');
+  let scraped_data: { logo_url: string | null } | null = null;
+
+  if (firstScrapedDataId) {
+    scraped_data = await this.prisma.website_scraped_data.findUnique({
+      where: { scraped_data_id: firstScrapedDataId },
+      select: { logo_url: true },
+    });
   }
+  const competitor_social_media : any = reports.map(r => r.dashboard3_socialmedia).filter(Boolean);
 
-  // 🟢 Use the first scraped_data_id in the query
-  const scraped_data = await this.prisma.website_scraped_data.findUnique({
-    where: {
-      scraped_data_id: firstScrapedDataId,
-    },
-    select:{
-      logo_url:true
-    }
-  });
-  // Combine multiple report sections (this is just a sample logic)
+  // Combine multiple report sections
   const website_audit_data = reports.map(r => r.dashboard1_Freedata).filter(Boolean);
   const seo_audit = reports.map(r => r.dashboard_paiddata).filter(Boolean);
   const competitor_analysis = reports.map(r => r.dashboard3_data).filter(Boolean);
+  const social_media_anaylsis = reports.map(r => r.dashboard2_data).filter(Boolean);
 
   return {
     website_audit_data,
@@ -86,14 +79,14 @@ export class CMORecommendationService {
     requirement,
     website,
     reports,
-    logo_url: scraped_data?.logo_url || null
+    logo_url: scraped_data?.logo_url || null, 
+    social_media_anaylsis,
+    competitor_social_media
   };
 }
 
-  
 
-
-  public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
+public async generateCMORecommendation(input: CMORecommendationInput): Promise<CMORecommendationOutput> {
     try {
       const {
         website_audit_data: website_audit_data,
@@ -101,14 +94,15 @@ export class CMORecommendationService {
         competitor_analysis: competitor_analysis,
         requirement,
         website,
-        reports,
-        logo_url
+        // reports,
+        logo_url,
+        social_media_anaylsis,
+        competitor_social_media
       } = await this.fetchRecommendations(input.user_id, input.website_id, input.report_ids);
 
       
 
       function stripCodeFences(text: string): string {
-        // Remove leading and trailing code fences (with optional language)
         return text
           .replace(/^\s*```(?:json)?\s*/i, '') // Remove opening
           .replace(/\s*```\s*$/i, '')          // Remove closing
@@ -122,7 +116,7 @@ for (const entry of seo_audit) {
   try {
     const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
     fullreportseo = { ...seo_audit, ...parsed }; // shallow merge
-    console.log("fullreportseo",fullreportseo)
+    // console.log("fullreportseo",fullreportseo)
   } catch (err) {
     console.warn("Invalid JSON in dashboard_paiddata entry", err);
   }
@@ -130,11 +124,10 @@ for (const entry of seo_audit) {
 
 
 const datafor_llm = fullreportseo?.datafor_llm;
-console.log("datafor_llm", datafor_llm)
+// console.log("datafor_llm", datafor_llm)
 
 
 
-// Utility function to safely parse and merge multiple JSON entries
 const parseFirstValidJSON = (arr: any[]): any => {
   for (const val of arr) {
     try {
@@ -160,14 +153,9 @@ let fullcompetitor_data: any = parseFirstValidJSON(competitor_analysis);
 
 const competitor_data = fullcompetitor_data?.llmData;
 
-// if (!webdatafor_llm) {
-//   throw new Error("Missing data_for_llm in dashboard1_Freedata");
-// }
-
 
 const allData: any = {};
 
-// 🧠 Analytics block with LLM-based formula and explanations
 if (webdatafor_llm) {
   allData.Analytics = {
     website_revenue_loss: `*Formula:*
@@ -218,20 +206,21 @@ if (datafor_llm?.geo) {
   allData.Geo = datafor_llm.geo;
 }
 
-// 🧠 Industry and location, optional fields
-if (requirement?.industry || requirement?.target_location) {
-  allData.user_industry_and_target_location = {
-    industry: requirement?.industry ?? "N/A",
-    Target_location: requirement?.target_location ?? "N/A",
-  };
-}
 
+if (social_media_anaylsis)
+{
+  allData.social_media_data = social_media_anaylsis
+}
 // 🧠 Competitor comparison
 if (competitor_data) {
   allData.competitor_comparison = competitor_data;
 }
 
-console.log("✅ allData prepared:", allData);
+if (competitor_social_media) {
+  allData.competitor_social_media = competitor_social_media;
+}
+const clean_data = sanitizeAndStringify(allData)
+// console.log("✅ allData prepared:", clean_data);
 function extractFirstJSONObject(text: string): string | null {
   const match = text.match(/\{[\s\S]*\}/);
   return match ? match[0] : null;
@@ -250,9 +239,6 @@ const executiveCMOPrompt = `
  - Primary Offering: ${requirement?.primary_offering || 'N/A'}
  - Unique Selling Proposition (USP): ${requirement?.USP || 'N/A'}
 
- ### Data Inputs
-S${allData ? '-' : ''}
-
 
 Your task is to generate a *structured JSON report* based on the given input data. The output must help executive stakeholders understand the brand’s position, performance risks, and growth levers.
 
@@ -268,20 +254,56 @@ Return a *valid JSON object* with the following keys in this exact order:
     "name": "Example Brand",
     "website": "https://example.com"
   },
-  "executive_summary": {
+ "executive_summary": {
   
                "High-level overview":"High-level overview of current brand performance" ,
                "challenges_opportunities" :"Key challenges & growth opportunities in plain English",
                "A one-liner verdict" :" Here’s what you need to fix now to grow faster""
-                },
-  
-                        
-                       
-  "brand_health_overview": {"
-  camparison of website anaylsis data like lcp /fcp etc ,
-  campare each of the matrix and explain it also , each matrix should be in a specific and new line
-  "},
+                },                  
 
+  "brand_health_overview": {
+    "overview": "Website performance metrics are strong",
+    "metrics": {
+      "Speed Index": {
+        "value": "0.8s",
+        "score": 0.99,
+        "comment": "Exceptional, far ahead of competitors (e.g., Cakeshop.ae at 1.8s, Artisan Bakers at 6.6s)"
+      },
+      "First Contentful Paint (FCP)": {
+        "value": "0.3s",
+        "score": 1,
+        "comment": "Best-in-class, ensuring fast visual feedback"
+      },
+      "Largest Contentful Paint (LCP)": {
+        "value": "1.2s",
+        "score": 0.9,
+        "comment": "Well below the 2.5s threshold, indicating fast main content delivery"
+      },
+      "Total Blocking Time (TBT)": {
+        "value": "540ms",
+        "score": 0.25,
+        "comment": "Needs improvement; higher than ideal (competitors range from 0ms to 440ms)"
+      },
+      "Cumulative Layout Shift (CLS)": {
+        "value": 0.029,
+        "score": 1,
+        "comment": "Excellent visual stability"
+      },
+      "SEO Health": {
+        "value": "100/100",
+        "comment": "Technical SEO is robust, outperforming most peers"
+      },
+      "Accessibility": {
+        "value": "99/100",
+        "comment": "Industry-leading, with only minor alt text redundancy issues"
+      },
+      "Best Practices": {
+        "value": "96/100",
+        "comment": "High compliance, exceeding most competitors"
+      }
+    },
+    "summary": "Overall, First Crust leads in speed, SEO, and accessibility, but TBT and on-page SEO require targeted fixes"
+  }
   "swot_analysis": {
     "strengths": ["..."],
     "weaknesses": ["..."],
@@ -297,7 +319,20 @@ Return a *valid JSON object* with the following keys in this exact order:
   "what_to_prioritize_first": "what to prioritize first and why "
   }
 
-  
+   "priority_fixes_bottom_funnel": {
+  "website_revenue_loss":
+  { 
+  issue :"Is your website revenue being impacted by slow loading times? Are large Total Blocking Time (TBT) or poor Largest Contentful Paint (LCP) causing users to drop off before converting? Are your product and checkout pages optimized for speed and interaction?",
+  fix: "Improve LCP to under 2.5s by optimizing images and reducing server response times.",
+  source: "website"
+}
+  "seo_revenue_loss": {
+  issue :"Is the seo revenue loss optimize ?Are you losing organic traffic due to missing keyword opportunities or underperforming landing pages? Are your high-intent keywords ranking well? Are technical SEO issues like crawl delays or poor Core Web Vitals limiting your visibility?"
+  fix: "Target high-value keywords with low competition to improve organic traffic.",
+  source: "seo"
+}
+  "what_to_prioritize_first": "what to prioritize first and why "
+  }
 
   "brand_positioning_messaging_review": 
   {
@@ -307,32 +342,59 @@ Return a *valid JSON object* with the following keys in this exact order:
    "Brand voice alignment: Are you sounding premium, helpful, or confused?"
 "
  }
- 
-   
+ "content_Strategy(minium 4)": {
+  "analysis": "Evaluate whether the brand has defined content pillars or is producing scattered one-off blogs without strategic clustering.",
+  "general_recommendation": "Develop 2–3 strong content pillars aligned with  revenue drivers. Each pillar should have one comprehensive guide (pillar page) and 5–7 supporting blogs or assets that target specific subtopics.",
+  "pillars": [
+    {
+      "pillar_theme": "Customer Retention for SaaS",
+      "pillar_page": "Ultimate Guide to SaaS Customer Retention",
+      "cluster_examples": [
+        "Top 5 retention metrics SaaS companies should track",
+        "Onboarding flows that reduce churn by 20%",
+        "Case study: How SaaS X improved retention with loyalty programs"
+      ]
+    },
+    {
+      "pillar_theme": "Digital Marketing for Small Businesses",
+      "pillar_page": "Complete Handbook on SMB Digital Marketing",
+      "cluster_examples": [
+        "Facebook vs. Google Ads for SMBs",
+        "How to track ROI on a small budget",
+        "Local SEO strategies to dominate your city"
+      ]
+    }
+  ],
+  "recommendations": [
+    "Audit existing blogs and group them into logical clusters under new pillar pages.",
+    "Fill missing clusters by targeting long-tail, bottom-funnel keywords (e.g., 'pricing', 'alternatives', 'best tools').",
+    "Cross-link all cluster blogs to their pillar page to improve topical authority."
+  ]
+}
+
   "retention_strategy": {
     
     "analysis": "Describe whether the return user behavior meets healthy retention standards for the industry.",
     "industry_benchmark": "Provide benchmark values for the industry (e.g., SaaS = 40% returning users).",
-    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc."
+    "recommendations": "Targeted strategies to increase retention — via loyalty programs, better onboarding, email flows, etc.(suggestion should be in detail and depth insist of generic)"
   },
 
       "market_suggestions":
       {
     "target_audience_validation": "Explain if the current top countries matches the brand's intended target location. Highlight mismatches and suggest corrective targeting strategies.",
-    "expansion_opportunities": "Suggest specific regional or audience segments within or outside the target location that show high potential based on interest or performance signals."
+    "expansion_opportunities": "Suggest specific regional or audience segments or social media platform and content within or outside the target location that show high potential based on interest or performance signals.(suggestion should be in detail and depth insist of generic)"
       },
 
    "channel_budget_suggestions": 
     {
       "channel": "Paid Search",
-      "suggestion": "Reduce spend by 15% due to saturated CPCs and low ROAS",
+      "suggestion": "check if there are paid ad or not and then give suggestion based on it , what paid ads should be run (facebook , google etc), there content etc , there extimated buget ",
       "channel": "SEO",
-      "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords"
+      "suggestion": "Increase investment in blog clusters targeting bottom-of-funnel keywords(suggestion should be in detail and depth insist of generic)"
     
     },
     
-      
-  
+ 
 }
 \\\`json
 ---
@@ -359,30 +421,25 @@ Return a *valid JSON object* with the following keys in this exact order:
 
 ---
 Your output is a strategic intelligence memo. Structure it strictly as valid JSON. Prioritize clarity, business impact, and next-step relevance.
+NOTE: Do not mention or refer to any third-party tools (such as PageSpeed, Semrush, etc.). 
+  Always write in full words, not short forms or abbreviations. 
+  Keep the language simple, clear, and easy for anyone to understand.
 
-NOTE: Never mention a third api like pagespeed , semrush etc
 `;
-
-
-
-      console.log('Calling OpenAI for CMO recommendation...');
+console.log('Calling OpenAI for CMO recommendation...');
 
       const response = await this.openai.chat.completions.create({
-        model: this.model,
-        temperature: 0.5,
-        max_tokens: 8000,
+        model: "gpt-5",
         messages: [
           { role: 'system', content: executiveCMOPrompt },
-          { role: 'user', content: JSON.stringify(allData) },
+          { role: 'user', content: JSON.stringify(clean_data) },
         ],
       });
       console.log("open ai response fetch")
       let rawText = response.choices[0]?.message?.content || 'No response generated.';
       rawText = stripCodeFences(rawText);
       const rawText2 = extractFirstJSONObject(rawText);
-      console.log("rawText",rawText)
 
-      // rawText = rawText.replace(/^json|$/g, '').trim();
       const responseContent = JSON.parse(rawText2 || '{}');
       console.log('Saving response to database...');
       const cmo_recommendation = {
@@ -403,9 +460,38 @@ NOTE: Never mention a third api like pagespeed , semrush etc
             },
           });
         }
-  
+        await this.prisma.cmo_recommendation.create({
+            data: {
+              user_id: input.user_id,
+              report_ids: input.report_ids, // saves as JSON array
+            },
+          });
+     
 
+        for (const reportId of input.report_ids) {
+                const existing = await this.prisma.analysis_status.findFirst({
+            where: { report_id: reportId }
+          });
+
+          if (existing) {
+            await this.prisma.analysis_status.update({
+              where: { id: existing.id },
+              data: { cmo_recommendation: true },
+            });
+          } else {
+            await this.prisma.analysis_status.create({
+              data: {
+                user_id: input.user_id,
+                report_id: reportId,
+                website_id: input.website_id,
+                cmo_recommendation: true,
+              },
+            });
+          }
+        }
+  
       return { cmo_recommendation: cmo_recommendation};
+
     } catch (error) {
       console.error('Error generating CMO recommendation:', error);
       throw new Error('Failed to generate CMO recommendation');

@@ -1,49 +1,46 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { safeParse } from "../../utils/safeParse";
 const prisma = new PrismaClient();
+const brandFields = ["dashboard1_Freedata", "dashboard_paiddata", "strengthandissues_d1", "recommendationbymo1", "traffic_analysis_id"];
+const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
+const competitorFields = ["dashboard3_data", "recommendationbymo3"];
 
+const renameFields: Record<string, string> = {
+  dashboard1_Freedata: "website_audit",
+  dashboard_paiddata: "seo_audit",
+  strengthandissues_d1: "strength_and_issues",
+  traffic_analysis_id: "traffic_analysis",
+  recommendationbymo1: "recommendationbymo",
+  dashboard2_data: "social_data",
+  strengthandissues_d2: "social_issues",
+  recommendationbymo2: "recommendationbymo",
+  dashboard3_data: "competitor_data",
+  recommendationbymo3: "recommendationbymo",
+  cmorecommendation: "cmo_recommendation",
+};
+
+type PaymentDetail = {
+  type?: string;
+  price?: string;
+};
 export const getUserDashboard = async (req: Request, res: Response) => {
   const userId = req.query.user_id;
-
   if (typeof userId !== "string") {
     return res.status(400).json({ error: "Invalid or missing user_id" });
   }
 
   try {
-    // 🔹 Load service prices
-    const analysisServices = await prisma.analysisServices.findMany();
-    const reportPriceMap: Record<string, number> = Object.fromEntries(analysisServices.map((service) => [service.report, service.price]));
+    const brandAudit: any[] = [];
+    const socialMedia: any[] = [];
+    const competitorsAnalysis: any[] = [];
 
-    // 🔹 Field groups
-    const brandFields = ["dashboard1_Freedata", "dashboard_paiddata", "strengthandissues_d1", "recommendationbymo1", "traffic_analysis_id"];
-    const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
-    const competitorFields = ["dashboard3_data", "recommendationbymo3"];
-    const cmoFields = ["cmorecommendation"];
-
-    // 🔹 Aliases for field names (keys in response)
-    const renameFields: Record<string, string> = {
-      dashboard1_Freedata: "website_audit",
-      dashboard_paiddata: "seo_audit",
-      strengthandissues_d1: "strength_and_issues",
-      traffic_analysis_id: "traffic_analysis",
-      recommendationbymo1: "recommendationbymo",
-
-      dashboard2_data: "social_data",
-      strengthandissues_d2: "social_issues",
-      recommendationbymo2: "recommendationbymo",
-
-      dashboard3_data: "competitor_data",
-      recommendationbymo3: "recommendationbymo",
-
-      cmorecommendation: "cmo_recommendation",
-    };
-
-    // 🔹 Fetch data
     const userWebsites = await prisma.user_websites.findMany({
       where: { user_id: userId },
       select: {
         website_url: true,
         website_id: true,
+        website_name: true,
         report: {
           orderBy: { created_at: "desc" },
           select: {
@@ -61,24 +58,120 @@ export const getUserDashboard = async (req: Request, res: Response) => {
             dashboard3_data: true,
             recommendationbymo3: true,
             cmorecommendation: true,
+            payments: {
+              select: { amount: true, detail: true },
+            },
           },
         },
       },
     });
 
-    // 🔹 Output containers
-    const brandAudit: any[] = [];
-    const socialMedia: any[] = [];
-    const competitorsAnalysis: any[] = [];
-    const finalRecommendationByCMO: any[] = [];
+    // ✅ Get CMO recommendations
+    const recommendations = await prisma.cmo_recommendation.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: "desc" },
+    });
+
+    // const formattedRecommendations = recommendations.map((rec) => {
+    //   let websiteMeta = null;
+    //   let firstReportId: string | null = null;
+    //   let firstReportPayment = 0;
+    //   let firstReportColumns: any[] = [];
+
+    //   for (const site of userWebsites) {
+    //     const foundReport = site.report.find((r) =>
+    //       (rec.report_ids as string[]).includes(r.report_id)
+    //     );
+
+    //     if (foundReport) {
+    //       websiteMeta = {
+    //         website_id: site.website_id,
+    //         website_url: site.website_url,
+    //         website_name: site.website_name,
+    //       };
+    //       firstReportId = foundReport.report_id;
+
+    //       // ✅ grab total payment for the first report only
+    //       firstReportPayment = (foundReport.payments ?? []).reduce(
+    //         (sum, p) => sum + (p.amount ?? 0),
+    //         0
+    //       );
+
+    //       // ✅ also collect columns (details)
+    //       firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
+    //         Array.isArray(p.detail) ? p.detail : [p.detail]
+    //       );
+
+    //       break;
+    //     }
+    //   }
+
+    //   return {
+    //     report_id: firstReportId,
+    //     ...websiteMeta,
+    //     created_at: rec.created_at,
+    //     updated_at: rec.updated_at,
+    //     report_ids: rec.report_ids,
+    //     id: rec.id,
+    //     total_payment: firstReportPayment, // 💰 total of first report
+    //     columns: firstReportColumns,       // 📊 details of first report
+    //   };
+    // });
+
+    const formattedRecommendations = recommendations.map((rec) => {
+      let websiteMeta = null;
+      let firstReportId: string | null = null;
+      let firstReportPayment = 0;
+      let firstReportColumns: any[] = [];
+
+      for (const site of userWebsites) {
+        const foundReport = site.report.find((r) => (rec.report_ids as string[]).includes(r.report_id));
+
+        if (foundReport) {
+          websiteMeta = {
+            website_id: site.website_id,
+            website_url: site.website_url,
+            website_name: site.website_name,
+          };
+          firstReportId = foundReport.report_id;
+
+          // ✅ grab total payment for the first report only
+          firstReportPayment = (foundReport.payments ?? []).reduce((sum, p) => sum + (p.amount ?? 0), 0);
+
+          firstReportColumns = (foundReport.payments ?? []).flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])).filter((d): d is PaymentDetail => typeof d === "object" && d !== null && "type" in d && (d as any).type === "CMO recommendation");
+
+          break; // stop after first match
+        }
+      }
+
+      return {
+        report_id: firstReportId,
+        ...websiteMeta,
+        created_at: rec.created_at,
+        updated_at: rec.updated_at,
+        report_ids: rec.report_ids,
+        id: rec.id,
+        total_payment: firstReportPayment,
+        columns: firstReportColumns, // 👈 only CMO recommendation objects
+      };
+    });
+
+    let totalSpend = 0;
 
     for (const site of userWebsites) {
       for (const report of site.report) {
+        const reportPayments = report.payments ?? [];
+        const reportTotal = reportPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+        totalSpend += reportTotal;
+
         const base = {
           report_id: report.report_id,
           website_url: site.website_url,
+          website_name: site.website_name,
           created_at: report.created_at,
           updated_at: report.updated_at,
+          total_payment: reportTotal,
+          columns: reportPayments.flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])),
         };
 
         const extractFields = (fields: string[]) => {
@@ -86,11 +179,8 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           for (const key of fields) {
             const value = report[key as keyof typeof report];
             if (value != null) {
-              const priceKey = key.startsWith("recommendationbymo") ? "recommendationbymo" : key;
-              if (reportPriceMap[priceKey]) {
-                const renamed = renameFields[key] ?? key;
-                result[renamed] = reportPriceMap[priceKey];
-              }
+              const renamed = renameFields[key] ?? key;
+              result[renamed] = 1;
             }
           }
           return result;
@@ -99,12 +189,10 @@ export const getUserDashboard = async (req: Request, res: Response) => {
         const brand = extractFields(brandFields);
         const social = extractFields(socialFields);
         const competitor = extractFields(competitorFields);
-        const cmo = extractFields(cmoFields);
 
-        if (Object.keys(brand).length) brandAudit.push({ ...base, columns: brand });
-        if (Object.keys(social).length) socialMedia.push({ ...base, columns: social });
-        if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base, columns: competitor });
-        if (Object.keys(cmo).length) finalRecommendationByCMO.push({ ...base, columns: cmo });
+        if (Object.keys(brand).length) brandAudit.push({ ...base });
+        if (Object.keys(social).length) socialMedia.push({ ...base });
+        if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base });
       }
     }
 
@@ -112,23 +200,22 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       total_brand_audit: brandAudit.length,
       total_social_media: socialMedia.length,
       total_competitor_analysis: competitorsAnalysis.length,
-      total_cmo_recommendations: Array.isArray(finalRecommendationByCMO) ? finalRecommendationByCMO.length : finalRecommendationByCMO ? 1 : 0,
+      total_cmo_recommendations: formattedRecommendations.length,
+      total_spend: totalSpend,
     };
 
-    // 🔹 Return grouped response
     res.json({
       ...dashboardCounts,
       data: {
         brand_audit: brandAudit,
-
         social_media: socialMedia,
         competitors_analysis: competitorsAnalysis,
-        recommendation_by_cmo: finalRecommendationByCMO,
+        cmo_recommendations: formattedRecommendations,
       },
     });
   } catch (error) {
     console.error("❌ Error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Something went wrong on server side" });
   }
 };
 
@@ -156,18 +243,19 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
       ...(onpage_optimization && { onpage_optimization }),
       ...(technical_seo && { technical_seo }),
       ...otherSeoFields,
-      // recommendation_by_mo_dasboard1: safeParse(reportData?.recommendationbymo1),
       recommendation_by_mo_dashboard1: {
         strengths_and_weaknness: safeParse(reportData?.strengthandissues_d1),
         recommendations: safeParse(reportData?.recommendationbymo1),
+        three_burning_issues: safeParse(reportData?.three_burning_issues),
       },
+
       dashboard2_data: safeParse(reportData?.dashboard2_data),
       recommendation_by_mo_dashboard2: safeParse(reportData?.recommendationbymo2),
-      competitors: competitor_data,
+      competitors: { ...competitor_data, competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia) },
       recommendation_by_mo_dashboard3: safeParse(reportData?.recommendationbymo3),
-      competitor_social_media_data: safeParse(reportData?.dashboard3_socialmedia),
+
       dashboard4_data: safeParse(reportData?.dashboard4_data),
-      recommendationbycmo: safeParse(reportData?.cmorecommendation),
+      cmo_recommendation: safeParse(reportData?.cmorecommendation),
     };
 
     res.json(parsedReport);
@@ -176,15 +264,6 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-function safeParse(input: any) {
-  try {
-    if (typeof input === "string") return JSON.parse(input);
-    return input ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export const getaudit = async (req: Request, res: Response) => {
   const website_id = req.query.website_id;
@@ -197,19 +276,6 @@ export const getaudit = async (req: Request, res: Response) => {
     const brandFields = ["dashboard1_Freedata", "dashboard_paiddata", "strengthandissues_d1", "recommendationbymo1", "traffic_analysis_id"];
     const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
     const competitorFields = ["dashboard3_data", "recommendationbymo3"];
-
-    const renameFields: Record<string, string> = {
-      dashboard1_Freedata: "website_audit",
-      dashboard_paiddata: "seo_audit",
-      strengthandissues_d1: "strength_and_issues",
-      traffic_analysis_id: "traffic_analysis",
-      recommendationbymo1: "recommendationbymo",
-      dashboard2_data: "social_data",
-      strengthandissues_d2: "social_issues",
-      recommendationbymo2: "recommendationbymo",
-      dashboard3_data: "competitor_data",
-      recommendationbymo3: "recommendationbymo",
-    };
 
     const userWebsites = await prisma.user_websites.findMany({
       where: { website_id: website_id },

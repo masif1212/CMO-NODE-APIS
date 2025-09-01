@@ -1,12 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 // async function main() {
 //   // Example: Create a dummy user
 //   const newUser = await prisma.users.create({
 //     data: {
-//       email: "dummyuser@example.com",
+//       email: "dummy@example.com",
 //       first_name: "John",
 //       last_name: "Doe",
 //       is_email_verified: true,
@@ -44,196 +44,131 @@ const prisma = new PrismaClient();
 
 
 
-// const analysisServices = [
-//    {
-//     type: 'si',
-//     report: 'recommendationbymo1',
-//     name:'Strength and Issues',
-//     price: 6.0,
-//     description: 'Recommendations by MO 1',
-//   },
 
-//     {
-//     type: 'sma',
-//     report: 'dashboard2_data',
-//     name : "Social Media Analsis",
-//     price: 6.0,
-//     description: 'Data from dashboard 2',
-//   },
+import { PrismaClient } from "@prisma/client";
 
-//     {
-//     type: 'crca',
-//     report: 'cmorecommendation',
-//    name : "CMO recommendation",
-
-//     price: 4.0,
-//     description: 'Final CMO recommendation',
-//   },
-//   {
-//     type: 'cwa',
-//     name : "Comprehensive Website Audit",
-
-//     report: 'dashboard1_Freedata',
-//     price: 0,
-//     description: 'Data from dashboard 1 free analysis',
-//   },
-//     {
-//     type: 'sism',
-//     name : "Strength and Issues (Social Media)",
-
-//     report: 'recommendationbymo2',
-//     price: 6.0,
-//     description: 'Recommendations by MO 2',
-//   },
-//   {
-//     type: 'sa',
-//     name : "SEO audit",
-
-//     report: 'dashboard_paiddata',
-//     price: 12.0,
-//     description: 'Paid dashboard analysis data',
-//   },
-
-//     {
-//     type: 'ca',
-//     name : "Competitior Analysis",
-
-//     report: 'dashboard3_data',
-//     price: 14.0,
-//     description: 'Data from dashboard 3',
-//   },
-
-//    {
-//     type: 'ta',
-//     name :"Traffic Anaylsis",
-//     report: 'traffic_anaylsis',
-//     price: 4.0,
-//     description: 'Recommendations by MO 1',
-//   },
- 
-//   {
-//     type: 'rs',
-//     name : "Recommendation",
-//     report: 'recommendationbymo3',
-//     price: 4.0,
-//     description: 'Recommendations by MO 3',
-//   },
-//   {
-//     type: 'dd',
-//     report: 'dashboard4_data',
-//     price: 140.0,
-//     description: 'Data from dashboard 4',
-//   },
-
-// ];
-
-
-   const     analysisServices = [
-   {
-    type: 'si',
-    report: 'strengthandissues_d1',
-    name:'Strength and Issues',
-    price: 6.0,
-    description: 'Recommendations by MO 1',
-  },
-
-    {
-    type: 'sma',
-    report: 'dashboard2_data',
-    name : "Social Media Analsis",
-    price: 6.0,
-    description: 'Data from dashboard 2',
-  },
-
-    {
-    type: 'crca',
-    report: 'cmorecommendation',
-   name : "CMO recommendation",
-
-    price: 4.0,
-    description: 'Final CMO recommendation',
-  },
-  {
-    type: 'cwa',
-    name : "Comprehensive Website Audit",
-
-    report: 'dashboard1_Freedata',
-    price: 0,
-    description: 'Data from dashboard 1 free analysis',
-  },
-    {
-    type: 'sism',
-    name : "Strength and Issues (Social Media)",
-
-    report: 'strengthandissues_d2',
-    price: 6.0,
-    description: 'Recommendations by MO 2',
-  },
-  {
-    type: 'sa',
-    name : "SEO audit",
-
-    report: 'dashboard_paiddata',
-    price: 12.0,
-    description: 'Paid dashboard analysis data',
-  },
-
-    {
-    type: 'ca',
-    name : "Competitior Analysis",
-
-    report: 'dashboard3_data',
-    price: 14.0,
-    description: 'Data from dashboard 3',
-  },
-
-   {
-    type: 'ta',
-    name :"Traffic Anaylsis",
-    report: 'traffic_analysis_id',
-    price: 4.0,
-    description: 'Recommendations by MO 1',
-  },
- 
-  {
-    type: 'rs',
-    name : "Recommendation",
-    report: 'recommendationbymo',
-    price: 4.0,
-    description: 'Recommendations by MO ',
-  },
-  {
-    type: 'dd',
-    report: 'dashboard4_data',
-    price: 140.0,
-    description: 'Data from dashboard 4',
-  },
-
-];
-
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🧹 Cleaning analysisServices table...');
-  await prisma.analysisServices.deleteMany({});
+  // 🔹 Batch of 10 users
+  const usersData = [
+    {
+      email: "alice@example1.com",
+      first_name: "Alice",
+      last_name: "Smith",
+      role: "user",
+      website: { url: "https://alicecorp.com", name: "Alice Corp" },
+    },
+    {
+      email: "bob@example1.com",
+      first_name: "Bob",
+      last_name: "Johnson",
+      role: "user",
+      website: { url: "https://bobventures.com", name: "Bob Ventures" },
+    },
+    {
+      email: "carol@example1.com",
+      first_name: "Carol",
+      last_name: "Miller",
+      role: "user",
+      website: { url: "https://caroltech.com", name: "Carol Tech" },
+    },
+    {
+      email: "david@example1.com",
+      first_name: "David",
+      last_name: "Brown",
+      role: "user",
+      website: { url: "https://davidglobal.com", name: "David Global" },
+    },
+    {
+      email: "eva@example.com",
+      first_name: "Eva",
+      last_name: "Wilson",
+      role: "user",
+      website: { url: "https://evaconsulting.com", name: "Eva Consulting" },
+    },
+    {
+      email: "frank@example.com",
+      first_name: "Frank",
+      last_name: "Taylor",
+      role: "user",
+      website: { url: "https://frankmedia.com", name: "Frank Media" },
+    },
+    {
+      email: "grace@example.com",
+      first_name: "Grace",
+      last_name: "Martinez",
+      role: "user",
+      website: { url: "https://graceinnovations.com", name: "Grace Innovations" },
+    },
+    {
+      email: "henry@example.com",
+      first_name: "Henry",
+      last_name: "Anderson",
+      role: "user",
+      website: { url: "https://henryventures.com", name: "Henry Ventures" },
+    },
+    {
+      email: "irene@example.com",
+      first_name: "Irene",
+      last_name: "Thomas",
+      role: "user",
+      website: { url: "https://irenedesigns.com", name: "Irene Designs" },
+    },
+    {
+      email: "jack@example.com",
+      first_name: "Jack",
+      last_name: "Moore",
+      role: "user",
+      website: { url: "https://jacksolutions.com", name: "Jack Solutions" },
+    },
+  ];
 
-  console.log('🌱 Seeding analysisServices...');
+  for (const user of usersData) {
+    // 1️⃣ Ensure role exists
+    const role = await prisma.roles.upsert({
+      where: { role_name: user.role },
+      update: {},
+      create: {
+        role_name: user.role,
+        description: `${user.role} role`,
+      },
+    });
 
-  for (const service of analysisServices) {
-    await prisma.analysisServices.create({ data: service });
+    // 2️⃣ Create user with role + website
+    const newUser = await prisma.users.create({
+      data: {
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        is_email_verified: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+        user_roles: {
+          create: { role_id: role.role_id },
+        },
+        user_websites: {
+          create: {
+            website_url: user.website.url,
+            website_type: "corporate",
+            website_name: user.website.name,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
+        },
+      },
+    });
+
+    console.log(`✅ Created user ${newUser.first_name} with role ${role.role_name}`);
   }
-
-  console.log('✅ Seed complete.');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+    console.error("❌ Error seeding users:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-
-
 

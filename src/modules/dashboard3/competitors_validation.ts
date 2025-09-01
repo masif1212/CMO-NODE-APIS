@@ -224,10 +224,7 @@ async function isHttpStatus200(url: string): Promise<boolean> {
   }
 }
 
-export async function isValidCompetitorUrl(url: string, competitorName?: string, sharedBrowser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
-  let browser: Browser | null = sharedBrowser || null;
-  let browserLaunchedHere = false;
-
+export async function isValidCompetitorUrl(url: string, competitorName?: string, Browser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
   try {
     if (!/^https?:\/\//.test(url)) {
       return { isValid: false, reason: "URL does not use HTTP or HTTPS" };
@@ -261,54 +258,10 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       return { isValid: false, reason };
     }
 
-    const mode = process.env.MODE;
-
-    console.log(`[brandprofile] Puppeteer launch MODE: ${mode}`);
-
-    //   if (mode === 'cloud') {
-    //     const launchOptions = {
-    //       headless: false,
-    //       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    //     };
-    //     browser = await puppeteer.launch(launchOptions);
-    //   } else if (mode === 'local') {
-    //     browser = await puppeteer.launch({ headless: true });
-    //   } else {
-    //     throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'local'.`);
-    //   }
-
-    //         browserLaunchedHere = true;
-    //       }
-
-    // Example from isValidCompetitorUrl
-
-    if (!browser) {
-      const mode = process.env.NODE;
-
-      console.log(`[Browser Init] MODE is set to: ${mode}`);
-
-      if (mode === "production") {
-        const launchOptions = {
-          executablePath: "/usr/bin/google-chrome-stable",
-          headless: "new" as any,
-          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-        };
-        console.log("[Browser Init] Launching full (non-headless) browser for CLOUD environment with options:", JSON.stringify(launchOptions));
-        browser = await puppeteer.launch(launchOptions);
-      } else if (mode === "development") {
-        const localOptions = { headless: true };
-        console.log("[Browser Init] Launching headless browser for development environment with options:", JSON.stringify(localOptions));
-        browser = await puppeteer.launch(localOptions);
-      } else {
-        console.error(`[Browser Init] ERROR: Invalid MODE value '${mode}'. Expected 'production' or 'development'.`);
-        throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
-      }
-
-      browserLaunchedHere = true;
-      console.log("[Browser Init] Browser instance successfully launched.");
+    if (!Browser) {
+      return { isValid: false, reason: "Browser instance is required but not provided" };
     }
-
-    const firstCheck = await checkLandingHomepage(url, browser);
+    const firstCheck = await checkLandingHomepage(url, Browser);
     if (firstCheck.valid) {
       return { isValid: true, preferredUrl: firstCheck.finalUrl };
     }
@@ -325,7 +278,7 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       return { isValid: false, reason };
     }
 
-    const secondCheck = await checkLandingHomepage(altUrl, browser);
+    const secondCheck = await checkLandingHomepage(altUrl, Browser);
     if (secondCheck.valid) {
       return { isValid: true, preferredUrl: secondCheck.finalUrl };
     }
@@ -336,13 +289,6 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     console.error(`Validation failed for ${url}:`, err);
     return { isValid: false, reason: `Unexpected error: ${errorMessage}` };
   } finally {
-    if (browserLaunchedHere && browser) {
-      try {
-        await browser.close();
-      } catch (err) {
-        console.warn("Failed to close browser:", err);
-      }
-    }
   }
 }
 

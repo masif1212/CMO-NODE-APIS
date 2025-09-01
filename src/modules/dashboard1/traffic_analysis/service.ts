@@ -167,7 +167,6 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
       dimensions: [{ name: "sessionSource" }],
       metrics: [{ name: "sessions" }],
       limit: "100",
-      // limit: "10",
     },
 
     medium: {
@@ -191,7 +190,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     devicesResp,
     browsersResp,
     sourcesResp,
-    
+
     newVsReturningResp,
     sessionMediumtResp,
   ] = await Promise.all([
@@ -229,7 +228,7 @@ export const getAnalyticsSummary = async (auth: OAuth2Client, propertyId: string
     engagementRate: parseFloat(engagementResp?.data?.rows?.[0]?.metricValues?.[2]?.value ?? "0"),
   };
 
-  const duration = ((performance.now() - start) / 1000).toFixed(2);
+  const duration = ((performance.now() - start) / 1000).toFixed(4);
   // console.log(`Analytics summary fetched in ${sessionMedium} seconds`);
   return {
     traffic: trafficResp?.data?.rows,
@@ -265,34 +264,34 @@ export const saveTrafficAnalysis = async (summary: any) => {
       ? "  Organic traffic looks healthy."
       : "⚠️ Organic traffic is low. Consider adding more SEO content and backlinks.";
 
- 
 
-const combinedSources = [
-  ...(summary?.sources?.map((item: any) => {
-    const rawName = item.dimensionValues?.[0]?.value?.toLowerCase();
-    return {
+
+  const combinedSources = [
+    ...(summary?.sources?.map((item: any) => {
+      const rawName = item.dimensionValues?.[0]?.value?.toLowerCase();
+      return {
+        type: "source",
+        name: rawName?.includes("chatgpt") ? "chatgpt.com" : rawName,
+
+        sessions: parseInt(item.metricValues?.[0]?.value, 10),
+      };
+    }) ?? []),
+    ...(summary?.sessionMedium?.map((item: any) => ({
+      type: "medium",
+      name: item.medium?.toLowerCase().includes("chatgpt") ? "chatgpt.com" : item.medium,
+      sessions: item.sessions,
+    })) ?? []),
+  ];
+
+  const hasChatGPT = combinedSources.some(src => src.name === "chatgpt.com");
+  // console.log("chatgpt", hasChatGPT);
+  if (!hasChatGPT) {
+    combinedSources.unshift({
       type: "source",
-          name: rawName?.includes("chatgpt") ? "chatgpt.com" : rawName,
-
-      sessions: parseInt(item.metricValues?.[0]?.value, 10),
-    };
-  }) ?? []),
-  ...(summary?.sessionMedium?.map((item: any) => ({
-    type: "medium",
-    name: item.medium?.toLowerCase().includes("chatgpt") ? "chatgpt.com" : item.medium,
-    sessions: item.sessions,
-  })) ?? []),
-];
-
-const hasChatGPT = combinedSources.some(src => src.name === "chatgpt.com");
-// console.log("chatgpt", hasChatGPT);
-if (!hasChatGPT) {
-  combinedSources.unshift({
-    type: "source",
-    name: "chatgpt.com",
-    sessions: 0,
-  });
-}
+      name: "chatgpt.com",
+      sessions: 0,
+    });
+  }
   return prisma.brand_traffic_analysis.create({
     data: {
       total_visitors,
@@ -311,7 +310,7 @@ if (!hasChatGPT) {
       engaged_sessions: summary?.engagement?.engagedSessions,
       top_devices: summary?.devices as Prisma.InputJsonValue,
       top_browsers: summary?.browsers as Prisma.InputJsonValue,
-      top_sources: combinedSources as Prisma.InputJsonValue, // <-- updated
+      top_sources: combinedSources as Prisma.InputJsonValue, 
       new_vs_returning: summary?.newVsReturning as Prisma.InputJsonValue,
     },
   });

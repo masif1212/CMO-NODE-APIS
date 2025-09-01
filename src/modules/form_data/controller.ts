@@ -11,10 +11,13 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       usp,
       industry,
       location,
+      target_location,
       target_audience,
       competitor_urls,
       user_id,
       website_id,
+      focus_areas,
+      industry_size
     } = req.body;
     console.log("reqiremnts req.body",req.body)
     console.log("user:id", user_id, "website_id:", website_id)
@@ -32,7 +35,11 @@ export const handleBrandProfileForm: RequestHandler = async (req, res) => {
       industry,
       location,
       target_audience,
-      competitor_urls
+      competitor_urls,
+      focus_areas,
+      industry_size,
+      target_location
+
       
     });
 

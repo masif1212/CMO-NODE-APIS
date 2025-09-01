@@ -1,19 +1,14 @@
 
-import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import logging from './logger'; 
-const prisma = new PrismaClient();
+import logging from './logger';
 const API_KEY = process.env.SCRAPPER_CREATOR_APIKEY;
-const INSTAGRAM_PROFILE_URL = process.env.Instagram_PROFILE_ULR;
-const INSTAGRAM_POST_URL = process.env.Instagram_POST_URL;
+const INSTAGRAM_PROFILE_URL = 'https://api.scrapecreators.com/v1/instagram/profile';
+const INSTAGRAM_POST_URL = 'https://api.scrapecreators.com/v2/instagram/user/posts';
 
 
-const headers = {
-  accept: 'application/json',
-  'x-api-key': API_KEY,
-};
+
 
 const extractInstagramUsername = (input: string): string => {
   try {
@@ -25,31 +20,31 @@ const extractInstagramUsername = (input: string): string => {
 };
 
 export const getInstagramPostsFromScrapedData = async (
-  handle: string,
+  instagram_handle: string,
   max_posts: number = 3,
   retry_attempts: number = 0,
   delay: number = 2
 ) => {
   // Validate environment variables
-  console.log('Starting getInstagramPostsFromScrapedData with handle:', handle, 'max_posts:', max_posts);
+  console.log('Starting getInstagramPostsFromScrapedData with handle:', instagram_handle, 'max_posts:', max_posts);
   if (!API_KEY) {
     console.log('API_KEY is missing');
     return { error: 'SCRAPPER_CREATOR_APIKEY environment variable is not set' };
   }
 
-  console.log('Extracting Instagram username from handle:', handle);
-  handle = extractInstagramUsername(handle);
-  console.log('Extracted handle:', handle);
+  console.log('Extracting Instagram username from handle:', instagram_handle);
+  let handle = extractInstagramUsername(instagram_handle);
+  // console.log('Extracted handle:', instagram_handle);
 
   const headers = { 'x-api-key': API_KEY };
-  console.log('Headers set:', headers);
+  // console.log('Headers set:', headers);
 
   const get_instagram_profile = async (handle: string) => {
     const url = `${INSTAGRAM_PROFILE_URL}?handle=${handle}`;
-    console.log('Fetching profile from URL:', url);
+    // console.log('Fetching profile from URL:', url);
 
     try {
-      console.log('Sending profile request with headers:', headers);
+      // console.log('Sending profile request with headers:', headers);
       const response = await axios.get(url, { headers });
       // console.log('Profile response received:', JSON.stringify(response.data, null, 2));
       const profile_info = response.data?.data?.user || {};
@@ -106,7 +101,6 @@ export const getInstagramPostsFromScrapedData = async (
     let attempt = 0;
     let previous_cursor: string | null = null;
     let empty_post_retries = 3;
-    // console.log('Initialized variables: total_posts:', total_posts, 'total_engagement:', total_engagement, 'posts:', posts, 'cursor:', cursor, 'empty_post_retries:', empty_post_retries);
 
     let last_response_data = null; // Store the last API response for posts
 
@@ -139,7 +133,7 @@ export const getInstagramPostsFromScrapedData = async (
 
         for (const post of fetched_posts) {
           if (total_posts >= max_posts) {
-            console.log('Max posts limit reached:', max_posts);
+            // console.log('Max posts limit reached:', max_posts);
             break;
           }
 
@@ -204,9 +198,9 @@ export const getInstagramPostsFromScrapedData = async (
     }
 
     const calculateEngagementStats = (posts: any[], followerCount: number) => {
-      console.log('Calculating engagement stats for posts:', posts, 'followerCount:', followerCount);
+      // console.log('Calculating engagement stats for posts:', posts, 'followerCount:', followerCount);
       if (!followerCount || followerCount === 0) {
-        console.log('No followers, returning default stats');
+        // console.log('No followers, returning default stats');
         return {
           engagementRate: '0.00%',
           engagementToFollowerRatio: '0.0000',
@@ -220,14 +214,14 @@ export const getInstagramPostsFromScrapedData = async (
       for (const post of posts) {
         const engagement = post.likes + post.comments + post.shares; // Include shares in engagement
         const postEngagementRate = (engagement / followerCount) * 100;
-        // console.log(`Post ID: ${post.post_id}, PostType: ${post.post_type}, Likes: ${post.likes}, Comments: ${post.comments}, Shares: ${post.shares}, Engagement: ${engagement}, PostEngagementRate: ${postEngagementRate.toFixed(2)}%`);
+        // console.log(`Post ID: ${post.post_id}, PostType: ${post.post_type}, Likes: ${post.likes}, Comments: ${post.comments}, Shares: ${post.shares}, Engagement: ${engagement}, PostEngagementRate: ${postEngagementRate.toFixed(4)}%`);
 
         perPostEngagement.push({
           postId: post.post_id,
           postUrl: post.shortcode ? `https://www.instagram.com/p/${post.shortcode}/` : '',
           publishTime: post.timestamp,
           postType: post.post_type,
-          engagementRate: postEngagementRate.toFixed(2) + '%',
+          engagementRate: postEngagementRate.toFixed(4) + '%',
           engagementToFollowerRatio: (engagement / followerCount).toFixed(4),
           likes: post.likes,
           comments: post.comments,
@@ -235,30 +229,67 @@ export const getInstagramPostsFromScrapedData = async (
         });
 
         count++;
-        // console.log('Processed post engagement:', perPostEngagement[perPostEngagement.length - 1]);
       }
 
       const avgEngagement = count > 0 ? total_engagement / count : 0;
       const engagementToFollowerRatio = avgEngagement / followerCount;
       const engagementRate = engagementToFollowerRatio * 100;
-      // console.log('Engagement stats calculated: avgEngagement:', avgEngagement, 'engagementToFollowerRatio:', engagementToFollowerRatio, 'engagementRate:', engagementRate);
 
-      let message = '';
-      if (engagementRate >= 1.6) {
-        message = 'High engagement—your content resonates.';
-      } else if (engagementRate >= 1.1) {
-        message = 'Better than most in your industry.';
-      } else if (engagementRate >= 0.6) {
-        message = 'Standard engagement—room to grow.';
-      } else if (engagementRate >= 0.0) {
-        message = 'Minimal engagement for your audience size.';
+
+
+
+      function getRandomMessage(messages: string[]): string {
+        return messages[Math.floor(Math.random() * messages.length)];
       }
+
+
+      function getRandomInstagramMessage(rate: number): string {
+        if (rate >= 50) {
+          return getRandomMessage([
+            "Exceptional engagement — your content is deeply resonating with your audience.",
+            " You're crushing it! Your posts are driving major visibility and reactions.",
+            "Your audience is locked in — keep delivering this level of consistency and value."
+          ]);
+        } else if (rate >= 30) {
+          return getRandomMessage([
+            "Strong engagement — your posts are driving meaningful interactions.",
+            "You’re gaining traction — your content is catching attention across the platform.",
+            "Great momentum — consider doubling down on what’s working in your top posts."
+          ]);
+        } else if (rate >= 20) {
+          return getRandomMessage([
+            "Solid performance — try leveraging reels or interactive stories to boost further.",
+            "Good effort — short-form video or carousel content might amplify reach.",
+            "You're on the radar — step it up with better CTAs and time-based engagement tactics."
+          ]);
+        } else if (rate >= 10) {
+          return getRandomMessage([
+            "Moderate engagement — consistent posting and trend alignment could enhance reach.",
+            "Fair performance — post timing and content hooks need refinement.",
+            "You're on the edge — try remixing existing formats or adding more emotion-driven content."
+          ]);
+        } else if (rate >= 5) {
+          return getRandomMessage([
+            "Low engagement — review your content strategy, post timing, or visual appeal.",
+            "Your reach is limited — try fresh themes or storytelling elements.",
+            "Not much happening — maybe test different hashtags or audience segments."
+          ]);
+        } else {
+          return getRandomMessage([
+            "Minimal engagement — your content isn’t landing. Explore new formats or storytelling angles.",
+            "Almost no engagement — try a bold pivot in content type, tone, or aesthetic.",
+            "You're missing visibility — consider auditing your profile and top content structure."
+          ]);
+        }
+      }
+
+
       // console.log('Engagement message:', message);
 
       return {
-        engagementRate: engagementRate.toFixed(2) + '%',
+        engagementRate: engagementRate.toFixed(4) + '%',
         engagementToFollowerRatio: engagementToFollowerRatio.toFixed(4),
-        message,
+        message: getRandomInstagramMessage(engagementRate),
         perPostEngagement,
       };
     };
@@ -271,16 +302,16 @@ export const getInstagramPostsFromScrapedData = async (
     console.log('Returning final result');
 
     const instagram_data = {
-      handle,
+      message,
+      instagram_handle,
       profile,
       engagementRate,
-      message,
       engagementToFollowerRatio,
       perPostEngagement
     };
     return {
-      instagram_data 
-    
+      instagram_data
+
     };
   } catch (error: any) {
     console.log('Error in main try block:', error.message, 'Stack:', error.stack);

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getUserDashboard,getWebsiteDetailedAnalysis ,getaudit} from "./dashboard.controller";
+import { getUserDashboard, getWebsiteDetailedAnalysis, getaudit } from "./dashboard.controller";
 
 const router = Router();
 
@@ -13,9 +13,8 @@ router.get("/detailed", (req, res, next) => {
   getWebsiteDetailedAnalysis(req, res).catch(next);
 });
 
-
 router.get("/reports", (req, res, next) => {
-getaudit(req, res).catch(next);
+  getaudit(req, res).catch(next);
 });
 
 export default router;

@@ -1,4 +1,3 @@
-import axios from "axios";
 import puppeteer, { Browser } from "puppeteer";
 import { PrismaClient } from "@prisma/client";
 // import { CreateWebsiteAnalysisDto } from "./schema";
@@ -110,6 +109,7 @@ function getErrorMessage(status: number, url: string): { error: string; quickFix
       };
   }
 }
+
 export async function getWebsiteUrlById(user_id: string, website_id: string): Promise<string> {
   // console.log(`Fetching URL for user_id: ${user_id}, website_id: ${website_id}`);
   const website = await prisma.user_websites.findUnique({
@@ -130,17 +130,7 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
 
   return website.website_url;
 }
-
 export async function checkBrokenLinks(user_id: string, website_id: string, website_url: string, maxDepth = 0): Promise<BrokenLinkResult[]> {
-  // Step 1: Verify website ownership before proceeding
-  // const userWebsite = await prisma.user_websites.findFirst({
-  //   where: { user_id, website_id },
-  // });
-
-  // if (!userWebsite) {
-  //   throw new Error("Website does not belong to the user.");
-  // }
-
   // Inside checkBrokenLinks function
   console.log("Puppeteer is launching...");
 

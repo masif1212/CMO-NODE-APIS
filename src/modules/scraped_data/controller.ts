@@ -21,7 +21,7 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
     console.log("Scraping started...");
     const data = await scrapeWebsite(user_id, website_id,report_id);
 
-    const record = await prisma.report.upsert({
+    await prisma.report.upsert({
       where: {
         report_id: report_id, // this must be a UNIQUE constraint or @id in the model
       },
@@ -37,15 +37,13 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
 });
 
     console.log("Scraping compelted successfully");
+    console.log("----------------------------------------------------------------------------------");
+
     return res.status(200).json({
-      success: true,
-      report_id:record.report_id,
-      website_id: data.website_id,
-      logo_url: data.logo_url,
-      statuscode: data.status_code,
-      message:data.status_message,
-      scraped_data_id:data.scraped_data_id
-    });
+      scraped_data_id:data.scraped_data_id,
+      report_id,
+      ...data}
+    );
 
   } catch (error) {
     console.error("Scrape handler error:", error);

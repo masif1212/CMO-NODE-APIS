@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
-import { getPageSpeedData, savePageSpeedAnalysis } from "./service";
+import { getPageSpeedData, savePageSpeedAnalysis,getWebsiteUrlById } from "./service";
 import { PrismaClient } from "@prisma/client";
-import * as cheerio from "cheerio";
 
 const prisma = new PrismaClient();
 
 export const handlePageSpeed = async (req: Request, res: Response) => {
-  const { website_id, user_id ,report_id} = req.body;
+  const { website_id, user_id, report_id } = req.body;
 
   if (!website_id || !user_id) {
     return res.status(400).json({
@@ -14,11 +13,11 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
       error: "Both 'website_id' and 'user_id' are required.",
     });
   }
-  
+
   try {
     console.log("Website audit started");
-        const report = await prisma.report.findUnique({
-      where: { report_id: report_id }, // You must have 'report_id' from req.body
+    const report = await prisma.report.findUnique({
+      where: { report_id: report_id }, 
       select: { scraped_data_id: true }
     });
 
@@ -27,8 +26,10 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
         success: false,
         error: "No report found with the given report_id.",
       });
-    }
-    const mainPageSpeedData = await getPageSpeedData(user_id, website_id);
+    } 
+    const url = await getWebsiteUrlById(user_id, website_id);
+
+    const mainPageSpeedData = await getPageSpeedData(url);
 
     if (!mainPageSpeedData || typeof mainPageSpeedData !== "object" || Object.keys(mainPageSpeedData).length === 0) {
       return res.status(502).json({
@@ -40,7 +41,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
     console.log("Website audit processing complete");
 
-    const saved = await savePageSpeedAnalysis(user_id, website_id, mainPageSpeedData);
+    const saved = await savePageSpeedAnalysis(user_id, website_id, mainPageSpeedData, report_id);
     if (!saved) {
       return res.status(500).json({
         success: false,
@@ -63,12 +64,12 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
     const categoryScores = {
       performance_insight: mainPageSpeedData.audit_details.categoryScores.performance,
-      seo: mainPageSpeedData.audit_details.categoryScores.seo,
+      seo_scores: mainPageSpeedData.audit_details.categoryScores.seo,
       accessibility: mainPageSpeedData.audit_details.categoryScores.accessibility,
-      best_practices: mainPageSpeedData.audit_details.categoryScores["best_practices"],
+      best_practices_scrores: mainPageSpeedData.audit_details.categoryScores["best_practices"],
       mobileFriendliness: mainPageSpeedData.audit_details.categoryScores.mobileFriendliness,
     };
-  //  console.log("Category scores:", categoryScores);
+
     const website = await prisma.user_websites.findUnique({
       where: { website_id },
     });
@@ -76,9 +77,9 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     if (!website || !website.website_url) {
       throw new Error("Website URL not found for the given website_id");
     }
-    
+
     const scrapedMeta = await prisma.website_scraped_data.findFirst({
-      where: { scraped_data_id: report.scraped_data_id  ?? undefined },
+      where: { scraped_data_id: report.scraped_data_id ?? undefined },
       select: {
         page_title: true,
         meta_description: true,
@@ -125,51 +126,51 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     const website_data = {
       revenueLossPercent: saved.revenue_loss_percent,
       seo_revenue_loss_percentage,
-      categories: categoryScores,
+      categorie_scrores: categoryScores,
       speed_health: auditMap,
-     
     };
+
     const combine_data = {
-        full_report: website_health,
-        data_for_llm: website_data,
-      };
-           
-    const record = await prisma.report.upsert({
+      full_report: website_health,
+      data_for_llm: website_data,
+    };
+
+    await prisma.report.upsert({
       where: {
-        report_id: report_id, // this must be a UNIQUE constraint or @id in the model
+        report_id: report_id, 
       },
       update: {
-        website_id: website_id, 
-          website_analysis_id: saved.website_analysis_id,
-          dashboard1_Freedata: JSON.stringify(combine_data),
+        website_id: website_id,
+        website_analysis_id: saved.website_analysis_id,
+        dashboard1_Freedata: JSON.stringify(combine_data),
       },
       create: {
-          website_id: website_id,
-          website_analysis_id: saved.website_analysis_id,
-          dashboard1_Freedata: JSON.stringify(combine_data),
+        website_id: website_id,
+        website_analysis_id: saved.website_analysis_id,
+        dashboard1_Freedata: JSON.stringify(combine_data),
       }
-});
+    });
 
 
- const existing = await prisma.analysis_status.findFirst({
-  where: { report_id }
-});
+    const existing = await prisma.analysis_status.findFirst({
+      where: { report_id }
+    });
 
-let update;
-if (existing) {
-  update = await prisma.analysis_status.update({
-    where: { id: existing.id },
-    data: { website_id, website_audit: true }
-  });
-} else {
-  update = await prisma.analysis_status.create({
-    data: { report_id, website_id, website_audit: true ,user_id}
-  });
-}
-
+    if (existing) {
+      await prisma.analysis_status.update({
+        where: { id: existing.id },
+        data: { website_id, website_audit: true }
+      });
+    } else {
+      await prisma.analysis_status.create({
+        data: { report_id, website_id, website_audit: true, user_id }
+      });
+    }
 
 
-return res.status(201).json({
+  console.log("----------------------------------------------------------------------------------");
+
+    return res.status(201).json({
       message: "Website audit completed",
       website_id,
       revenueLossPercent: saved.revenue_loss_percent,

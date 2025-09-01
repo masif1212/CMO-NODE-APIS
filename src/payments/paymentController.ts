@@ -139,8 +139,94 @@ export const savePaymentMethod = async (req: AuthenticatedRequest, res: Response
   }
 };
 
+// export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+//   const { token, analysis_types, save_card, source_id,report_id, detail,report_ids } = req.body;
+//   const { user_id, email } = req.user!;
+//    console.log("detail",req.body)
+//   if (!analysis_types || !Array.isArray(analysis_types) || analysis_types.length === 0) {
+//     res.status(400).json({ error: "You must select at least one analysis service." });
+//     return;
+//   }
+//   if (!token && !source_id) {
+//     res.status(400).json({ error: "A payment method (new or saved) is required." });
+//     return;
+//   }
+//   console.log(analysis_types);
+
+//   try {
+//     const analysisServices = await prisma.analysisServices.findMany({
+//       where: { type: { in: analysis_types } },
+//     });
+//     console.log(analysisServices);
+
+//     if (analysisServices.length !== analysis_types.length) {
+//       res.status(400).json({ error: "One or more selected analysis types are invalid." });
+//       return;
+//     }
+
+//     const totalCost = analysisServices.reduce((sum, service) => sum + Number(service.price), 0);
+//     const customer_id = await getOrCreateCustomer(user_id, email);
+
+//     const payment = (await cko.payments.request({
+//       source: source_id ? { id: source_id } : { type: "token", token },
+//       amount: Math.round(totalCost * 100),
+//       currency: "USD",
+//       reference: `analysis-${analysis_types.join("-")}-${user_id}`,
+//       metadata: { user_id, analysis_types: analysis_types.join(",") },
+//       customer: { id: customer_id, email: email },
+//       processing_channel_id: process.env.CKO_PROCESSING_CHANNEL_ID,
+//       capture: true,
+//     })) as CkoPaymentResponse;
+
+//     if (save_card && token && payment.source?.id) {
+//       const existingMethod = await prisma.paymentMethods.findFirst({
+//         where: { checkout_source_id: payment.source.id },
+//       });
+//       if (!existingMethod) {
+//         await prisma.paymentMethods.create({
+//           data: {
+//             user_id,
+//             checkout_source_id: payment.source.id,
+//             card_type: payment.source.scheme,
+//             last4: payment.source.last4,
+//             is_default: (await prisma.paymentMethods.count({ where: { user_id } })) === 0,
+//           },
+//         });
+//       }
+//     }
+
+//     const paymentRecord = await prisma.payments.create({
+//       data: {
+//         user_id,
+//         amount: totalCost,
+//         report_id,
+//         detail,
+//         currency: "USD",
+//         payment_method: payment.source?.scheme || "card",
+//         payment_status: payment.status,
+//         transaction_id: payment.id,
+//         analysis_type: analysis_types.join(","),
+//       },
+//     });
+
+    
+
+//     if (payment.status === "Authorized" || payment.status === "Captured") {
+//       res.json({ success: true, payment: paymentRecord });
+//     } else {
+//       res.status(400).json({ success: false, error: "Payment was not successful.", details: payment });
+//     }
+//   } catch (error: any) {
+//     console.error("Pay-as-you-go error:", error);
+//     res.status(500).json({ error: "An internal error occurred during payment processing.", details: error.body });
+//   }
+// };
+
+
+
 export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { token, analysis_types, save_card, source_id } = req.body;
+  console.log("req..body",req.body)
+  const { token, analysis_types, save_card, source_id, report_id, detail, report_ids } = req.body;
   const { user_id, email } = req.user!;
 
   if (!analysis_types || !Array.isArray(analysis_types) || analysis_types.length === 0) {
@@ -151,13 +237,11 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
     res.status(400).json({ error: "A payment method (new or saved) is required." });
     return;
   }
-  console.log(analysis_types);
 
   try {
     const analysisServices = await prisma.analysisServices.findMany({
       where: { type: { in: analysis_types } },
     });
-    console.log(analysisServices);
 
     if (analysisServices.length !== analysis_types.length) {
       res.status(400).json({ error: "One or more selected analysis types are invalid." });
@@ -173,7 +257,7 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
       currency: "USD",
       reference: `analysis-${analysis_types.join("-")}-${user_id}`,
       metadata: { user_id, analysis_types: analysis_types.join(",") },
-      customer: { id: customer_id, email: email },
+      customer: { id: customer_id, email },
       processing_channel_id: process.env.CKO_PROCESSING_CHANNEL_ID,
       capture: true,
     })) as CkoPaymentResponse;
@@ -195,28 +279,61 @@ export const payAsYouGo = async (req: AuthenticatedRequest, res: Response): Prom
       }
     }
 
-    const paymentRecord = await prisma.payments.create({
-      data: {
-        user_id,
-        amount: totalCost,
-        currency: "USD",
-        payment_method: payment.source?.scheme || "card",
-        payment_status: payment.status,
-        transaction_id: payment.id,
-        analysis_type: analysis_types.join(","),
-      },
-    });
+    let paymentRecords = [];
+
+    if (Array.isArray(report_ids) && report_ids.length > 0) {
+      console.log(" 5666666",report_ids)
+      // Multiple report_ids case
+      paymentRecords = await Promise.all(
+        report_ids.map((r_id: string) =>
+          prisma.payments.create({
+            data: {
+              user_id,
+              amount: totalCost,
+              report_id: r_id,
+              detail,
+              currency: "USD",
+              payment_method: payment.source?.scheme || "card",
+              payment_status: payment.status,
+              transaction_id: payment.id,
+              analysis_type: analysis_types.join(","),
+            },
+          })
+        )
+      );
+    } else if (report_id) {
+      // Single report_id case
+      console.log("single report id",report_id)
+      const paymentRecord = await prisma.payments.create({
+        data: {
+          user_id,
+          amount: totalCost,
+          report_id,
+          detail,
+          currency: "USD",
+          payment_method: payment.source?.scheme || "card",
+          payment_status: payment.status,
+          transaction_id: payment.id,
+          analysis_type: analysis_types.join(","),
+        },
+      });
+      paymentRecords.push(paymentRecord);
+    }
 
     if (payment.status === "Authorized" || payment.status === "Captured") {
-      res.json({ success: true, payment: paymentRecord });
+      res.json({ success: true, payments: paymentRecords });
     } else {
       res.status(400).json({ success: false, error: "Payment was not successful.", details: payment });
     }
   } catch (error: any) {
     console.error("Pay-as-you-go error:", error);
-    res.status(500).json({ error: "An internal error occurred during payment processing.", details: error.body });
+    res.status(500).json({
+      error: "An internal error occurred during payment processing.",
+      details: error.body,
+    });
   }
 };
+
 
 export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { user_id } = req.user!;
@@ -270,3 +387,4 @@ export const webhookHandler = async (req: Request, res: Response): Promise<void>
     res.status(400).send("Webhook signature verification failed.");
   }
 };
+
