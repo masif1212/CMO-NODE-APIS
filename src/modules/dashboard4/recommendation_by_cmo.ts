@@ -116,7 +116,7 @@ for (const entry of seo_audit) {
   try {
     const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
     fullreportseo = { ...seo_audit, ...parsed }; // shallow merge
-    console.log("fullreportseo",fullreportseo)
+    // console.log("fullreportseo",fullreportseo)
   } catch (err) {
     console.warn("Invalid JSON in dashboard_paiddata entry", err);
   }
