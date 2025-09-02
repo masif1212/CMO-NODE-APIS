@@ -20,6 +20,25 @@ CREATE TABLE `users` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `roles` (
+    `role_id` VARCHAR(191) NOT NULL,
+    `role_name` VARCHAR(191) NULL,
+    `description` VARCHAR(191) NULL,
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `roles_role_name_key`(`role_name`),
+    PRIMARY KEY (`role_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `user_roles` (
+    `user_id` VARCHAR(191) NOT NULL,
+    `role_id` VARCHAR(191) NOT NULL,
+
+    PRIMARY KEY (`user_id`, `role_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `analysisServices` (
     `id` VARCHAR(191) NOT NULL,
     `type` VARCHAR(191) NULL,
@@ -65,7 +84,9 @@ CREATE TABLE `paymentMethods` (
 CREATE TABLE `payments` (
     `payment_id` VARCHAR(191) NOT NULL,
     `user_id` VARCHAR(191) NOT NULL,
-    `amount` DECIMAL(65, 30) NOT NULL,
+    `report_id` VARCHAR(191) NULL,
+    `detail` JSON NULL,
+    `amount` INTEGER NULL,
     `currency` VARCHAR(191) NOT NULL,
     `payment_method` VARCHAR(191) NOT NULL,
     `payment_status` VARCHAR(191) NOT NULL,
@@ -125,17 +146,6 @@ CREATE TABLE `magic_links` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `roles` (
-    `role_id` VARCHAR(191) NOT NULL,
-    `role_name` VARCHAR(191) NULL,
-    `description` VARCHAR(191) NULL,
-    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `roles_role_name_key`(`role_name`),
-    PRIMARY KEY (`role_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `permissions` (
     `permission_id` VARCHAR(191) NOT NULL,
     `permission_name` VARCHAR(191) NULL,
@@ -152,14 +162,6 @@ CREATE TABLE `role_permissions` (
     `permission_id` VARCHAR(191) NOT NULL,
 
     PRIMARY KEY (`role_id`, `permission_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `user_roles` (
-    `user_id` VARCHAR(191) NOT NULL,
-    `role_id` VARCHAR(191) NOT NULL,
-
-    PRIMARY KEY (`user_id`, `role_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -255,7 +257,6 @@ CREATE TABLE `data_retention_policies` (
 -- CreateTable
 CREATE TABLE `brand_website_analysis` (
     `website_analysis_id` VARCHAR(191) NOT NULL,
-    `report_id` VARCHAR(191) NULL,
     `performance_score` DOUBLE NULL,
     `seo_score` DOUBLE NULL,
     `first_contentful_paint` VARCHAR(191) NULL,
@@ -275,8 +276,6 @@ CREATE TABLE `brand_website_analysis` (
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `brand_website_analysis_report_id_key`(`report_id`),
-    INDEX `brand_website_analysis_report_id_idx`(`report_id`),
     PRIMARY KEY (`website_analysis_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -315,6 +314,7 @@ CREATE TABLE `website_scraped_data` (
     `scraped_data_id` VARCHAR(191) NOT NULL,
     `report_id` VARCHAR(191) NULL,
     `website_url` VARCHAR(191) NULL,
+    `website_name` VARCHAR(191) NULL,
     `H1_text` LONGTEXT NULL,
     `isCrawlable` BOOLEAN NULL,
     `headingAnalysis` JSON NULL,
@@ -358,6 +358,8 @@ CREATE TABLE `competitor_details` (
     `scraped_data_id` VARCHAR(191) NULL,
     `name` VARCHAR(191) NULL,
     `website_url` VARCHAR(191) NULL,
+    `website_name` VARCHAR(191) NULL,
+    `H1_text` LONGTEXT NULL,
     `competitor_website_url` LONGTEXT NULL,
     `industry` LONGTEXT NULL,
     `region` LONGTEXT NULL,
@@ -413,6 +415,8 @@ CREATE TABLE `user_requirements` (
     `ip_address` LONGTEXT NULL,
     `user_agent` LONGTEXT NULL,
     `industry` LONGTEXT NULL,
+    `industry_size` LONGTEXT NULL,
+    `focus_areas` LONGTEXT NULL,
     `region_of_operation` LONGTEXT NULL,
     `target_location` LONGTEXT NULL,
     `target_audience` LONGTEXT NULL,
@@ -502,6 +506,7 @@ CREATE TABLE `report` (
     `dashboard1_Freedata` LONGTEXT NULL,
     `dashboard_paiddata` LONGTEXT NULL,
     `strengthandissues_d1` LONGTEXT NULL,
+    `three_burning_issues` LONGTEXT NULL,
     `recommendationbymo1` LONGTEXT NULL,
     `dashboard2_data` JSON NULL,
     `strengthandissues_d2` LONGTEXT NULL,
@@ -518,6 +523,49 @@ CREATE TABLE `report` (
     PRIMARY KEY (`report_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `email_templates` (
+    `template_id` VARCHAR(191) NOT NULL,
+    `template_name` VARCHAR(191) NULL,
+    `subject` VARCHAR(191) NULL,
+    `description` LONGTEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `email_templates_template_name_key`(`template_name`),
+    PRIMARY KEY (`template_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `propmt_templates` (
+    `template_id` VARCHAR(191) NOT NULL,
+    `template_name` VARCHAR(191) NULL,
+    `description` LONGTEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `propmt_templates_template_name_key`(`template_name`),
+    PRIMARY KEY (`template_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `cmo_recommendation` (
+    `user_id` VARCHAR(191) NULL,
+    `id` VARCHAR(191) NOT NULL,
+    `report_ids` JSON NULL,
+    `cmorecommendation` LONGTEXT NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `user_roles` ADD CONSTRAINT `user_roles_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `user_roles` ADD CONSTRAINT `user_roles_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `roles`(`role_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE `AnalysisServiceHistory` ADD CONSTRAINT `AnalysisServiceHistory_service_id_fkey` FOREIGN KEY (`service_id`) REFERENCES `analysisServices`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -529,6 +577,9 @@ ALTER TABLE `payments` ADD CONSTRAINT `payments_user_id_fkey` FOREIGN KEY (`user
 
 -- AddForeignKey
 ALTER TABLE `payments` ADD CONSTRAINT `payments_subscription_id_fkey` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions`(`subscription_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `payments` ADD CONSTRAINT `payments_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `report`(`report_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `user_websites` ADD CONSTRAINT `user_websites_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -546,12 +597,6 @@ ALTER TABLE `role_permissions` ADD CONSTRAINT `role_permissions_role_id_fkey` FO
 ALTER TABLE `role_permissions` ADD CONSTRAINT `role_permissions_permission_id_fkey` FOREIGN KEY (`permission_id`) REFERENCES `permissions`(`permission_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `user_roles` ADD CONSTRAINT `user_roles_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `user_roles` ADD CONSTRAINT `user_roles_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `roles`(`role_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `sessions` ADD CONSTRAINT `sessions_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -565,9 +610,6 @@ ALTER TABLE `email_verifications` ADD CONSTRAINT `email_verifications_user_id_fk
 
 -- AddForeignKey
 ALTER TABLE `api_keys` ADD CONSTRAINT `api_keys_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `brand_website_analysis` ADD CONSTRAINT `brand_website_analysis_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `report`(`report_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `brand_traffic_analysis` ADD CONSTRAINT `brand_traffic_analysis_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `report`(`report_id`) ON DELETE CASCADE ON UPDATE CASCADE;
