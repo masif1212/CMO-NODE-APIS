@@ -1,6 +1,6 @@
 import axios from "axios";
 import { PrismaClient } from "@prisma/client";
-import lighthouse from "lighthouse";
+// import lighthouse from "lighthouse"; // This line is removed
 
 const prisma = new PrismaClient();
 import puppeteer from "puppeteer";
@@ -396,15 +396,15 @@ export async function getPageSpeedData(url: string) {
   ["performance", "seo", "accessibility", "best-practices", "pwa"].forEach((c) => params.append("category", c));
 
   // Helper function to process Lighthouse results
-  const processLighthouseResult = (lighthouse: any) => {
-    if (!lighthouse?.categories || !lighthouse.audits) {
+  const processLighthouseResult = (lighthouseResult: any) => {
+    if (!lighthouseResult?.categories || !lighthouseResult.audits) {
       throw new Error("Missing Lighthouse categories or audits in response");
     }
 
-    const getScore = (cat: string) => (lighthouse.categories[cat]?.score != null ? Math.round(lighthouse.categories[cat].score * 100) : null);
+    const getScore = (cat: string) => (lighthouseResult.categories[cat]?.score != null ? Math.round(lighthouseResult.categories[cat].score * 100) : null);
 
     const getAudit = (id: string) => {
-      const audit = lighthouse.audits[id];
+      const audit = lighthouseResult.audits[id];
       return audit
         ? {
             id,
@@ -426,10 +426,10 @@ export async function getPageSpeedData(url: string) {
           };
     };
 
-    const allAuditIds = Object.keys(lighthouse.audits);
+    const allAuditIds = Object.keys(lighthouseResult.audits);
     const detailedAuditResults = allAuditIds.map(getAudit);
 
-    const accessibilityAuditIds = lighthouse.categories["accessibility"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
+    const accessibilityAuditIds = lighthouseResult.categories["accessibility"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
 
     const accessibilityAudits = detailedAuditResults.filter((audit) => accessibilityAuditIds.includes(audit.id));
 
@@ -454,12 +454,12 @@ export async function getPageSpeedData(url: string) {
     }
 
     // SEO audits
-    const seoAuditIds = lighthouse.categories["seo"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
+    const seoAuditIds = lighthouseResult.categories["seo"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
     const seoAudits = seoAuditIds.map(getAudit);
 
     // Best practices
 
-    const bestPracticeAuditIds = lighthouse.categories?.["best-practices"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
+    const bestPracticeAuditIds = lighthouseResult.categories?.["best-practices"]?.auditRefs?.map((ref: any) => ref.id) ?? [];
 
     const bestPracticeAudits = detailedAuditResults.filter((audit) => bestPracticeAuditIds.includes(audit.id));
 
@@ -485,9 +485,9 @@ export async function getPageSpeedData(url: string) {
     }
 
     // Revenue loss estimation
-    const LCP = lighthouse?.audits["largest-contentful-paint"]?.numericValue;
-    const TBT = lighthouse?.audits["total-blocking-time"]?.numericValue;
-    const CLS = lighthouse?.audits["cumulative-layout-shift"]?.numericValue;
+    const LCP = lighthouseResult?.audits["largest-contentful-paint"]?.numericValue;
+    const TBT = lighthouseResult?.audits["total-blocking-time"]?.numericValue;
+    const CLS = lighthouseResult?.audits["cumulative-layout-shift"]?.numericValue;
 
     const lcpSeconds = LCP / 1000;
     const rawRevenueLoss = (lcpSeconds - 2.5) * 7 + ((TBT - 200) / 100) * 3 + CLS * 10;
@@ -577,6 +577,9 @@ export async function getPageSpeedData(url: string) {
           onlyCategories: ["performance", "seo", "accessibility", "best-practices", "pwa"],
         },
       };
+
+      // Dynamically import lighthouse
+      const lighthouse = (await import("lighthouse")).default;
 
       const result = await lighthouse(
         url,
