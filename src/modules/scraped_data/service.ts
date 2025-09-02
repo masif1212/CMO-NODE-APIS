@@ -603,7 +603,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
       status_message: message,
       scraped_data_id: "nill",
     };
-    console.log("Error result:", result); // Debug log
+    console.log("Error result:", result, "report_id", report_id); // Debug log
     return result;
   }
 }

@@ -1,6 +1,4 @@
-
 import { PrismaClient } from "@prisma/client";
-
 
 const prisma = new PrismaClient();
 
@@ -8,7 +6,7 @@ import { Request, Response } from "express";
 import { scrapeWebsite } from "./service";
 
 export async function scrapeWebsitehandle(req: Request, res: Response) {
-  const { user_id, website_id ,report_id} = req.body;
+  const { user_id, website_id, report_id } = req.body;
 
   if (!user_id || !website_id) {
     return res.status(400).json({
@@ -19,32 +17,31 @@ export async function scrapeWebsitehandle(req: Request, res: Response) {
 
   try {
     console.log("Scraping started...");
-    const data = await scrapeWebsite(user_id, website_id,report_id);
-
+    const data = await scrapeWebsite(user_id, website_id, report_id);
+    console.log("report_id for scrapping ", report_id);
     await prisma.report.upsert({
       where: {
         report_id: report_id, // this must be a UNIQUE constraint or @id in the model
       },
       update: {
-        scraped_data_id: data.scraped_data_id
+        scraped_data_id: data.scraped_data_id,
         // add any other fields you want to update
       },
       create: {
         website_id: website_id,
-        scraped_data_id: data.scraped_data_id
+        scraped_data_id: data.scraped_data_id,
         // add any other fields required for creation
-      }
-});
+      },
+    });
 
     console.log("Scraping compelted successfully");
     console.log("----------------------------------------------------------------------------------");
 
     return res.status(200).json({
-      scraped_data_id:data.scraped_data_id,
+      scraped_data_id: data.scraped_data_id,
       report_id,
-      ...data}
-    );
-
+      ...data,
+    });
   } catch (error) {
     console.error("Scrape handler error:", error);
     return res.status(500).json({
