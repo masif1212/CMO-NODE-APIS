@@ -70,7 +70,7 @@ steps:
       - "--region=us-central1"
       - "--wait"
 
-  # Step 5: Deploy the backend Cloud Run service
+  # Step 5: Deploy the backend Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "Deploy Backend Service"
     entrypoint: "bash"
