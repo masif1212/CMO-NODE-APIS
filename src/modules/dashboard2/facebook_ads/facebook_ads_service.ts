@@ -19,7 +19,7 @@ function extractCompanyName(url: string): string {
 
 export const getfacebookAds = async (website_url: string) => {
   const name = extractCompanyName(website_url);
-  console.log("name", name);
+  console.log("name for facebook add", name);
   const url = `${FACEBOOK_ADS_URL}?companyName=${name}&media_type=ALL&trim=true`;
   console.log("facebook ads url", url);
 
