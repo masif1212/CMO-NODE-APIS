@@ -17,12 +17,10 @@ interface CMORecommendationOutput {
 export class CMORecommendationService {
   private prisma: PrismaClient;
   private openai: OpenAI;
-  private model: string;
 
   constructor(prisma: PrismaClient, openai: OpenAI, model: string = 'gpt-4.1') {
     this.prisma = prisma;
     this.openai = openai;
-    this.model = model;
   }
 
 private async fetchRecommendations(user_id: string, website_id: string, report_ids: string[]) {

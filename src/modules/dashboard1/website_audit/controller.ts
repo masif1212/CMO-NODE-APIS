@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getPageSpeedData, savePageSpeedAnalysis,getWebsiteUrlById } from "./service";
 import { PrismaClient } from "@prisma/client";
+import { termValue } from "rdflib";
 
 const prisma = new PrismaClient();
 
@@ -81,6 +82,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
     const scrapedMeta = await prisma.website_scraped_data.findFirst({
       where: { scraped_data_id: report.scraped_data_id ?? undefined },
       select: {
+        logo_url:true,
         page_title: true,
         meta_description: true,
         meta_keywords: true,
@@ -114,6 +116,7 @@ export const handlePageSpeed = async (req: Request, res: Response) => {
 
     const website_health = {
       website_id,
+      logo_url : scrapedMeta?.logo_url,
       revenueLossPercent: saved.revenue_loss_percent,
       seo_revenue_loss_percentage,
       categories: categoryScores,

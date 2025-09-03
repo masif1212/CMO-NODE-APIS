@@ -607,6 +607,9 @@ export function getStatusMessage(code: number): string {
 //     return result;
 //   }
 // }
+
+
+
 export async function scrapeWebsite(user_id: string, website_id: string, report_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
@@ -919,6 +922,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         youtube_handle: record.youtube_handle,
       },
       onpage_opptimization: {
+        logo_url: record.logo_url ?? undefined,
         h1_text: h1Text,
         metaDataWithoutRawHtml: {
           homepage_alt_text_coverage: record.homepage_alt_text_coverage,
