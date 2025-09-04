@@ -951,97 +951,237 @@ export class CompetitorService {
     return dashboarddata;
   }
 
+  // static async social_media(user_id: string, website_id: string, report_id: string) {
+  //   if (!website_id || !user_id || !report_id) {
+  //     throw new Error("website_id, report_id, and user_id are required");
+  //   }
+
+  //   console.log(`Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
+  //   const website_url = await getWebsiteUrlById(user_id, website_id);
+  //   if (!website_url) {
+  //     throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  //   }
+
+  //   const report = await prisma.report.findUnique({
+  //     where: { report_id },
+  //     select: { scraped_data_id: true },
+  //   });
+
+  //   const websiteScraped = await prisma.website_scraped_data.findUnique({
+  //     where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+  //     select: {
+  //       facebook_handle: true,
+  //       instagram_handle: true,
+  //       youtube_handle: true,
+  //       linkedin_handle: true,
+  //     },
+  //   });
+  //   console.log("main_website handles", websiteScraped);
+  //   const main_website = await fetchSocialMediaData(websiteScraped?.facebook_handle, websiteScraped?.instagram_handle, websiteScraped?.youtube_handle, websiteScraped?.linkedin_handle, website_url);
+
+  //   const competitors = await prisma.competitor_details.findMany({
+  //     where: { report_id },
+  //     orderBy: { order_index: "asc" },
+  //     take: 7,
+  //   });
+
+  //   console.log(`Fetched ${competitors.length} competitors.`);
+
+  //   const processedUrls = new Set<string>([website_url]);
+  //   const limit = createLimiter(7);
+
+  //   const competitorResults = await Promise.all(
+  //     competitors.map((competitor) =>
+  //       limit(async () => {
+  //         const { competitor_id, facebook_handle, instagram_handle, youtube_handle, linkedin_handle, competitor_website_url } = competitor;
+
+  //         if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
+  //           console.log(`Skipping competitor ${competitor_id} due to duplicate URL.`);
+  //           return { competitor_id, social_media: null };
+  //         }
+
+  //         processedUrls.add(competitor_website_url);
+
+  //         try {
+  //           const social_media = await fetchSocialMediaData(facebook_handle, instagram_handle, youtube_handle, linkedin_handle, competitor_website_url);
+
+  //           await prisma.competitor_details.update({
+  //             where: { competitor_id },
+  //             data: {
+  //               social_media_data: social_media,
+  //             },
+  //           });
+
+  //           return { competitor_id, social_media };
+  //         } catch (error) {
+  //           console.error(`Error fetching social data for ${competitor_id}`, error);
+  //           return { competitor_id, social_media: null };
+  //         }
+  //       })
+  //     )
+  //   );
+
+  //   // Convert array to ID-based object
+  //   const competitorsData: Record<string, any> = {};
+  //   for (const item of competitorResults) {
+  //     if (item?.competitor_id) {
+  //       competitorsData[item.competitor_id] = item.social_media;
+  //     }
+  //   }
+
+  //   const competitor_social_media_data = {
+  //     main_website,
+  //     competitors: competitorsData,
+  //   };
+
+  //   await prisma.report.upsert({
+  //     where: { report_id },
+  //     update: { dashboard3_socialmedia: competitor_social_media_data },
+  //     create: { website_id, report_id, dashboard3_socialmedia: competitor_social_media_data },
+  //   });
+
+  //   return { competitor_social_media_data };
+  // }
+
+
   static async social_media(user_id: string, website_id: string, report_id: string) {
-    if (!website_id || !user_id || !report_id) {
-      throw new Error("website_id, report_id, and user_id are required");
-    }
-
-    console.log(`Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
-    const website_url = await getWebsiteUrlById(user_id, website_id);
-    if (!website_url) {
-      throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
-    }
-
-    const report = await prisma.report.findUnique({
-      where: { report_id },
-      select: { scraped_data_id: true },
-    });
-
-    const websiteScraped = await prisma.website_scraped_data.findUnique({
-      where: { scraped_data_id: report?.scraped_data_id ?? undefined },
-      select: {
-        facebook_handle: true,
-        instagram_handle: true,
-        youtube_handle: true,
-        linkedin_handle: true,
-      },
-    });
-    console.log("main_website handles", websiteScraped);
-    const main_website = await fetchSocialMediaData(websiteScraped?.facebook_handle, websiteScraped?.instagram_handle, websiteScraped?.youtube_handle, websiteScraped?.linkedin_handle, website_url);
-
-    const competitors = await prisma.competitor_details.findMany({
-      where: { report_id },
-      orderBy: { order_index: "asc" },
-      take: 7,
-    });
-
-    console.log(`Fetched ${competitors.length} competitors.`);
-
-    const processedUrls = new Set<string>([website_url]);
-    const limit = createLimiter(7);
-
-    const competitorResults = await Promise.all(
-      competitors.map((competitor) =>
-        limit(async () => {
-          const { competitor_id, facebook_handle, instagram_handle, youtube_handle, linkedin_handle, competitor_website_url } = competitor;
-
-          if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
-            console.log(`Skipping competitor ${competitor_id} due to duplicate URL.`);
-            return { competitor_id, social_media: null };
-          }
-
-          processedUrls.add(competitor_website_url);
-
-          try {
-            const social_media = await fetchSocialMediaData(facebook_handle, instagram_handle, youtube_handle, linkedin_handle, competitor_website_url);
-
-            await prisma.competitor_details.update({
-              where: { competitor_id },
-              data: {
-                social_media_data: social_media,
-              },
-            });
-
-            return { competitor_id, social_media };
-          } catch (error) {
-            console.error(`Error fetching social data for ${competitor_id}`, error);
-            return { competitor_id, social_media: null };
-          }
-        })
-      )
-    );
-
-    // Convert array to ID-based object
-    const competitorsData: Record<string, any> = {};
-    for (const item of competitorResults) {
-      if (item?.competitor_id) {
-        competitorsData[item.competitor_id] = item.social_media;
-      }
-    }
-
-    const competitor_social_media_data = {
-      main_website,
-      competitors: competitorsData,
-    };
-
-    await prisma.report.upsert({
-      where: { report_id },
-      update: { dashboard3_socialmedia: competitor_social_media_data },
-      create: { website_id, report_id, dashboard3_socialmedia: competitor_social_media_data },
-    });
-
-    return { competitor_social_media_data };
+  if (!website_id || !user_id || !report_id) {
+    throw new Error("website_id, report_id, and user_id are required");
   }
+
+  console.log(`Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
+  const website_url = await getWebsiteUrlById(user_id, website_id);
+  if (!website_url) {
+    throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
+  }
+
+  const report = await prisma.report.findUnique({
+    where: { report_id },
+    select: { scraped_data_id: true },
+  });
+
+  const websiteScraped = await prisma.website_scraped_data.findUnique({
+    where: { scraped_data_id: report?.scraped_data_id ?? undefined },
+    select: {
+      facebook_handle: true,
+      instagram_handle: true,
+      youtube_handle: true,
+      linkedin_handle: true,
+    },
+  });
+  console.log("main_website handles", websiteScraped);
+
+  const main_website = await fetchSocialMediaData(
+    websiteScraped?.facebook_handle,
+    websiteScraped?.instagram_handle,
+    websiteScraped?.youtube_handle,
+    websiteScraped?.linkedin_handle,
+    website_url
+  );
+
+  const competitors = await prisma.competitor_details.findMany({
+    where: { report_id },
+    orderBy: { order_index: "asc" },
+    take: 7,
+  });
+
+  console.log(`Fetched ${competitors.length} competitors.`);
+
+  const processedUrls = new Set<string>([website_url]);
+  const limit = createLimiter(7);
+
+  const competitorResults = await Promise.all(
+    competitors.map((competitor) =>
+      limit(async () => {
+        const {
+          competitor_id,
+          facebook_handle,
+          instagram_handle,
+          youtube_handle,
+          linkedin_handle,
+          competitor_website_url,
+        } = competitor;
+
+        if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
+          console.log(`Skipping competitor ${competitor_id} due to duplicate URL.`);
+          return { competitor_id, social_media: null, handles: null };
+        }
+
+        processedUrls.add(competitor_website_url);
+
+        try {
+          const social_media = await fetchSocialMediaData(
+            facebook_handle,
+            instagram_handle,
+            youtube_handle,
+            linkedin_handle,
+            competitor_website_url
+          );
+
+          await prisma.competitor_details.update({
+            where: { competitor_id },
+            data: {
+              social_media_data: social_media,
+            },
+          });
+
+          return {
+            competitor_id,
+            social_media,
+            handles: {
+              facebook_handle,
+              instagram_handle,
+              youtube_handle,
+              linkedin_handle,
+              competitor_website_url,
+            },
+          };
+        } catch (error) {
+          console.error(`Error fetching social data for ${competitor_id}`, error);
+          return {
+            competitor_id,
+            social_media: null,
+            handles: {
+              facebook_handle,
+              instagram_handle,
+              youtube_handle,
+              linkedin_handle,
+              competitor_website_url,
+            },
+          };
+        }
+      })
+    )
+  );
+
+  // Convert array to ID-based object
+  const competitorsData: Record<string, any> = {};
+  for (const item of competitorResults) {
+    if (item?.competitor_id) {
+      competitorsData[item.competitor_id] = {
+        social_media: item.social_media,
+        handles: item.handles,
+      };
+    }
+  }
+
+  const competitor_social_media_data = {
+    main_website: {
+      social_media: main_website,
+      handles: websiteScraped, // ✅ raw handles for main site
+    },
+    competitors: competitorsData,
+  };
+
+  await prisma.report.upsert({
+    where: { report_id },
+    update: { dashboard3_socialmedia: competitor_social_media_data },
+    create: { website_id, report_id, dashboard3_socialmedia: competitor_social_media_data },
+  });
+
+  return { competitor_social_media_data };
+}
+
 
   static async getComparisonRecommendations(website_id: string, report_id: string) {
     if (!report_id) {
