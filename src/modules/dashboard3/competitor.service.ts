@@ -1167,7 +1167,7 @@ export class CompetitorService {
 
   const competitor_social_media_data = {
     main_website: {
-      social_media: main_website,
+      social_media_analysis: main_website,
       handles: websiteScraped, // ✅ raw handles for main site
     },
     competitors: competitorsData,
