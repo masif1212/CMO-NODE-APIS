@@ -38,7 +38,7 @@ export async function scrapeWebsiteCompetitors(url: string) {
     const isCrawlable = await isCrawlableByLLMBots(url);
 
     let finalLogoUrl = schemaAnalysisData.logo ?? null;
-    console.log("finalLogoUrlfromschema", finalLogoUrl);
+    // console.log("finalLogoUrlfromschema", finalLogoUrl);
     if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
       console.log("Schema logo URL is invalid, falling back...");
       finalLogoUrl = null; // Clear it so fallback logic runs
@@ -59,7 +59,7 @@ export async function scrapeWebsiteCompetitors(url: string) {
 
           if (await isLogoUrlValid(src)) {
             finalLogoUrl = src;
-            console.log("finalLogoUrlscrape", finalLogoUrl);
+            // console.log("finalLogoUrlscrape", finalLogoUrl);
             break;
           }
         }
@@ -124,12 +124,12 @@ export async function scrapeWebsiteCompetitors(url: string) {
 
             if (isMissing) {
               affectedPagesCount++;
-              console.log("Missing metadata on:", pageUrl, {
-                title,
-                meta_description,
-                og_title,
-                meta_keywords,
-              });
+              // console.log("Missing metadata on:", pageUrl, {
+              //   title,
+              //   meta_description,
+              //   og_title,
+              //   meta_keywords,
+              // });
             }
 
             return { url: pageUrl, title, meta_description, og_title, meta_keywords, h1Text };
@@ -160,7 +160,8 @@ export async function scrapeWebsiteCompetitors(url: string) {
     const domain = getDomainRoot(url);
     const website_name = domain.split(".")[0];
     // console.log("CTR_Loss_Percent",CTR_Loss_Percent)
-    console.log("homepage_alt_text_coverage", homepage_alt_text_coverage);
+    // console.log("homepage_alt_text_coverage", homepage_alt_text_coverage);
+    console.log('linkedin_handle for website  ', url,  extractHandle("linkedin")  )
     return {
       website_url: url,
       page_title: $("title").text() || null,
@@ -205,7 +206,7 @@ export const fetchBrands = async (user_id: string, website_id: string, report_id
   // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
-  let userReq = await prisma.user_requirements.findFirst({
+let userReq = await prisma.user_requirements.findFirst({
     where: {
       user_id,
       website_id,

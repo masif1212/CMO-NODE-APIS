@@ -28,7 +28,7 @@ export const getLinkedinPostsHandler = async (req: Request, res: Response) => {
 
 
     const linkedin_data = await getlinkedinProfileFromScrapedData(linkedin_handle);
-
+    console.log("linkedin_data",linkedin_data)
     const existingReport = await prisma.report.findUnique({
       where: { report_id },
       select: { dashboard2_data: true }
@@ -64,6 +64,6 @@ export const getLinkedinPostsHandler = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error("Error in getLinkedinPostsHandler:", error);
-    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    return res.status(500).json({ success: false, error });
   }
 };

@@ -8,38 +8,68 @@ const linkedlin_PROFILE_URL = 'https://api.scrapecreators.com/v1/linkedin/compan
 
 const headers = { 'x-api-key': API_KEY };
 
-export const getlinkedinProfileFromScrapedData = async (linkedlin_handle: any) => {
-  const cleanUrl = linkedlin_handle.trim().replace(/^https?:\/\//, '');
-  // console.log("cleanUrl", cleanUrl);
-  const url = `${linkedlin_PROFILE_URL}?url=https://${cleanUrl}`;
-  console.log("url", url);
 
+
+export const getlinkedinProfileFromScrapedData = async (linkedin_handle: string) => {
   try {
-    console.log("calling linkedin company endpoint");
-    const response = await axios.get(url, { headers });
+    let cleanUrl = linkedin_handle.trim();
 
+    // --- Normalize LinkedIn URL ---
+    // Remove query params like ?feedView=all
+    cleanUrl = cleanUrl.split("?")[0];
+
+    // If it's a posts page → trim it to company home
+    cleanUrl = cleanUrl.replace(/\/posts\/?$/, "");
+
+    // Ensure https:// prefix
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+
+    const url = `${linkedlin_PROFILE_URL}?url=${encodeURIComponent(cleanUrl)}`;
+    console.log("LinkedIn company API URL:", url);
+
+    // --- Call Scraper ---
+    const response = await axios.get(url, { headers });
     const data = response.data;
 
-    // --- Calculate total post count & posting frequency ---
-    if (Array.isArray(data)) {
+    if (!data || typeof data !== "object") {
       throw new Error("Unexpected response format");
     }
 
-
-    const totalPosts = data?.posts.length;
-    // console.log("totalPosts", totalPosts);
-    return {
-      linkedlin_data: {
-        ...data,
-        totalPosts,
-      }
-    };
+    const totalPosts = data?.posts?.length || 0;
+    return { linkedlin_data: { ...data, totalPosts, linkedin_handle } };
 
   } catch (error: any) {
-    console.error("Error fetching linkedin profile:", error);
-    return { error: `Failed to fetch profile: ${error.message}` };
+    console.error("Error fetching linkedin profile:", error?.message);
+
+    // ScrapeCreators returns structured JSON on error
+    if (error.response?.data) {
+      return {
+        linkedlin_data: {
+          success: false,
+          error: error.response.data.error || "scrape_failed",
+          errorStatus: error.response.status || 500,
+          description: error.response.data.message || "Unknown error from scraper",
+          linkedin_handle:linkedin_handle,
+        }
+      };
+    }
+
+    // Fallback if no structured payload
+    return {
+      linkedlin_data: {
+        success: false,
+        error: "internal_error",
+        errorStatus: 500,
+        description: error.message || "Something went wrong fetching LinkedIn data",
+        linkedin_handle:linkedin_handle,
+
+      }
+    };
   }
 };
+
 
 
 
