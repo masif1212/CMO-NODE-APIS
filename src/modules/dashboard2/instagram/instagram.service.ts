@@ -22,7 +22,7 @@ const extractInstagramUsername = (input: string): string => {
 export const getInstagramPostsFromScrapedData = async (
   instagram_handle: string,
   max_posts: number = 3,
-  retry_attempts: number = 0,
+  retry_attempts: number = 2,
   delay: number = 2
 ) => {
   // Validate environment variables

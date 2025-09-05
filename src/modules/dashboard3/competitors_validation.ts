@@ -183,48 +183,175 @@ function isHomepagePath(path: string): boolean {
   return acceptedHomepagePaths.has(normalized) || /^\/(country\/[a-z]{2}|[a-z]{2})$/i.test(normalized);
 }
 
-async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
+// async function checkLandingHomepage(url: string, browser: Browser): Promise<{ valid: boolean; finalUrl?: string }> {
+//   let page;
+//   try {
+//     page = await browser.newPage();
+//     await page.setUserAgent("Mozilla/5.0");
+
+//     // Fail fast (lower timeout), and don't wait for all resources
+//     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 110000 });
+
+//     let finalUrl = page.url();
+//     const html = await page.content();
+
+//     const metaRedirect = await extractMetaRedirect(html);
+//     if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
+
+//     const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, "") || "/";
+//     return { valid: isHomepagePath(finalPath), finalUrl };
+//   } catch (err) {
+//     console.error(`Check failed for ${url}: ${err}`);
+//     return { valid: false };
+//   } finally {
+//     if (page) {
+//       try {
+//         await page.close();
+//       } catch (err) {
+//         console.warn(`Failed to close page for ${url}:`, err);
+//       }
+//     }
+//   }
+// }
+
+
+async function checkLandingHomepage(
+  url: string,
+  browser: Browser
+): Promise<{ valid: boolean; finalUrl?: string }> {
   let page;
   try {
     page = await browser.newPage();
     await page.setUserAgent("Mozilla/5.0");
-
-    // Fail fast (lower timeout), and don't wait for all resources
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 110000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
     let finalUrl = page.url();
+
+    // Reject Chrome error/internal URLs
+    if (
+      finalUrl.startsWith("chrome-error://") ||
+      finalUrl.startsWith("about:blank")
+    ) {
+      return { valid: false };
+    }
+
     const html = await page.content();
-
     const metaRedirect = await extractMetaRedirect(html);
-    if (metaRedirect) finalUrl = new URL(metaRedirect, url).toString();
+    if (metaRedirect) {
+      finalUrl = new URL(metaRedirect, url).toString();
+    }
 
-    const finalPath = new URL(finalUrl).pathname.replace(/\/+$/, "") || "/";
+    const finalPath = new URL(finalUrl).pathname;
     return { valid: isHomepagePath(finalPath), finalUrl };
   } catch (err) {
     console.error(`Check failed for ${url}: ${err}`);
     return { valid: false };
   } finally {
-    if (page) {
-      try {
-        await page.close();
-      } catch (err) {
-        console.warn(`Failed to close page for ${url}:`, err);
-      }
-    }
+    if (page) await page.close().catch(() => {});
   }
 }
 
+
+// async function isHttpStatus200(url: string): Promise<boolean> {
+//   try {
+//     const res = await fetch(url, { method: "HEAD", redirect: "follow" });
+//     return res.status === 200;
+//   } catch (err) {
+//     console.warn(`Quick status check failed for ${url}:`, err);
+//     return false;
+//   }
+// }
+
+// export async function isValidCompetitorUrl(url: string, competitorName?: string, Browser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
+//   try {
+//     if (!/^https?:\/\//.test(url)) {
+//       return { isValid: false, reason: "URL does not use HTTP or HTTPS" };
+//     }
+
+//     const parsed = new URL(url);
+//     const hostname = parsed.hostname;
+
+//     const blocklist = ["facebook.com", "twitter.com", "google.com", "youtube.com", "instagram.com", "linkedin.com", "tiktok.com", "example.com", "nonexistent.com"];
+//     if (blocklist.some((b) => hostname.includes(b))) {
+//       return { isValid: false, reason: `Hostname "${hostname}" is in the blocklist` };
+//     }
+
+//     if (competitorName) {
+//       const normalizedName = competitorName.toLowerCase().replace(/\s+/g, "");
+//       if (!hostname.toLowerCase().includes(normalizedName)) {
+//         return { isValid: false, reason: `Hostname does not include normalized competitor name "${normalizedName}"` };
+//       }
+//     }
+
+//     // ⚡ Fast HTTP check before launching Puppeteer
+//     const isLive = await isHttpStatus200(url);
+//     if (!isLive) {
+//       return { isValid: false, reason: "Fast HTTP check failed (non-200 or unreachable)" };
+//     }
+
+//     const originalDns = await resolveDnsCached(hostname);
+//     if (!originalDns.length) {
+//       const reason = `DNS resolution failed for hostname "${hostname}"`;
+//       console.warn(reason);
+//       return { isValid: false, reason };
+//     }
+
+//     if (!Browser) {
+//       return { isValid: false, reason: "Browser instance is required but not provided" };
+//     }
+//     const firstCheck = await checkLandingHomepage(url, Browser);
+//     if (firstCheck.valid) {
+//       return { isValid: true, preferredUrl: firstCheck.finalUrl };
+//     }
+
+//     // Try alternate www/non-www version
+//     const hasWWW = hostname.startsWith("www.");
+//     const altHostname = hasWWW ? hostname.replace(/^www\./, "") : `www.${hostname}`;
+//     const altUrl = url.replace(hostname, altHostname);
+
+//     const altDns = await resolveDnsCached(altHostname);
+//     if (!altDns.length) {
+//       const reason = `Alternate DNS resolution failed for hostname "${altHostname}"`;
+//       console.warn(reason);
+//       return { isValid: false, reason };
+//     }
+
+//     const secondCheck = await checkLandingHomepage(altUrl, Browser);
+//     if (secondCheck.valid) {
+//       return { isValid: true, preferredUrl: secondCheck.finalUrl };
+//     }
+
+//     return { isValid: false, reason: "Neither original nor alternate URL led to a valid homepage" };
+//   } catch (err) {
+//     const errorMessage = err instanceof Error ? err.message : String(err);
+//     console.error(`Validation failed for ${url}:`, err);
+//     return { isValid: false, reason: `Unexpected error: ${errorMessage}` };
+//   } finally {
+//   }
+// }
+
+
+
 async function isHttpStatus200(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { method: "HEAD", redirect: "follow" });
-    return res.status === 200;
+    let res = await fetch(url, { method: "HEAD", redirect: "follow" });
+    if (res.status === 200) return true;
+
+    // Retry with GET if HEAD fails
+    res = await fetch(url, { method: "GET", redirect: "follow" });
+    return res.status >= 200 && res.status < 400;
   } catch (err) {
     console.warn(`Quick status check failed for ${url}:`, err);
     return false;
   }
 }
 
-export async function isValidCompetitorUrl(url: string, competitorName?: string, Browser?: Browser): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
+
+export async function isValidCompetitorUrl(
+  url: string,
+  competitorName?: string,
+  Browser?: Browser
+): Promise<{ isValid: boolean; preferredUrl?: string; reason?: string }> {
   try {
     if (!/^https?:\/\//.test(url)) {
       return { isValid: false, reason: "URL does not use HTTP or HTTPS" };
@@ -233,11 +360,23 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     const parsed = new URL(url);
     const hostname = parsed.hostname;
 
-    const blocklist = ["facebook.com", "twitter.com", "google.com", "youtube.com", "instagram.com", "linkedin.com", "tiktok.com", "example.com", "nonexistent.com"];
+    // Blocklist check
+    const blocklist = [
+      "facebook.com",
+      "twitter.com",
+      "google.com",
+      "youtube.com",
+      "instagram.com",
+      "linkedin.com",
+      "tiktok.com",
+      "example.com",
+      "nonexistent.com",
+    ];
     if (blocklist.some((b) => hostname.includes(b))) {
       return { isValid: false, reason: `Hostname "${hostname}" is in the blocklist` };
     }
 
+    // Optional name check
     if (competitorName) {
       const normalizedName = competitorName.toLowerCase().replace(/\s+/g, "");
       if (!hostname.toLowerCase().includes(normalizedName)) {
@@ -245,12 +384,13 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
       }
     }
 
-    // ⚡ Fast HTTP check before launching Puppeteer
+    // ⚡ Fast HTTP check with fallback
     const isLive = await isHttpStatus200(url);
     if (!isLive) {
-      return { isValid: false, reason: "Fast HTTP check failed (non-200 or unreachable)" };
+      return { isValid: false, reason: "HTTP check failed (non-200 or unreachable)" };
     }
 
+    // DNS check
     const originalDns = await resolveDnsCached(hostname);
     if (!originalDns.length) {
       const reason = `DNS resolution failed for hostname "${hostname}"`;
@@ -261,8 +401,10 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     if (!Browser) {
       return { isValid: false, reason: "Browser instance is required but not provided" };
     }
+
+    // First attempt
     const firstCheck = await checkLandingHomepage(url, Browser);
-    if (firstCheck.valid) {
+    if (firstCheck.valid && firstCheck.finalUrl) {
       return { isValid: true, preferredUrl: firstCheck.finalUrl };
     }
 
@@ -272,15 +414,11 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     const altUrl = url.replace(hostname, altHostname);
 
     const altDns = await resolveDnsCached(altHostname);
-    if (!altDns.length) {
-      const reason = `Alternate DNS resolution failed for hostname "${altHostname}"`;
-      console.warn(reason);
-      return { isValid: false, reason };
-    }
-
-    const secondCheck = await checkLandingHomepage(altUrl, Browser);
-    if (secondCheck.valid) {
-      return { isValid: true, preferredUrl: secondCheck.finalUrl };
+    if (altDns.length) {
+      const secondCheck = await checkLandingHomepage(altUrl, Browser);
+      if (secondCheck.valid && secondCheck.finalUrl) {
+        return { isValid: true, preferredUrl: secondCheck.finalUrl };
+      }
     }
 
     return { isValid: false, reason: "Neither original nor alternate URL led to a valid homepage" };
@@ -288,9 +426,11 @@ export async function isValidCompetitorUrl(url: string, competitorName?: string,
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error(`Validation failed for ${url}:`, err);
     return { isValid: false, reason: `Unexpected error: ${errorMessage}` };
-  } finally {
   }
 }
+
+
+
 
 export async function validateCompetitorUrlsInParallel(urls: string[], competitorNames?: (string | undefined)[]): Promise<{ url: string; result: { isValid: boolean; preferredUrl?: string } }[]> {
   // const pLimit = require("p-limit");

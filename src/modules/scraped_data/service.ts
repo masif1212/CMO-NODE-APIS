@@ -826,6 +826,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         youtube_handle: youtube,
         tiktok_handle: tiktok,
         twitter_handle: twitter,
+         linkedin_handle:linkedin,
       },
       create: {
         user_id,
@@ -835,6 +836,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         youtube_handle: youtube,
         tiktok_handle: tiktok,
         twitter_handle: twitter,
+        linkedin_handle:linkedin,
       },
     });
 
@@ -920,6 +922,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         facebook_handle: record.facebook_handle,
         instagram_handle: record.instagram_handle,
         youtube_handle: record.youtube_handle,
+        linkedin_handle:record.linkedin_handle,
       },
       onpage_opptimization: {
         logo_url: record.logo_url ?? undefined,

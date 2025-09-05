@@ -256,19 +256,19 @@ Generate a JSON object with a single key, "recommendations", which is an array o
 
 Each object must contain:
 - **tag**: One of the following tags:
-  - 'Content and Keyword Gap (if available)'  
+  - 'Content and Keyword Gap '  
     (Use metrics like 'Length of meta description', 'Presence of tags', 'Missing keywords', or vague messaging)
-  - 'SEO and Website Revenue Loss (if available)'  
+  - 'SEO and Website Revenue Loss '  
     (Tie search ranking issues to traffic/conversion loss. Use bounce rate, click-through rate, high-exit pages, etc.)
   - 'Big Idea'  
     (Evaluate clarity and strength of homepage messaging vs competitors. Does the site clearly differentiate itself?)
   -  'Social Media Analysis'
     (what platforms competitors are using and what should main website use to improve our productivity, add a brief summary of evalution)
-  - 'Paid Ads (if available)'  
+  - 'Paid Ads '  
     (Do competitor have paid ads? What types of ad can we use )
-  - 'Emerging Channels (if available)'
+  - 'Emerging Channels '
     (Look at whether competitors are leveraging TikTok, podcasts, newsletters, or niche communities — and whether the brand should.)  
-  - 'Performance Comparison (if available)'  
+  - 'Performance Comparison '  
     (Use metrics like Core Web Vitals, Largest Contentful Paint, Accessibility, Mobile Experience, etc.)
 
     
@@ -280,7 +280,7 @@ Each object must contain:
   - The **business impact** of closing this gap (e.g., more traffic, better UX, higher conversions)
 
 ### Notes:
-- The following 6 tags are **mandatory if data is available ** but not limited and must be included **exactly once** each in the final JSON array. Each tag should have its own unique, non-overlapping recommendation:
+- The following 6 tags are **mandatory if data is available for each one ** but not limited and must be included **exactly once** each in the final JSON array. Each tag should have its own unique, non-overlapping recommendation:
 
 - If other meaningful gaps are identified based on the input data, you may include additional recommendations with **new, unique tags** that reflect those issues. However, the include  6 tags(minimun) and must appear in the output exactly once, each addressing a distinct gap.
 - Mention the **best-performing competitor** when available. If not, fallback to industry best practices (e.g., LCP < 2.5s, meta description ≤ 160 characters, alt text on all homepage images).
