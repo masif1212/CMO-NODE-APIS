@@ -70,25 +70,56 @@ export const generatesocialmediareport = async (
     // console.log("Recommendation Data", allDataforrecommendation);
     const clean_data = sanitizeAndStringify(allDataforrecommendation)
     console.log("clean_data",clean_data)
-    const llmResponse = await openai.chat.completions.create({
-      model: "gpt-5",
-      // temperature: 0.5,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: brandPulsePrompt },
-        { role: "user", content: JSON.stringify(clean_data) },
-      ],
-    });
+    // const llmResponse = await openai.chat.completions.create({
+    //   model: "gpt-3.5-turbo",
+    //   // temperature: 0.5,
+    //   response_format: { type: "json_object" },
+    //   messages: [
+    //     { role: "system", content: brandPulsePrompt },
+    //     { role: "user", content: JSON.stringify(clean_data) },
+    //   ],
+    // });
 
-    const contentString = llmResponse.choices[0].message.content;
+    // const contentString = llmResponse.choices[0].message.content;
+
+    // let llmContentParsed;
+    // try {
+    //   llmContentParsed = JSON.parse(contentString ?? "{}");
+    // } catch (parseError) {
+    //   console.error("Failed to parse LLM response:", parseError);
+    //   return { error: "Failed to parse LLM response" };
+    // }
+    
+
 
     let llmContentParsed;
-    try {
-      llmContentParsed = JSON.parse(contentString ?? "{}");
-    } catch (parseError) {
-      console.error("Failed to parse LLM response:", parseError);
-      return { error: "Failed to parse LLM response" };
-    }
+      let parseSuccess = false;
+      let contentString: string | null = null;
+
+      // Try request + parse up to 2 times
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const llmResponse = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: brandPulsePrompt },
+              { role: "user", content: JSON.stringify(clean_data) },
+            ],
+          });
+
+          contentString = llmResponse.choices[0].message.content;
+          llmContentParsed = JSON.parse(contentString ?? "{}");
+          parseSuccess = true;
+          break; // ✅ Success → exit loop
+        } catch (err) {
+          console.error(`Attempt ${attempt} failed:`, err);
+          if (attempt === 2) {
+            return { error: "Failed to parse LLM response after retry" };
+          }
+          console.log("Retrying LLM call...");
+        }
+      }
 
     // Securely clean strings from \n, extra quotes, etc.
     let cleanedContent = cleanStringValues(llmContentParsed);
