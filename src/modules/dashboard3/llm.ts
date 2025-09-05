@@ -124,7 +124,7 @@ Do NOT include explanations, text, or markdown.
  
     try {
     const response = await openai.responses.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-5",
       input: prompt,
       tools: [
         {

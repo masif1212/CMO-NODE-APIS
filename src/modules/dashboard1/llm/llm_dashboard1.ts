@@ -95,7 +95,7 @@ try {
 
     console.log("Generating LLM response (funnel recommendation)…");
     const funnelLLMResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-5",
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [
@@ -247,7 +247,7 @@ try {
 
     console.log("Generating LLM response (funnel recommendation)…");
     const funnelLLMResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-5",
       temperature: 0.8,
       response_format: { type: "json_object" },
       messages: [
@@ -387,7 +387,7 @@ try {
   
     console.log("Generating LLM response (what working, what needs to be fixed)...");
     const llmResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-5",
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [

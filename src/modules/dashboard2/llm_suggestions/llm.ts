@@ -71,7 +71,7 @@ export const generatesocialmediareport = async (
     const clean_data = sanitizeAndStringify(allDataforrecommendation)
     console.log("clean_data",clean_data)
     // const llmResponse = await openai.chat.completions.create({
-    //   model: "gpt-3.5-turbo",
+    //   model: "gpt-5",
     //   // temperature: 0.5,
     //   response_format: { type: "json_object" },
     //   messages: [
@@ -100,7 +100,7 @@ export const generatesocialmediareport = async (
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
           const llmResponse = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-5",
             response_format: { type: "json_object" },
             messages: [
               { role: "system", content: brandPulsePrompt },
