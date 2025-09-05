@@ -8,34 +8,13 @@ const headers = { 'x-api-key': API_KEY };
 
 
 
-// function extractCompanyName(url: string): string {
-//   const parsed = parse(url);
-//   if (!parsed.domain) {
-//     throw new Error("Could not extract domain from URL: " + url);
-//   }
-//   // remove the TLD (.com, .net, etc.)
-//   return parsed.domain.split(".")[0];
-// }
-
-
-export function extractCompanyName(url: string): string {
-  try {
-    const parsed = parse(url);
-
-    if (!parsed.domain) {
-      // fallback: maybe it's already a bare company name
-      if (/^[a-z0-9-]+$/i.test(url)) {
-        return url.toLowerCase();
-      }
-      throw new Error("Could not extract domain from URL: " + url);
-    }
-
-    // Handle multi-part domains like co.uk
-    const parts = parsed.domain.split(".");
-    return parts.length > 2 ? parts[parts.length - 2] : parts[0];
-  } catch (e) {
-    throw new Error("Invalid input for extractCompanyName: " + url);
+function extractCompanyName(url: string): string {
+  const parsed = parse(url);
+  if (!parsed.domain) {
+    throw new Error("Could not extract domain from URL: " + url);
   }
+  // remove the TLD (.com, .net, etc.)
+  return parsed.domain.split(".")[0];
 }
 
 export const getfacebookAds = async (website_url: string) => {
