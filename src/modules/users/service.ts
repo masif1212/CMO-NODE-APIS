@@ -73,7 +73,7 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
   const domain = getDomainRoot(websiteUrl);
   const website_name = domain.split(".")[0];
   
-  console.log("domain", domain, "website_name",website_name);
+  // console.log("domain", domain, "website_name",website_name);
 
   let existingWebsite = await prisma.user_websites.findFirst({
     where: {

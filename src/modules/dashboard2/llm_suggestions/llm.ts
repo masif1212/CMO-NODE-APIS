@@ -49,6 +49,8 @@ export const generatesocialmediareport = async (
       scraped = await prisma.website_scraped_data.findUnique({
         where: { scraped_data_id: report.scraped_data_id },
         select: {
+          website_url:true,
+          logo_url:true,
           meta_description: true,
           page_title: true,
           H1_text: true,
@@ -68,29 +70,64 @@ export const generatesocialmediareport = async (
     // console.log("Recommendation Data", allDataforrecommendation);
     const clean_data = sanitizeAndStringify(allDataforrecommendation)
     console.log("clean_data",clean_data)
-    const llmResponse = await openai.chat.completions.create({
-      model: "gpt-5",
-      // temperature: 0.5,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: brandPulsePrompt },
-        { role: "user", content: JSON.stringify(clean_data) },
-      ],
-    });
+    // const llmResponse = await openai.chat.completions.create({
+    //   model: "gpt-5",
+    //   // temperature: 0.5,
+    //   response_format: { type: "json_object" },
+    //   messages: [
+    //     { role: "system", content: brandPulsePrompt },
+    //     { role: "user", content: JSON.stringify(clean_data) },
+    //   ],
+    // });
 
-    const contentString = llmResponse.choices[0].message.content;
+    // const contentString = llmResponse.choices[0].message.content;
+
+    // let llmContentParsed;
+    // try {
+    //   llmContentParsed = JSON.parse(contentString ?? "{}");
+    // } catch (parseError) {
+    //   console.error("Failed to parse LLM response:", parseError);
+    //   return { error: "Failed to parse LLM response" };
+    // }
+    
+
 
     let llmContentParsed;
-    try {
-      llmContentParsed = JSON.parse(contentString ?? "{}");
-    } catch (parseError) {
-      console.error("Failed to parse LLM response:", parseError);
-      return { error: "Failed to parse LLM response" };
-    }
+      let parseSuccess = false;
+      let contentString: string | null = null;
+
+      // Try request + parse up to 2 times
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const llmResponse = await openai.chat.completions.create({
+            model: "gpt-5",
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: brandPulsePrompt },
+              { role: "user", content: JSON.stringify(clean_data) },
+            ],
+          });
+
+          contentString = llmResponse.choices[0].message.content;
+          llmContentParsed = JSON.parse(contentString ?? "{}");
+          parseSuccess = true;
+          break; // ✅ Success → exit loop
+        } catch (err) {
+          console.error(`Attempt ${attempt} failed:`, err);
+          if (attempt === 2) {
+            return { error: "Failed to parse LLM response after retry" };
+          }
+          console.log("Retrying LLM call...");
+        }
+      }
 
     // Securely clean strings from \n, extra quotes, etc.
-    const cleanedContent = cleanStringValues(llmContentParsed);
-
+    let cleanedContent = cleanStringValues(llmContentParsed);
+    cleanedContent = {
+          ...cleanedContent,
+          logo_url: scraped?.logo_url ?? "N/A",
+          website_url:scraped?.website_url
+        };
     // Save cleaned response
     await prisma.report.upsert({
       where: { report_id },

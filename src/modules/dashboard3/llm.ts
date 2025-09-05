@@ -124,7 +124,7 @@ Do NOT include explanations, text, or markdown.
  
     try {
     const response = await openai.responses.create({
-      model: "gpt-4.1",
+      model: "gpt-5",
       input: prompt,
       tools: [
         {
@@ -243,7 +243,7 @@ const competitor_data = await prisma.report.findUnique({
 };
 
 const clean_data =sanitizeAndStringify (mergedData);
-console.log("clean_data",clean_data)
+// console.log("clean_data",clean_data)
  return `
 You are a digital strategy expert tasked with analyzing a website’s performance, SEO, and content strategy compared to industry competitors. Your goal is to generate a list of **high-impact, cross-functional recommendations**, each tied to a clear technical or marketing deficiency. The client is moderately technical and expects **actionable insights**, ideally supported by competitor benchmarks. If no competitor data is available, use best-practice standards.
 
