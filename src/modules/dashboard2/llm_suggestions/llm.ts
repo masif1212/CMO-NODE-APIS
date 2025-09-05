@@ -49,6 +49,8 @@ export const generatesocialmediareport = async (
       scraped = await prisma.website_scraped_data.findUnique({
         where: { scraped_data_id: report.scraped_data_id },
         select: {
+          website_url:true,
+          logo_url:true,
           meta_description: true,
           page_title: true,
           H1_text: true,
@@ -89,8 +91,12 @@ export const generatesocialmediareport = async (
     }
 
     // Securely clean strings from \n, extra quotes, etc.
-    const cleanedContent = cleanStringValues(llmContentParsed);
-
+    let cleanedContent = cleanStringValues(llmContentParsed);
+    cleanedContent = {
+          ...cleanedContent,
+          logo_url: scraped?.logo_url ?? "N/A",
+          website_url:scraped?.website_url
+        };
     // Save cleaned response
     await prisma.report.upsert({
       where: { report_id },
