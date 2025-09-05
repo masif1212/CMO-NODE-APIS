@@ -138,7 +138,7 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
     instagram_handle: Requirement?.instagram_handle,
     // twitter_handle: Requirement?.twitter_handle,
     youtube_handle: Requirement?.youtube_handle,
-    linkedin_handle: Requirement?.linkedin_handle,
+    // linkedin_handle: Requirement?.linkedin_handle,
     // tiktok_handle: Requirement?.tiktok_handle,
   };
   }
