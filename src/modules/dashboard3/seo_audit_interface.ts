@@ -73,7 +73,7 @@ export interface SeoAudit {
   meta_keywords?: string | null;
   schema_markup_status: SchemaMarkupStatus | null;
   isCrawlable: boolean | null;
-  headingAnalysis: any;
+  // headingAnalysis: any;
   alt_text_coverage: any;
   h1_heading: string | null;
   AI_Discoverability?: string | null;
