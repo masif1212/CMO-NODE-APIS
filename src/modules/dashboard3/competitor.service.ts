@@ -128,7 +128,7 @@ function normalizeSchemaStatus(url: string, schemaAnalysis: any): SchemaMarkupSt
 export class CompetitorService {
   static async brandprofile(user_id: string, website_id: string, report_id: string): Promise<Record<string, any>> {
     const t0 = performance.now();
-    console.log(`[brandprofile] Starting brand profile generation for report id=${report_id}`);
+    // console.log(`[brandprofile] Starting brand profile generation for report id=${report_id}`);
 
     if (!user_id || !website_id || !report_id) {
       throw new Error("user_id, report_id and website_id are required");
@@ -139,14 +139,14 @@ export class CompetitorService {
     if (!website_url) {
       throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
     }
-    console.log(`[brandprofile] Found main website URL: ${website_url}`);
+    // console.log(`[brandprofile] Found main website URL: ${website_url}`);
 
     // --- Load report + scraped data ---
     const report = await prisma.report.findUnique({
       where: { report_id },
       select: { scraped_data_id: true },
     });
-    console.log(`[brandprofile] Report scraped_data_id: ${report?.scraped_data_id}`);
+    // console.log(`[brandprofile] Report scraped_data_id: ${report?.scraped_data_id}`);
 
     const [user, scrapedMain, userRequirementRaw] = await Promise.all([
       prisma.user_websites.findUnique({
@@ -162,7 +162,7 @@ export class CompetitorService {
       throw new Error(`[brandprofile] No scraped data found for report_id=${report_id}`);
     }
 
-    console.log(`[brandprofile] Loaded scraped main website data (id=${scrapedMain.scraped_data_id})`);
+    // console.log(`[brandprofile] Loaded scraped main website data (id=${scrapedMain.scraped_data_id})`);
 
     const userRequirement: UserRequirement = {
       industry: userRequirementRaw?.industry ?? "Unknown",
@@ -173,7 +173,7 @@ export class CompetitorService {
       competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls) ? userRequirementRaw.competitor_urls.filter((url): url is string => typeof url === "string") : [],
     };
 
-    console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
+    // console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
 
     const MAX_COMPETITORS = 3;
     const competitorResults: ProcessedResult[] = [];
@@ -194,19 +194,19 @@ export class CompetitorService {
           headless: "new" as any,
           args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
         });
-        console.log("[brandprofile] Launching Puppeteer in production (Cloud Run)...");
+        // console.log("[brandprofile] Launching Puppeteer in production (Cloud Run)...");
       } else if (mode === "development") {
         browser = await puppeteer.launch({
           headless: "new" as any,
           args: ["--no-sandbox", "--disable-setuid-sandbox"],
         });
-        console.log("[brandprofile]  Launching Puppeteer in development (local headless)...");
+        // console.log("[brandprofile]  Launching Puppeteer in development (local headless)...");
       } else {
         throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
       }
 
       const endLaunch = Date.now();
-      console.log(`[brandprofile] Puppeteer browser launched in ${(endLaunch - startLaunch) / 1000}s`);
+      // console.log(`[brandprofile] Puppeteer browser launched in ${(endLaunch - startLaunch) / 1000}s`);
 
       // --- Process user-provided competitors ---
       for (const originalUrl of userRequirement.competitor_urls) {
@@ -223,33 +223,33 @@ export class CompetitorService {
           const result = await isValidCompetitorUrl(originalUrl, undefined, browser);
           let end = Date.now();
 
-          console.log(`[brandprofile]  Validation result for ${originalUrl}: ${JSON.stringify(result)} (took ${(end - start) / 1000}s)`);
+          // console.log(`[brandprofile]  Validation result for ${originalUrl}: ${JSON.stringify(result)} (took ${(end - start) / 1000}s)`);
 
           if (result.isValid && result.preferredUrl && !processedUrls.has(result.preferredUrl)) {
             preferredUrl = result.preferredUrl;
-            start = Date.now();
+            // start = Date.now();
             scraped = await scrapeWebsiteCompetitors(preferredUrl);
-            end = Date.now();
-            console.log(`[brandprofile] Scraped data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
-            start = Date.now();
+            // end = Date.now();
+            // console.log(`[brandprofile] Scraped data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
+            // start = Date.now();
 
             competitorData = await extractCompetitorDataFromLLM(scraped);
-            end = Date.now();
-            console.log(`[brandprofile] Extracted competitor data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
+            // end = Date.now();
+            // console.log(`[brandprofile] Extracted competitor data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
           } else {
-            start = Date.now();
+            // start = Date.now();
             competitorData = await extractCompetitorDataFromLLM(scraped);
-            end = Date.now();
-            console.log(`[brandprofile] Fallback to competitor data extraction for ${originalUrl} (took ${(end - start) / 1000}s)`);
+            // end = Date.now();
+            // console.log(`[brandprofile] Fallback to competitor data extraction for ${originalUrl} (took ${(end - start) / 1000}s)`);
           }
-          start = Date.now();
+          // start = Date.now();
           name = competitorData?.name || scraped?.website_name || originalUrl;
 
-          end = Date.now();
-          console.log(`[brandprofile] Competitor name: ${name} (extracted in ${(end - start) / 1000}s)`);
+          // end = Date.now();
+          // console.log(`[brandprofile] Competitor name: ${name} (extracted in ${(end - start) / 1000}s)`);
 
           if (processedNames.has(name)) {
-            console.log(`[brandprofile] Duplicate competitor skipped: ${name}`);
+            // console.log(`[brandprofile] Duplicate competitor skipped: ${name}`);
             continue;
           }
 
@@ -542,13 +542,7 @@ static async seo_audit(user_id: string, website_id: string, report_id: string): 
         }
 
         const h1_heading = scraped.H1_text;
-        // const schema_markup_status: SchemaMarkupStatus = {
-        //   url: competitor_website_url,
-        //   message: scraped.schema_analysis ? "Structured data detected" : "No structured data detected",
-        //   schemas: {
-        //     summary: scraped.schema_analysis ? [{ type: "Organization", format: "JSON-LD", isValid: true }] : [],
-        //     // details: scraped.schema_analysis ? { Organization: [{ type: "Organization", format: "JSON-LD", isValid: true }] } : {},
-        //   },
+       
 
         const schema_markup_status = normalizeSchemaStatus(
           competitor_website_url,

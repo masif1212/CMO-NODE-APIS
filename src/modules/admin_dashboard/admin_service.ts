@@ -301,7 +301,7 @@ export async function addOrUpdateAnalysisService(req: Request, res: Response) {
         data: updateData,
       });
     } else {
-      console.log("No service found with this type. Creating new...");
+      // console.log("No service found with this type. Creating new...");
 
       // ✅ Create fresh service
       service = await prisma.analysisServices.create({

@@ -69,26 +69,8 @@ export const generatesocialmediareport = async (
   
     // console.log("Recommendation Data", allDataforrecommendation);
     const clean_data = sanitizeAndStringify(allDataforrecommendation)
-    console.log("clean_data",clean_data)
-    // const llmResponse = await openai.chat.completions.create({
-    //   model: "gpt-5",
-    //   // temperature: 0.5,
-    //   response_format: { type: "json_object" },
-    //   messages: [
-    //     { role: "system", content: brandPulsePrompt },
-    //     { role: "user", content: JSON.stringify(clean_data) },
-    //   ],
-    // });
+   
 
-    // const contentString = llmResponse.choices[0].message.content;
-
-    // let llmContentParsed;
-    // try {
-    //   llmContentParsed = JSON.parse(contentString ?? "{}");
-    // } catch (parseError) {
-    //   console.error("Failed to parse LLM response:", parseError);
-    //   return { error: "Failed to parse LLM response" };
-    // }
     
 
 
@@ -128,6 +110,7 @@ export const generatesocialmediareport = async (
           logo_url: scraped?.logo_url ?? "N/A",
           website_url:scraped?.website_url
         };
+    // console.log("cleanedContent",cleanedContent)
     // Save cleaned response
     await prisma.report.upsert({
       where: { report_id },

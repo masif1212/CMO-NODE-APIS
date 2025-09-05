@@ -5,7 +5,7 @@ import { generate_d1_recommendation, generated1_strengthandIssue ,generate_d1_bu
 export const dashboard1_Recommendation = async (req: Request, res: Response) => {
   const { website_id, user_id, report_id } = req.body;
 
-  console.log("Request Body:", req.body);
+  // console.log("Request Body:", req.body);
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
@@ -27,7 +27,7 @@ export const dashboard1_Recommendation = async (req: Request, res: Response) => 
 export const d1_burning_issues = async (req: Request, res: Response) => {
   const { website_id, user_id, report_id } = req.body;
 
-  console.log("Request Body:", req.body);
+  // console.log("Request Body:", req.body);
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
   try {
@@ -47,7 +47,7 @@ export const d1_burning_issues = async (req: Request, res: Response) => {
 export const dashboard1_strengthandIssue = async (req: Request, res: Response) => {
   const { website_id, user_id, report_id } = req.body;
 
-  console.log("Request Body:", req.body);
+  // console.log("Request Body:", req.body);
   // if (!req.session?.user?.accessToken) return res.status(401).json({ error: "Unauthorized" });
   if (!website_id || !user_id) return res.status(400).json({ error: "website_id or user_id" });
 
