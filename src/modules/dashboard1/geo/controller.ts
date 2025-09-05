@@ -18,16 +18,16 @@ export const getLegalAIBrandsController = async (req: Request, res: Response) =>
       where: { report_id: report_id }, // 'record_id' must be defined
     });
 
-    console.log("fetching llm response...")
+    // console.log("fetching llm response...")
     const result = await fetchBrands(user_id, website_id, report);
-    console.log("llm response", result)
+    // console.log("llm response", result)
 
 
     const responsePayload: Record<string, any> = { success: true };
 
     if (!report) throw new Error("Missing report object");
 
-console.log("fetching data from db...")
+// console.log("fetching data from db...")
     const [scrapedData, pageSpeedData, traffic] = await Promise.all([
       report?.scraped_data_id
         ? prisma.website_scraped_data.findUnique({
@@ -70,8 +70,8 @@ console.log("fetching data from db...")
     ]);
 
 
-    console.log("report.traffic_analysis_id", report.traffic_analysis_id)
-    console.log("data fetch")
+    // console.log("report.traffic_analysis_id", report.traffic_analysis_id)
+    // console.log("data fetch")
 
     
     // On Page Optimization

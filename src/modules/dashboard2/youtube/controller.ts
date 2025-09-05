@@ -25,7 +25,7 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
     }
   
     if (!youtube_handle) {
-      console.warn("No YouTube handle found");
+      // console.warn("No YouTube handle found");
       return res.status(200).json({
         message: "no-youtube-handle",
         profile: null,
@@ -35,7 +35,7 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("YouTube handle found:", youtube_handle);
+    // console.log("YouTube handle found:", youtube_handle);
 
     const youtube_data = await analyzeYouTubeDataByWebsiteId(youtube_handle);
 
@@ -69,11 +69,11 @@ export const analyzeYouTubeController = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("YouTube analysis complete");
+    // console.log("YouTube analysis complete");
     return res.status(200).json(youtube_data);
 
   } catch (error: any) {
-    console.error("Error analyzing YouTube data:", error);
+    // console.error("Error analyzing YouTube data:", error);
     return res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };

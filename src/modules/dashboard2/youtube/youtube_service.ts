@@ -1,12 +1,12 @@
 import { google, youtube_v3 } from "googleapis";
 
 export async function analyzeYouTubeDataByWebsiteId(youtube_handle: any) {
-  console.log("youtubeUrl", youtube_handle);
+  // console.log("youtubeUrl", youtube_handle);
 
   const channelId = await resolveYouTubeChannelId(youtube_handle);
   if (!channelId) return { status: "invalid-channel" };
 
-  console.log("Resolved Channel ID:", channelId);
+  // console.log("Resolved Channel ID:", channelId);
 
   const videoIdsAndDates = await fetchLast30Videos(channelId);
   const youtubeData = await fetchYouTubeChannelData(channelId);

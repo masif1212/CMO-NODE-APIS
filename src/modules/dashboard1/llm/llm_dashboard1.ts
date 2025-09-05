@@ -14,7 +14,7 @@ export const generate_d1_recommendation= async (website_id: string, user_id: str
   const report = await prisma.report.findUnique({
         where: { report_id }
       })
-      console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
+      // console.log("report?.traffic_analysis_id",report?.traffic_analysis_id)
   try {
    
   const [scraped, analysis, traffic] = await Promise.all([
@@ -90,7 +90,7 @@ try {
     };
 
    
-    console.log("allDataforrecommendation",allDataforrecommendation)
+    // console.log("allDataforrecommendation",allDataforrecommendation)
   
 
     console.log("Generating LLM response (funnel recommendation)…");
@@ -121,7 +121,7 @@ try {
     };
     console.log("Full LLM Response:", JSON.stringify(fullLLMResponse, null, 2));
 
-    console.log("Saving LLM response to database...");
+    // console.log("Saving LLM response to database...");
     await prisma.report.upsert({
   where: { report_id },
   update: {
@@ -262,7 +262,7 @@ try {
       
         
     } catch (parseError) {
-      console.error("Failed to parse funnel LLM response:", parseError);
+      // console.error("Failed to parse funnel LLM response:", parseError);
       funnelRecommendations = { };
     }
 
@@ -271,7 +271,7 @@ try {
     };
     console.log("three_burning_issues:", JSON.stringify(fullLLMResponse, null, 2));
 
-    console.log("Saving LLM response to database...");
+    // console.log("Saving LLM response to database...");
     await prisma.report.upsert({
   where: { report_id },
   update: {
@@ -290,11 +290,11 @@ try {
      
 
 
-    console.log("LLM response saved successfully for report_id:", report_id);
+    // console.log("LLM response saved successfully for report_id:", report_id);
 
     return ({ recommendation_by_mo_dashboard1: fullLLMResponse });
   } catch (err) {
-    console.error("LLM Audit Error:", err);
+    // console.error("LLM Audit Error:", err);
     return ({ error: "Internal Server Error" });
   }
 };
