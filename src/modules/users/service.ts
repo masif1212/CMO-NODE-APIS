@@ -155,5 +155,7 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
   
     matchingRequirement,
     social_media_handlers,
+    website_name,
+    domain
   };
 }

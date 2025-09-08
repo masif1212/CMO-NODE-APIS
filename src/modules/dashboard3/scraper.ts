@@ -158,16 +158,13 @@ export async function scrapeWebsiteCompetitors(url: string) {
       extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
     };
     // const domain = getDomainRoot(url);
-    const hostname = new URL(url).hostname; 
-    console.log("hostname", hostname);
-      // const cleanHost = hostname.replace(/^www\./, "");
-      const cleanDomain = hostname.replace(/^www\./, "");
-      console.log("cleanDomain", cleanDomain);
-      const parts = cleanDomain.split(".");
 
-  // Take the second-to-last part (root), or fallback
-     const website_name = parts.length > 1 ? parts[parts.length - 2] : parts[0];
-     console.log("website_name", website_name);
+
+
+
+
+    const domain = getDomainRoot(url);
+    const website_name = domain.split(".")[0];
     return {
       website_url: url,
       page_title: $("title").text() || null,
@@ -212,7 +209,7 @@ export const fetchBrands = async (user_id: string, website_id: string, report_id
   // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
-let userReq = await prisma.user_requirements.findFirst({
+  let userReq = await prisma.user_requirements.findFirst({
     where: {
       user_id,
       website_id,

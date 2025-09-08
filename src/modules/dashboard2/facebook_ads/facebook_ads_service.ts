@@ -31,8 +31,6 @@ export const getfacebookAds = async (website_url: string) => {
     if (Array.isArray(data)) {
       throw new Error("Unexpected response format");
     }
-
-
     return {
       facebook_ads_data: {
         ...data,

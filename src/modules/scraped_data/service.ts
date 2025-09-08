@@ -4,6 +4,7 @@ import dns from "dns/promises";
 import { PrismaClient } from "@prisma/client";
 import { parseStringPromise } from "xml2js";
 import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
+import { getDomainRoot } from "../../utils/extractDomain"
 
 const prisma = new PrismaClient();
 
@@ -276,20 +277,15 @@ export function getStatusMessage(code: number): string {
 export async function scrapeWebsite(user_id: string, website_id: string, report_id: string): Promise<ScrapeResult> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
-  const domain = new URL(website_url).hostname;
+  // const domain = new URL(website_url).hostname;
 
 
 
-  // const hostname = new URL(website_url).hostname; 
-  // console.log("hostname", domain);
-  // const cleanHost = hostname.replace(/^www\./, "");
-  const cleanDomain = domain.replace(/^www\./, "");
-  // console.log("cleanDomain", cleanDomain);
-  const parts = cleanDomain.split(".");
 
-  // Take the second-to-last part (root), or fallback
-  const website_name = parts.length > 1 ? parts[parts.length - 2] : parts[0];
-  // console.log("website_name", website_name);
+  const domain = getDomainRoot(website_url);
+  const website_name = domain.split(".")[0];
+  // const website_name = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+  console.log("website_name", website_name);
 
 
   let statusCode: number = 0;
