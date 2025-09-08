@@ -19,7 +19,6 @@ function extractCompanyName(url: string): string {
 
 export const getfacebookAds = async (website_url: string) => {
   const name = extractCompanyName(website_url);
-  console.log("name for facebook add", name);
   const url = `${FACEBOOK_ADS_URL}?companyName=${name}&media_type=ALL&trim=true`;
   // console.log("facebook ads url", url);
 
@@ -32,8 +31,6 @@ export const getfacebookAds = async (website_url: string) => {
     if (Array.isArray(data)) {
       throw new Error("Unexpected response format");
     }
-
-
     return {
       facebook_ads_data: {
         ...data,

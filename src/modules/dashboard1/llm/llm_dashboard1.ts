@@ -395,7 +395,6 @@ try {
         { role: "user", content: JSON.stringify(allDataforstrength) },
       ],
     });
-    // console.log("Raw LLM Response:", llmResponse.choices[0].message.content);
     let llmContent;
     try {
       llmContent = llmResponse.choices[0].message.content

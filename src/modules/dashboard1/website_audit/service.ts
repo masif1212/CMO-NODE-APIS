@@ -540,7 +540,6 @@ export async function getPageSpeedData(url: string) {
   } catch (err: any) {
     console.error(`PageSpeed fetch failed for ${url}:`, err.message);
     const mode = process.env.MODE;
-    console.log("");
 
     // Fallback to direct Lighthouse run
     try {

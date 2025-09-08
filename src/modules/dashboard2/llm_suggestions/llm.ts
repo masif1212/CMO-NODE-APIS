@@ -44,7 +44,7 @@ export const generatesocialmediareport = async (
   try {
     let scraped = null;
   
-    // ✅ Only call findUnique if scraped_data_id exists
+    //Only call findUnique if scraped_data_id exists
     if (report?.scraped_data_id) {
       scraped = await prisma.website_scraped_data.findUnique({
         where: { scraped_data_id: report.scraped_data_id },

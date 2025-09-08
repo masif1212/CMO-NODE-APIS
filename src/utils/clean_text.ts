@@ -1,5 +1,4 @@
 export function sanitizeAndStringify(input: any): string {
-  // console.log("🔹 [sanitizeAndStringify] Original Input:", JSON.stringify(input));
 
   function cleanText(text: string): string {
     const cleaned = text
@@ -9,9 +8,7 @@ export function sanitizeAndStringify(input: any): string {
        .replace(/[.,!?;:()'"-]/g, "")
       .trim();
 
-    // if (original !== cleaned) {
-    //   console.log(`✂️ [cleanText] Modifing string...`);
-    // }
+   
 
     return cleaned;
   }

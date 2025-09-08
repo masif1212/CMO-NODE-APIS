@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import OpenAI from 'openai';
 import { sanitizeAndStringify } from '../../utils/clean_text';
 
-
 interface CMORecommendationInput {
   user_id: string;
   website_id: string;

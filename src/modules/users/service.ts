@@ -148,14 +148,14 @@ export async function add_userwebsite(user_id: string, rawUrl: string) {
   });
 
   return {
-    // message: website_exists
-    //   ? "Website already exists for this user."
-    //   : "New website successfully added.",
+   
     website_exists,
     report_id: newReport.report_id,
     website_id,
   
     matchingRequirement,
     social_media_handlers,
+    website_name,
+    domain
   };
 }

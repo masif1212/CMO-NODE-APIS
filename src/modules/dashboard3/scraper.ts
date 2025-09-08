@@ -157,11 +157,14 @@ export async function scrapeWebsiteCompetitors(url: string) {
       CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4)) : 0,
       extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
     };
+    // const domain = getDomainRoot(url);
+
+
+
+
+
     const domain = getDomainRoot(url);
     const website_name = domain.split(".")[0];
-    // console.log("CTR_Loss_Percent",CTR_Loss_Percent)
-    // console.log("homepage_alt_text_coverage", homepage_alt_text_coverage);
-    console.log('linkedin_handle for website  ', url,  extractHandle("linkedin")  )
     return {
       website_url: url,
       page_title: $("title").text() || null,
@@ -206,7 +209,7 @@ export const fetchBrands = async (user_id: string, website_id: string, report_id
   // console.log('Website Entry in geo', websiteEntry);
   const websiteUrl = websiteEntry.website_url;
 
-let userReq = await prisma.user_requirements.findFirst({
+  let userReq = await prisma.user_requirements.findFirst({
     where: {
       user_id,
       website_id,
