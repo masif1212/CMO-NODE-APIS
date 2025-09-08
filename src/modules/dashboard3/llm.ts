@@ -113,18 +113,11 @@ Do NOT include explanations, text, or markdown.
   }
 ]'`
 
-
-
-
-
-
-
-
 // console.log("prompt",prompt)
  
     try {
     const response = await openai.responses.create({
-      model: "gpt-5",
+      model: "gpt-4.1",
       input: prompt,
       tools: [
         {

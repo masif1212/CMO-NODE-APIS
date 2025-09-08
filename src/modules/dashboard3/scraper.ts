@@ -157,11 +157,17 @@ export async function scrapeWebsiteCompetitors(url: string) {
       CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(4)) : 0,
       extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
     };
-    const domain = getDomainRoot(url);
-    const website_name = domain.split(".")[0];
-    // console.log("CTR_Loss_Percent",CTR_Loss_Percent)
-    // console.log("homepage_alt_text_coverage", homepage_alt_text_coverage);
-    console.log('linkedin_handle for website  ', url,  extractHandle("linkedin")  )
+    // const domain = getDomainRoot(url);
+    const hostname = new URL(url).hostname; 
+    console.log("hostname", hostname);
+      // const cleanHost = hostname.replace(/^www\./, "");
+      const cleanDomain = hostname.replace(/^www\./, "");
+      console.log("cleanDomain", cleanDomain);
+      const parts = cleanDomain.split(".");
+
+  // Take the second-to-last part (root), or fallback
+     const website_name = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+     console.log("website_name", website_name);
     return {
       website_url: url,
       page_title: $("title").text() || null,
