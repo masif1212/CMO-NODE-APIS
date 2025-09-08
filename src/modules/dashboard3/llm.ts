@@ -118,6 +118,7 @@ Do NOT include explanations, text, or markdown.
     try {
     const response = await openai.responses.create({
       model: "gpt-4.1",
+      
       input: prompt,
       tools: [
         {

@@ -203,7 +203,7 @@ export const getFacebookProfileFromScrapedData = async (facebook_handle: string)
 };
 
 const extractFacebookProfileInfo = (data: any) => {
-  console.log("data",data)
+  // console.log("data",data)
   try {
     const profileInfo: Record<string, any> = {
       name: data.name || "N/A",

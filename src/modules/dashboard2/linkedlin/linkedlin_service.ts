@@ -102,7 +102,7 @@ export const getlinkedinProfileFromScrapedData = async (linkedin_handle: string)
 
     // --- Use final URL for scraper API ---
     const url = `${linkedlin_PROFILE_URL}?url=${encodeURIComponent(finalUrl)}`;
-    console.log("LinkedIn company API URL:", finalUrl);
+    // console.log("LinkedIn company API URL:", finalUrl);
 
     // --- Call Scraper ---
     const response = await axios.get(url, { headers });
