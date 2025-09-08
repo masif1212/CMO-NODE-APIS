@@ -626,17 +626,28 @@ export async function scrapeWebsite(
     });
   }
 
-   prisma.user_requirements.update({
-      where: { website_id },
-      data:{
+    await prisma.user_requirements.upsert({
+      where: {
+        website_id,
+      },
+      update: {
         facebook_handle: facebook,
         instagram_handle: instagram,
-        linkedin_handle: linkedin,
-        twitter_handle: twitter,
         youtube_handle: youtube,
         tiktok_handle: tiktok,
-      }
-
+        twitter_handle: twitter,
+        linkedin_handle: linkedin,
+      },
+      create: {
+        user_id,
+        website_id,
+        facebook_handle: facebook,
+        instagram_handle: instagram,
+        youtube_handle: youtube,
+        tiktok_handle: tiktok,
+        twitter_handle: twitter,
+        linkedin_handle: linkedin,
+      },
     });
   const record = await upsertWebsiteScrapedDataWithRetry();
   
