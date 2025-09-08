@@ -5,7 +5,7 @@ import { validateComprehensiveSchema, SchemaOutput } from "../scraped_data/schem
 import { OpenAI } from "openai";
 import dotenv from "dotenv";
 import { getRobotsTxtAndSitemaps, evaluateHeadingHierarchy, isLogoUrlValid, parseSitemap, isCrawlableByLLMBots } from "../scraped_data/service";
-import { getDomainRoot } from "../../utils/extractDomain";
+import { getDomainRoot ,fetchSocialLinksFromDom} from "../../utils/extractDomain";
 
 dotenv.config();
 
@@ -18,13 +18,7 @@ export async function scrapeWebsiteCompetitors(url: string) {
     const html = res.data;
     const $ = cheerio.load(html);
     const headingAnalysis = evaluateHeadingHierarchy($);
-    const extractHandle = (platform: string) => $(`a[href*="${platform}.com"]`).attr("href") || null;
-
-    const otherLinks = $("a")
-      .map((_, el) => $(el).attr("href"))
-      .get()
-      .filter((href) => href && !href.includes(url))
-      .filter((href, idx, self) => self.indexOf(href) === idx);
+   
 
     const imgTags = $("img");
     const totalImages = imgTags.length;
@@ -124,12 +118,6 @@ export async function scrapeWebsiteCompetitors(url: string) {
 
             if (isMissing) {
               affectedPagesCount++;
-              // console.log("Missing metadata on:", pageUrl, {
-              //   title,
-              //   meta_description,
-              //   og_title,
-              //   meta_keywords,
-              // });
             }
 
             return { url: pageUrl, title, meta_description, og_title, meta_keywords, h1Text };
@@ -160,6 +148,38 @@ export async function scrapeWebsiteCompetitors(url: string) {
     // const domain = getDomainRoot(url);
 
 
+       /** --- Social Media Links --- */
+  let twitter: any, facebook: any, instagram: any, linkedin: any, youtube: any, tiktok: any;
+  const otherLinks: string[] = [];
+
+  $("a").each((_, el) => {
+    const href = $(el).attr("href");
+    if (!href) return;
+    const link = href.toLowerCase();
+
+    if (link.includes("twitter.com")) twitter ||= href;
+    else if (link.includes("facebook.com")) facebook ||= href;
+    else if (link.includes("instagram.com")) instagram ||= href;
+    else if (link.includes("linkedin.com")) linkedin ||= href;
+    else if (link.includes("youtube.com")) youtube ||= href;
+    else if (link.includes("tiktok.com")) tiktok ||= href;
+    else otherLinks.push(href);
+  });
+
+  // 🔑 Fallback: use Puppeteer DOM evaluation if no social links were found
+  if (!twitter && !facebook && !instagram && !linkedin && !youtube && !tiktok) {
+    try {
+      const socialLinks = await fetchSocialLinksFromDom(url);
+      twitter = socialLinks.twitter || twitter;
+      facebook = socialLinks.facebook || facebook;
+      instagram = socialLinks.instagram || instagram;
+      linkedin = socialLinks.linkedin || linkedin;
+      youtube = socialLinks.youtube || youtube;
+      tiktok = socialLinks.tiktok || tiktok;
+    } catch (err) {
+      console.warn("Fallback social media extraction failed:", (err as Error).message);
+    }
+  }
 
 
 
@@ -176,14 +196,14 @@ export async function scrapeWebsiteCompetitors(url: string) {
       og_title: $('meta[property="og:title"]').attr("content") || null,
       og_description: $('meta[property="og:description"]').attr("content") || null,
       og_image: $('meta[property="og:image"]').attr("content") || null,
-      twitter_handle: extractHandle("twitter") || null,
-      facebook_handle: extractHandle("facebook") || null,
-      instagram_handle: extractHandle("instagram") || null,
-      linkedin_handle: extractHandle("linkedin") || null,
-      youtube_handle: extractHandle("youtube") || null,
+      twitter_handle: twitter || null,
+      facebook_handle: facebook|| null,
+      instagram_handle: instagram || null,
+      linkedin_handle: linkedin|| null,
+      youtube_handle: youtube|| null,
       homepage_alt_text_coverage: homepage_alt_text_coverage,
       isCrawlable: isCrawlable,
-      tiktok_handle: extractHandle("tiktok") || null,
+      tiktok_handle: tiktok || null,
       headingAnalysis: headingAnalysis,
       other_links: otherLinks,
       schema_analysis: schemaAnalysisData || null,
