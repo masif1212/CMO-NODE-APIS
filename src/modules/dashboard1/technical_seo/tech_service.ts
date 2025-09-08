@@ -5,7 +5,7 @@ import { URL } from "url";
 import { BrokenLinkResult } from "../../../types/express";
     const mode = process.env.MODE;
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient(); 
 
 const TIMEOUT_MS = 30000;
 
@@ -131,6 +131,8 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
 
   return website.website_url;
 }
+
+
 export async function checkBrokenLinks(user_id: string, website_id: string, website_url: string, maxDepth = 0): Promise<BrokenLinkResult[]> {
   // Inside checkBrokenLinks function
   console.log("Puppeteer is launching...");
