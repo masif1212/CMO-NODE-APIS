@@ -6,6 +6,9 @@ const brandFields = ["dashboard1_Freedata", "dashboard_paiddata", "strengthandis
 const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
 const competitorFields = ["dashboard3_data", "recommendationbymo3"];
 
+
+
+
 const renameFields: Record<string, string> = {
   dashboard1_Freedata: "website_audit",
   dashboard_paiddata: "seo_audit",
@@ -24,6 +27,211 @@ type PaymentDetail = {
   type?: string;
   price?: string;
 };
+// export const getUserDashboard = async (req: Request, res: Response) => {
+//   const userId = req.query.user_id;
+//   if (typeof userId !== "string") {
+//     return res.status(400).json({ error: "Invalid or missing user_id" });
+//   }
+
+//   try {
+//     const brandAudit: any[] = [];
+//     const socialMedia: any[] = [];
+//     const competitorsAnalysis: any[] = [];
+
+//     const userWebsites = await prisma.user_websites.findMany({
+//       where: { user_id: userId },
+//       select: {
+//         website_url: true,
+//         website_id: true,
+//         website_name: true,
+//         report: {
+//           orderBy: { created_at: "desc" },
+//           select: {
+//             report_id: true,
+//             created_at: true,
+//             updated_at: true,
+//             dashboard1_Freedata: true,
+//             dashboard_paiddata: true,
+//             strengthandissues_d1: true,
+//             recommendationbymo1: true,
+//             traffic_analysis_id: true,
+//             dashboard2_data: true,
+//             strengthandissues_d2: true,
+//             recommendationbymo2: true,
+//             dashboard3_data: true,
+//             recommendationbymo3: true,
+//             cmorecommendation: true,
+//             payments: {
+//               select: { amount: true, detail: true },
+//             },
+//           },
+//         },
+//       },
+//     });
+
+//     // ✅ Get CMO recommendations
+//     const recommendations = await prisma.cmo_recommendation.findMany({
+//       where: { user_id: userId },
+//       orderBy: { created_at: "desc" },
+//     });
+
+//     // const formattedRecommendations = recommendations.map((rec) => {
+//     //   let websiteMeta = null;
+//     //   let firstReportId: string | null = null;
+//     //   let firstReportPayment = 0;
+//     //   let firstReportColumns: any[] = [];
+
+//     //   for (const site of userWebsites) {
+//     //     const foundReport = site.report.find((r) =>
+//     //       (rec.report_ids as string[]).includes(r.report_id)
+//     //     );
+
+//     //     if (foundReport) {
+//     //       websiteMeta = {
+//     //         website_id: site.website_id,
+//     //         website_url: site.website_url,
+//     //         website_name: site.website_name,
+//     //       };
+//     //       firstReportId = foundReport.report_id;
+
+//     //       // ✅ grab total payment for the first report only
+//     //       firstReportPayment = (foundReport.payments ?? []).reduce(
+//     //         (sum, p) => sum + (p.amount ?? 0),
+//     //         0
+//     //       );
+
+//     //       // ✅ also collect columns (details)
+//     //       firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
+//     //         Array.isArray(p.detail) ? p.detail : [p.detail]
+//     //       );
+
+//     //       break;
+//     //     }
+//     //   }
+
+//     //   return {
+//     //     report_id: firstReportId,
+//     //     ...websiteMeta,
+//     //     created_at: rec.created_at,
+//     //     updated_at: rec.updated_at,
+//     //     report_ids: rec.report_ids,
+//     //     id: rec.id,
+//     //     total_payment: firstReportPayment, // 💰 total of first report
+//     //     columns: firstReportColumns,       // 📊 details of first report
+//     //   };
+//     // });
+
+//     const formattedRecommendations = recommendations.map((rec) => {
+//       let websiteMeta = null;
+//       let firstReportId: string | null = null;
+//       let firstReportPayment = 0;
+//       let firstReportColumns: any[] = [];
+
+//       for (const site of userWebsites) {
+//         const foundReport = site.report.find((r) => (rec.report_ids as string[]).includes(r.report_id));
+
+//         if (foundReport) {
+//           websiteMeta = {
+//             website_id: site.website_id,
+//             website_url: site.website_url,
+//             website_name: site.website_name,
+//           };
+//           firstReportId = foundReport.report_id;
+
+//           // ✅ grab total payment for the first report only
+//           firstReportPayment = (foundReport.payments ?? []).reduce((sum, p) => sum + (p.amount ?? 0), 0);
+
+//           firstReportColumns = (foundReport.payments ?? []).flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])).filter((d): d is PaymentDetail => typeof d === "object" && d !== null && "type" in d && (d as any).type === "CMO recommendation");
+
+//           break; // stop after first match
+//         }
+//       }
+
+//       return {
+//         report_id: firstReportId,
+//         ...websiteMeta,
+//         created_at: rec.created_at,
+//         updated_at: rec.updated_at,
+//         report_ids: rec.report_ids,
+//         id: rec.id,
+//         total_payment: firstReportPayment,
+//         columns: firstReportColumns, // 👈 only CMO recommendation objects
+//       };
+//     });
+
+//     let totalSpend = 0;
+
+//     for (const site of userWebsites) {
+//       for (const report of site.report) {
+//         const reportPayments = report.payments ?? [];
+//         const reportTotal = reportPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+//         totalSpend += reportTotal;
+
+//         const base = {
+//           report_id: report.report_id,
+//           website_url: site.website_url,
+//           website_name: site.website_name,
+//           created_at: report.created_at,
+//           updated_at: report.updated_at,
+//           total_payment: reportTotal,
+//           columns: reportPayments.flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])),
+//         };
+
+//         const extractFields = (fields: string[]) => {
+//           const result: Record<string, number> = {};
+//           for (const key of fields) {
+//             const value = report[key as keyof typeof report];
+//             if (value != null) {
+//               const renamed = renameFields[key] ?? key;
+//               result[renamed] = 1;
+//             }
+//           }
+//           return result;
+//         };
+
+//         const brand = extractFields(brandFields);
+//         const social = extractFields(socialFields);
+//         const competitor = extractFields(competitorFields);
+
+//         if (Object.keys(brand).length) brandAudit.push({ ...base });
+//         if (Object.keys(social).length) socialMedia.push({ ...base });
+//         if (Object.keys(competitor).length) competitorsAnalysis.push({ ...base });
+//       }
+//     }
+
+//     const dashboardCounts = {
+//       total_brand_audit: brandAudit.length,
+//       total_social_media: socialMedia.length,
+//       total_competitor_analysis: competitorsAnalysis.length,
+//       total_cmo_recommendations: formattedRecommendations.length,
+//       total_spend: totalSpend,
+//     };
+
+//     res.json({
+//       ...dashboardCounts,
+//       data: {
+//         brand_audit: brandAudit,
+//         social_media: socialMedia,
+//         competitors_analysis: competitorsAnalysis,
+//         cmo_recommendations: formattedRecommendations,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("❌ Error:", error);
+//     res.status(500).json({ error: "Something went wrong on server side" });
+//   }
+// };
+
+
+
+
+
+
+
+
+// optional: define stricter shape for CMO details
+
+
 export const getUserDashboard = async (req: Request, res: Response) => {
   const userId = req.query.user_id;
   if (typeof userId !== "string") {
@@ -35,6 +243,7 @@ export const getUserDashboard = async (req: Request, res: Response) => {
     const socialMedia: any[] = [];
     const competitorsAnalysis: any[] = [];
 
+    // fetch user websites + reports + payments
     const userWebsites = await prisma.user_websites.findMany({
       where: { user_id: userId },
       select: {
@@ -58,65 +267,17 @@ export const getUserDashboard = async (req: Request, res: Response) => {
             dashboard3_data: true,
             recommendationbymo3: true,
             cmorecommendation: true,
-            payments: {
-              select: { amount: true, detail: true },
-            },
+            payments: { select: { amount: true, detail: true } },
           },
         },
       },
     });
 
-    // ✅ Get CMO recommendations
+    // fetch latest CMO recommendations
     const recommendations = await prisma.cmo_recommendation.findMany({
       where: { user_id: userId },
       orderBy: { created_at: "desc" },
     });
-
-    // const formattedRecommendations = recommendations.map((rec) => {
-    //   let websiteMeta = null;
-    //   let firstReportId: string | null = null;
-    //   let firstReportPayment = 0;
-    //   let firstReportColumns: any[] = [];
-
-    //   for (const site of userWebsites) {
-    //     const foundReport = site.report.find((r) =>
-    //       (rec.report_ids as string[]).includes(r.report_id)
-    //     );
-
-    //     if (foundReport) {
-    //       websiteMeta = {
-    //         website_id: site.website_id,
-    //         website_url: site.website_url,
-    //         website_name: site.website_name,
-    //       };
-    //       firstReportId = foundReport.report_id;
-
-    //       // ✅ grab total payment for the first report only
-    //       firstReportPayment = (foundReport.payments ?? []).reduce(
-    //         (sum, p) => sum + (p.amount ?? 0),
-    //         0
-    //       );
-
-    //       // ✅ also collect columns (details)
-    //       firstReportColumns = (foundReport.payments ?? []).flatMap((p) =>
-    //         Array.isArray(p.detail) ? p.detail : [p.detail]
-    //       );
-
-    //       break;
-    //     }
-    //   }
-
-    //   return {
-    //     report_id: firstReportId,
-    //     ...websiteMeta,
-    //     created_at: rec.created_at,
-    //     updated_at: rec.updated_at,
-    //     report_ids: rec.report_ids,
-    //     id: rec.id,
-    //     total_payment: firstReportPayment, // 💰 total of first report
-    //     columns: firstReportColumns,       // 📊 details of first report
-    //   };
-    // });
 
     const formattedRecommendations = recommendations.map((rec) => {
       let websiteMeta = null;
@@ -125,7 +286,9 @@ export const getUserDashboard = async (req: Request, res: Response) => {
       let firstReportColumns: any[] = [];
 
       for (const site of userWebsites) {
-        const foundReport = site.report.find((r) => (rec.report_ids as string[]).includes(r.report_id));
+        const foundReport = site.report.find((r) =>
+          (rec.report_ids as string[]).includes(r.report_id)
+        );
 
         if (foundReport) {
           websiteMeta = {
@@ -135,10 +298,21 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           };
           firstReportId = foundReport.report_id;
 
-          // ✅ grab total payment for the first report only
-          firstReportPayment = (foundReport.payments ?? []).reduce((sum, p) => sum + (p.amount ?? 0), 0);
+          firstReportPayment = (foundReport.payments ?? []).reduce(
+            (sum, p) => sum + (p.amount ?? 0),
+            0
+          );
 
-          firstReportColumns = (foundReport.payments ?? []).flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])).filter((d): d is PaymentDetail => typeof d === "object" && d !== null && "type" in d && (d as any).type === "CMO recommendation");
+          // only keep CMO recommendation details
+          firstReportColumns = (foundReport.payments ?? [])
+            .flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail]))
+            .filter(
+              (d): d is PaymentDetail =>
+                typeof d === "object" &&
+                d !== null &&
+                "type" in d &&
+                (d as any).type === "CMO recommendation"
+            );
 
           break; // stop after first match
         }
@@ -152,16 +326,20 @@ export const getUserDashboard = async (req: Request, res: Response) => {
         report_ids: rec.report_ids,
         id: rec.id,
         total_payment: firstReportPayment,
-        columns: firstReportColumns, // 👈 only CMO recommendation objects
+        columns: firstReportColumns,
       };
     });
 
+    // compute total spend + categorize reports
     let totalSpend = 0;
 
     for (const site of userWebsites) {
       for (const report of site.report) {
         const reportPayments = report.payments ?? [];
-        const reportTotal = reportPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+        const reportTotal = reportPayments.reduce(
+          (sum, p) => sum + (p.amount ?? 0),
+          0
+        );
         totalSpend += reportTotal;
 
         const base = {
@@ -171,7 +349,9 @@ export const getUserDashboard = async (req: Request, res: Response) => {
           created_at: report.created_at,
           updated_at: report.updated_at,
           total_payment: reportTotal,
-          columns: reportPayments.flatMap((p) => (Array.isArray(p.detail) ? p.detail : [p.detail])),
+          columns: reportPayments.flatMap((p) =>
+            Array.isArray(p.detail) ? p.detail : [p.detail]
+          ),
         };
 
         const extractFields = (fields: string[]) => {
@@ -219,6 +399,8 @@ export const getUserDashboard = async (req: Request, res: Response) => {
   }
 };
 
+
+
 export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) => {
   const reportId = req.query.report_id as string;
 
@@ -264,6 +446,7 @@ export const getWebsiteDetailedAnalysis = async (req: Request, res: Response) =>
     res.status(500).json({ error: "Internal server error" });
   }
 };
+ 
 
 export const getaudit = async (req: Request, res: Response) => {
   const website_id = req.query.website_id;
@@ -273,10 +456,7 @@ export const getaudit = async (req: Request, res: Response) => {
   }
 
   try {
-    const brandFields = ["dashboard1_Freedata", "dashboard_paiddata", "strengthandissues_d1", "recommendationbymo1", "traffic_analysis_id"];
-    const socialFields = ["dashboard2_data", "strengthandissues_d2", "recommendationbymo2"];
-    const competitorFields = ["dashboard3_data", "recommendationbymo3"];
-
+   
     const userWebsites = await prisma.user_websites.findMany({
       where: { website_id: website_id },
       select: {
@@ -372,3 +552,8 @@ export const getaudit = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+
+
+

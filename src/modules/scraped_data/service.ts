@@ -4,7 +4,9 @@ import dns from "dns/promises";
 import { PrismaClient } from "@prisma/client";
 import { parseStringPromise } from "xml2js";
 import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
-import { getDomainRoot } from "../../utils/extractDomain"
+import { getDomainRoot,fetchSocialLinksFromDom } from "../../utils/extractDomain"
+import puppeteer from "puppeteer";
+// const mode = process.env.MODE;
 
 const prisma = new PrismaClient();
 
@@ -219,110 +221,200 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
   return website.website_url;
 }
 
+// export function getStatusMessage(code: number): string {
+//   const messages: Record<number, string> = {
+//     200: "Webiste is up",
+//     201: "Webiste is up",
+//     202: "Webiste is up",
+//     400: "Bad Request",
+//     401: "Unauthorized - Authentication required",
+//     402: "Payment Required",
+//     405: "Method Not Allowed",
+//     406: "Not Acceptable",
+//     407: "Proxy Authentication Required",
+//     408: "Request Timeout",
+//     409: "Conflict",
+//     410: "Gone",
+//     411: "Length Required",
+//     412: "Precondition Failed",
+//     413: "Payload Too Large",
+//     414: "URI Too Long",
+//     415: "Unsupported Media Type",
+//     416: "Range Not Satisfiable",
+//     417: "Expectation Failed",
+//     418: "I'm a teapot 🍵",
+//     421: "Misdirected Request",
+//     422: "Unprocessable Entity",
+//     423: "Locked",
+//     424: "Failed Dependency",
+//     425: "Too Early",
+//     426: "Upgrade Required",
+//     428: "Precondition Required",
+//     431: "Request Header Fields Too Large",
+//     451: "Unavailable For Legal Reasons",
+//     403: "Access denied",
+//     404: "Page not found",
+//     429: "Scraping blocked",
+//     500: "Internal Server Error",
+//     501: "Not Implemented",
+//     502: "Bad Gateway",
+//     503: "Service Unavailable",
+//     504: "Gateway Timeout",
+//     505: "HTTP Version Not Supported",
+//     506: "Variant Also Negotiates",
+//     507: "Insufficient Storage",
+//     508: "Loop Detected",
+//     510: "Not Extended",
+//     511: "Network Authentication Required",
+//     521: "Web server is down",
+//     522: "Webside is down",
+//     523: "Origin is unreachable",
+//     524: "A timeout occurred",
+//     525: "SSL handshake failed",
+//     526: "Invalid SSL certificate",
+//   };
+//   if (messages[code]) return messages[code];
+//   if (code >= 500 && code <= 599) return `Server error (${code})`;
+//   if (code >= 400 && code <= 499) return `Client error (${code})`;
+//   return `status code (${code})`;
+// }
+
+
 export function getStatusMessage(code: number): string {
   const messages: Record<number, string> = {
-    400: "Bad Request",
-    401: "Unauthorized - Authentication required",
-    402: "Payment Required",
-    405: "Method Not Allowed",
-    406: "Not Acceptable",
-    407: "Proxy Authentication Required",
-    408: "Request Timeout",
-    409: "Conflict",
-    410: "Gone",
-    411: "Length Required",
-    412: "Precondition Failed",
-    413: "Payload Too Large",
-    414: "URI Too Long",
-    415: "Unsupported Media Type",
-    416: "Range Not Satisfiable",
-    417: "Expectation Failed",
-    418: "I'm a teapot 🍵",
-    421: "Misdirected Request",
-    422: "Unprocessable Entity",
-    423: "Locked",
-    424: "Failed Dependency",
-    425: "Too Early",
-    426: "Upgrade Required",
-    428: "Precondition Required",
-    431: "Request Header Fields Too Large",
-    451: "Unavailable For Legal Reasons",
-    403: "Access denied",
-    404: "Page not found",
-    429: "Scraping blocked",
-    500: "Internal Server Error",
-    501: "Not Implemented",
-    502: "Bad Gateway",
-    503: "Service Unavailable",
-    504: "Gateway Timeout",
-    505: "HTTP Version Not Supported",
-    506: "Variant Also Negotiates",
-    507: "Insufficient Storage",
-    508: "Loop Detected",
-    510: "Not Extended",
-    511: "Network Authentication Required",
-    521: "Web server is down",
-    522: "Webside is down",
-    523: "Origin is unreachable",
-    524: "A timeout occurred",
-    525: "SSL handshake failed",
-    526: "Invalid SSL certificate",
+    // ✅ Success
+    200: "Website is working normally",
+    201: "Website is working — something was created successfully",
+    202: "Website accepted the request — still processing",
+    204: "Website is working but returned no content",
+
+    // 🔄 Redirects
+    301: "Page has moved permanently — try the new link",
+    302: "Page has moved temporarily — try again later",
+    304: "Page hasn’t changed — showing saved version",
+
+    // ❌ Client Errors (your side)
+    400: "Bad request — the link or request is incorrect",
+    401: "Unauthorized — login or access key required",
+    402: "Payment required — access is restricted",
+    403: "Access denied — you don’t have permission",
+    404: "Page not found — the link is broken or removed",
+    408: "Request timed out — the website took too long to respond",
+    409: "Conflict — resource already exists or is in use",
+    410: "Page has been removed permanently",
+    418: "I’m a teapot 🍵 — just a fun error code",
+    429: "Too many requests from your side — please slow down",
+
+    // 💥 Server Errors (website side)
+    500: "Server error — something went wrong on the website",
+    502: "Bad gateway — server got an invalid response",
+    503: "Service unavailable — website is overloaded or down",
+    504: "Gateway timeout — website didn’t respond in time",
+
+    // 🌐 Cloudflare & SSL
+    521: "Website’s server is down",
+    522: "Connection timed out — website is unreachable",
+    523: "Website’s server can’t be reached",
+    524: "Website took too long to respond",
+    525: "Secure connection failed (SSL handshake error)",
+    526: "Invalid security certificate — website not trusted",
   };
+
   if (messages[code]) return messages[code];
-  if (code >= 500 && code <= 599) return `Server error (${code})`;
-  if (code >= 400 && code <= 499) return `Client error (${code})`;
-  return `Unhandled status code (${code})`;
+  if (code >= 500 && code <= 599) return `Website error (${code}) — problem on the website’s side`;
+  if (code >= 400 && code <= 499) return `Request error (${code}) — problem with the link or access`;
+  if (code >= 300 && code <= 399) return `Redirect (${code}) — page has moved`;
+  if (code >= 200 && code <= 299) return `Success (${code}) — website is working`;
+  return `Unknown status code (${code})`;
 }
 
-export async function scrapeWebsite(user_id: string, website_id: string, report_id: string): Promise<ScrapeResult> {
+
+/** ✅ Always return { html, status } */
+async function fetchFullHtml(url: string): Promise<{ html: string; status: number }> {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  let status = 0;
+  try {
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout:80000 });
+    status = response?.status() || 0;
+
+    const html = await page.content();
+    return { html: html || "", status };
+  } catch {
+    return { html: "", status: 500 };
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function scrapeWebsite(
+  user_id: string,
+  website_id: string,
+  report_id: string
+): Promise<any> {
   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
-  // const domain = new URL(website_url).hostname;
-
-
-
-
   const domain = getDomainRoot(website_url);
   const website_name = domain.split(".")[0];
-  // const website_name = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+
   console.log("website_name", website_name);
 
-
-  let statusCode: number = 0;
-  let ipAddress: string = "N/A";
-  let html: string = "";
-  let message: string = "Unknown error";
+  let statusCode = 0;
+  let ipAddress = "N/A";
+  let html = "";
+  let message = "Unknown error";
 
   try {
-    const response = await axios.get(website_url);
-    // console.log("Response received from website:", response.status);
+    // Puppeteer fetch
+    const { html: fetchedHtml, status: fetchedStatus } = await fetchFullHtml(website_url);
 
-    html = response.data;
-    statusCode = response.status;
-    message = statusCode >= 200 && statusCode < 400 ? "Website is up" : getStatusMessage(statusCode);
-    // console.log("statusCode:", statusCode, "message:", message); // Debug log
-
-    const dnsResult = await dns.lookup(domain);
-    ipAddress = dnsResult.address;
-  } catch (error: any) {
-    statusCode = error?.response?.status || 500;
-    const raw = error?.response?.data || "";
-    html = typeof raw === "string" ? raw : "";
+    html = typeof fetchedHtml === "string" ? fetchedHtml : "";
+    statusCode = fetchedStatus || 200;
     message = getStatusMessage(statusCode);
-    // console.log("Error case - statusCode:", statusCode, "message:", message); // Debug log
+
+    // DNS lookup
+    try {
+      const dnsResult = await dns.lookup(domain);
+      ipAddress = dnsResult.address;
+    } catch {
+      ipAddress = "N/A";
+    }
+  } catch (error: any) {
+    statusCode = error?.statusCode || error?.response?.status || 500;
+    html = "";
+    message = getStatusMessage(statusCode);
+
+    console.error("Error fetching website:", {
+      url: website_url,
+      statusCode,
+      message,
+      error: error.message || error.toString(),
+    });
   }
 
   const responseTimeMs = Date.now() - start;
-  const $ = cheerio.load(html);
+
+  // 🔧 Always give cheerio a safe string
+  if (typeof html !== "string") html = "";
+  const $ = cheerio.load(html || "");
+
+  /** ============ ANALYSIS SECTION ============ */
+
   const headingAnalysis = evaluateHeadingHierarchy($);
 
-  function extractTitleTags(): object {
+  function extractTitleTags() {
     const titles = $("title")
       .map((_, el) => $(el).text().trim())
       .get()
       .filter(Boolean);
+
     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
-    const message = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
+    const message =
+      titles.length > 1
+        ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+        : titles[0] || "not found";
+
     return { status, titles, message };
   }
 
@@ -335,6 +427,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
     og_image: $('meta[property="og:image"]').attr("content") || "not found",
   };
 
+    /** --- Social Media Links --- */
   let twitter: any, facebook: any, instagram: any, linkedin: any, youtube: any, tiktok: any;
   const otherLinks: string[] = [];
 
@@ -342,6 +435,7 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
     const href = $(el).attr("href");
     if (!href) return;
     const link = href.toLowerCase();
+
     if (link.includes("twitter.com")) twitter ||= href;
     else if (link.includes("facebook.com")) facebook ||= href;
     else if (link.includes("instagram.com")) instagram ||= href;
@@ -351,19 +445,53 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
     else otherLinks.push(href);
   });
 
+  // 🔑 Fallback: use Puppeteer DOM evaluation if no social links were found
+  if (!twitter && !facebook && !instagram && !linkedin && !youtube && !tiktok) {
+    try {
+      const socialLinks = await fetchSocialLinksFromDom(website_url);
+      twitter = socialLinks.twitter || twitter;
+      facebook = socialLinks.facebook || facebook;
+      instagram = socialLinks.instagram || instagram;
+      linkedin = socialLinks.linkedin || linkedin;
+      youtube = socialLinks.youtube || youtube;
+      tiktok = socialLinks.tiktok || tiktok;
+    } catch (err) {
+      console.warn("Fallback social media extraction failed:", (err as Error).message);
+    }
+  }
+
+
+  /** --- Image Alt Coverage --- */
   const totalImages = $("img").length;
   const imagesWithAlt = $("img").filter((_, el) => !!$(el).attr("alt")?.trim()).length;
-  const homepage_alt_text_coverage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
+  const homepage_alt_text_coverage =
+    totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 0;
 
+  /** --- Sitemap --- */
   const sitemapUrls = await getRobotsTxtAndSitemaps(website_url);
   const sitemapLinks = (await Promise.all(sitemapUrls.map(parseSitemap))).flat();
-  const allSitemapUrls = [...new Set<string>([website_url, ...sitemapLinks.map((u) => u.trim())])];
+  const allSitemapUrls = [...new Set([website_url, ...sitemapLinks.map((u) => u.trim())])];
 
+  /** --- Key Pages Selection --- */
   let selectedKeyPages: string[] = [];
-
   if (allSitemapUrls.length > 10) {
     const homepage = website_url;
-    const importantKeywords = ["about", "services", "service", "contact", "pricing", "plans", "blog", "insights", "team", "company", "features", "why", "how-it-works", "careers"];
+    const importantKeywords = [
+      "about",
+      "services",
+      "service",
+      "contact",
+      "pricing",
+      "plans",
+      "blog",
+      "insights",
+      "team",
+      "company",
+      "features",
+      "why",
+      "how-it-works",
+      "careers",
+    ];
 
     const keywordMatched = allSitemapUrls.filter((link) => {
       try {
@@ -384,11 +512,14 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
       }
     });
 
-    selectedKeyPages = [homepage, ...keywordMatched, ...shallowPages].filter((v, i, self) => self.indexOf(v) === i).slice(0, 10);
+    selectedKeyPages = [homepage, ...keywordMatched, ...shallowPages]
+      .filter((v, i, self) => self.indexOf(v) === i)
+      .slice(0, 10);
   } else {
     selectedKeyPages = allSitemapUrls;
   }
 
+  /** --- Key Page Metadata Analysis --- */
   let affectedPagesCount = 0;
   const keyPages = await Promise.all(
     selectedKeyPages.map(async (pageUrl) => {
@@ -400,19 +531,25 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
             .map((_, el) => $$(el).text().trim())
             .get()
             .filter(Boolean);
-          const title = titles.length > 1 ? `${titles.join(" || ")} - needs attention - multiple title tags found` : titles[0] || "not found";
 
-          const meta_description = $$('meta[name="description"]').attr("content")?.trim() || "not found";
+          const title =
+            titles.length > 1
+              ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+              : titles[0] || "not found";
+
+          const meta_description =
+            $$('meta[name="description"]').attr("content")?.trim() || "not found";
           const og_title = $$('meta[property="og:title"]').attr("content")?.trim() || "not found";
-          const meta_keywords = $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
+          const meta_keywords =
+            $$('meta[name="keywords"]').attr("content")?.trim() || "not found";
 
           const isMultipleTitle = title.includes("needs attention");
-          const isMissing = [title, meta_description, og_title, meta_keywords].some((v) => !v || v.trim().toLowerCase() === "not found") || isMultipleTitle;
+          const isMissing =
+            [title, meta_description, og_title, meta_keywords].some(
+              (v) => !v || v.trim().toLowerCase() === "not found"
+            ) || isMultipleTitle;
 
-          if (isMissing) {
-            affectedPagesCount++;
-            // console.log("Missing metadata on:", pageUrl);
-          }
+          if (isMissing) affectedPagesCount++;
 
           return { url: pageUrl, title, meta_description, og_title, meta_keywords };
         }
@@ -437,57 +574,112 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
   const CTR_Loss_Percent = {
     total_key_pages: totalKeyPages,
     total_affected_pages: affectedPagesCount,
-    CTR_Loss_Percent: totalKeyPages > 0 ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2)) : 0,
+    CTR_Loss_Percent:
+      totalKeyPages > 0
+        ? Number(((affectedPagesCount / totalKeyPages) * 0.37).toFixed(2))
+        : 0,
     extract_message: sitemapLinks.length > 0 ? "Sitemap found" : "Sitemap not found",
   };
 
-  try {
-    const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url);
-    const isCrawlable = await isCrawlableByLLMBots(website_url);
+  /** --- Schema + Logo + Crawlability --- */
+  const schemaAnalysisData: SchemaOutput = await validateComprehensiveSchema(website_url);
+  const isCrawlable = await isCrawlableByLLMBots(website_url);
 
-    let finalLogoUrl = schemaAnalysisData.logo ?? null;
-    if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
-      finalLogoUrl = null;
+  let finalLogoUrl = schemaAnalysisData.logo ?? null;
+  if (finalLogoUrl && !(await isLogoUrlValid(finalLogoUrl))) {
+    finalLogoUrl = null;
+  }
+
+  if (!finalLogoUrl) {
+    const logoSelectors = [
+      'link[rel="icon"]',
+      'link[rel="shortcut icon"]',
+      'link[rel="apple-touch-icon"]',
+      'img[alt*="logo"]',
+      'img[src*="logo"]',
+    ];
+
+    for (const selector of logoSelectors) {
+      const el = $(selector).first();
+      let src = el.attr("href") || el.attr("src");
+      if (src) {
+        if (src.startsWith("//")) src = "https:" + src;
+        else if (src.startsWith("/")) src = new URL(src, website_url).href;
+
+        if (await isLogoUrlValid(src)) {
+          finalLogoUrl = src;
+          break;
+        }
+      }
     }
+  }
 
-    if (!finalLogoUrl) {
-      const logoSelectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]', 'img[alt*="logo"]', 'img[src*="logo"]'];
+  const h1Text = $("h1").first().text().trim() || "Not Found";
 
-      for (const selector of logoSelectors) {
-        const el = $(selector).first();
-        let src = el.attr("href") || el.attr("src");
-        if (src) {
-          if (src.startsWith("//")) src = "https:" + src;
-          else if (src.startsWith("/")) src = new URL(src, website_url).href;
+  /** --- Save to DB (race-safe upsert) --- */
+  async function upsertWebsiteScrapedDataWithRetry(maxRetries = 3) {
+    const payload = {
+      website_url,
+      H1_text: h1Text,
+      website_name,
+      page_title: JSON.stringify(meta.page_title),
+      logo_url: finalLogoUrl,
+      meta_description: meta.meta_description,
+      meta_keywords: meta.meta_keywords,
+      og_title: meta.og_title,
+      og_description: meta.og_description,
+      og_image: meta.og_image,
+      twitter_handle: twitter,
+      facebook_handle: facebook,
+      instagram_handle: instagram,
+      linkedin_handle: linkedin,
+      youtube_handle: youtube,
+      tiktok_handle: tiktok,
+      isCrawlable,
+      headingAnalysis,
+      ctr_loss_percent: CTR_Loss_Percent,
+      sitemap_pages: filteredPages,
+      schema_analysis: JSON.stringify(schemaAnalysisData),
+      homepage_alt_text_coverage,
+      other_links: otherLinks.length > 0 ? otherLinks : "not found",
+      raw_html: html,
+      status_code: statusCode,
+      ip_address: ipAddress,
+      response_time_ms: responseTimeMs,
+      status_message: message,
+    } as const;
 
-          if (await isLogoUrlValid(src)) {
-            finalLogoUrl = src;
-            break;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await prisma.website_scraped_data.update({
+          where: { report_id },
+          data: payload,
+        });
+      } catch (e: any) {
+        if (typeof e === "object" && e?.code === "P2025") {
+          try {
+            return await prisma.website_scraped_data.create({
+              data: { report_id, ...payload },
+            });
+          } catch (e2: any) {
+            if (typeof e2 === "object" && e2?.code === "P2002") {
+              const backoffMs = 25 * attempt * attempt;
+              await new Promise((r) => setTimeout(r, backoffMs));
+              continue;
+            }
+            throw e2;
           }
         }
+        throw e;
       }
     }
-    let h1Text = "Not Found";
+    return prisma.website_scraped_data.update({
+      where: { report_id },
+      data: payload,
+    });
+  }
 
-    if (html) {
-      try {
-        // console.log("parsing HTML...");
-
-        h1Text = $("h1").first().text().trim() || "Not Found";
-        // console.log("H1 Text:", h1Text);
-      } catch (err) {
-        if (err instanceof Error) {
-          console.warn("Cheerio failed to parse HTML:", err.message);
-        } else {
-          console.warn("Cheerio failed to parse HTML:", err);
-        }
-        // Skips setting h1Text if error happens
-      }
-    } else {
-      console.warn("Cheerio.load not available or raw_html missing");
-    }
-
-    await prisma.user_requirements.upsert({
+await prisma.user_requirements.upsert({
       where: {
         website_id,
       },
@@ -510,118 +702,32 @@ export async function scrapeWebsite(user_id: string, website_id: string, report_
         linkedin_handle: linkedin,
       },
     });
-
-    // ---------- RACE-SAFE UPSERT (update-first, create-second, retry on P2002) ----------
-    async function upsertWebsiteScrapedDataWithRetry(maxRetries = 3) {
-      // shared payload (unchanged from your code)
-      const payload = {
-        website_url,
-        H1_text: h1Text,
-        website_name,
-        page_title: JSON.stringify(meta.page_title),
-        logo_url: finalLogoUrl,
-        meta_description: meta.meta_description,
-        meta_keywords: meta.meta_keywords,
-        og_title: meta.og_title,
-        og_description: meta.og_description,
-        og_image: meta.og_image,
-        twitter_handle: twitter,
-        facebook_handle: facebook,
-        instagram_handle: instagram,
-        linkedin_handle: linkedin,
-        youtube_handle: youtube,
-        tiktok_handle: tiktok,
-        isCrawlable,
-        headingAnalysis,
-        ctr_loss_percent: CTR_Loss_Percent,
-        sitemap_pages: filteredPages,
-        schema_analysis: JSON.stringify(schemaAnalysisData),
-        homepage_alt_text_coverage,
-        other_links: otherLinks.length > 0 ? otherLinks : "not found",
-        raw_html: html,
-        status_code: statusCode,
-        ip_address: ipAddress,
-        response_time_ms: responseTimeMs,
-        status_message: message,
-      } as const;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          // Try UPDATE first (fast path if row exists)
-          return await prisma.website_scraped_data.update({
-            where: { report_id },
-            data: payload,
-          });
-        } catch (e: any) {
-          // Not found -> try CREATE
-          if (typeof e === "object" && e?.code === "P2025") {
-            try {
-              return await prisma.website_scraped_data.create({
-                data: { report_id, ...payload },
-              });
-            } catch (e2: any) {
-              // Lost the race against a concurrent writer -> backoff, then retry UPDATE
-              if (typeof e2 === "object" && e2?.code === "P2002") {
-                const backoffMs = 25 * attempt * attempt; // simple quadratic backoff
-                await new Promise((r) => setTimeout(r, backoffMs));
-                continue; // retry loop
-              }
-              throw e2;
-            }
-          }
-          throw e;
-        }
-      }
-
-      // Final attempt: force UPDATE (by now, the other writer should have created it)
-      return prisma.website_scraped_data.update({
-        where: { report_id },
-        data: payload,
-      });
-    }
-    // ------------------------------------------------------------------------------------
-
-    const record = await upsertWebsiteScrapedDataWithRetry();
-
-    const result = {
-      success: true,
+  const record = await upsertWebsiteScrapedDataWithRetry();
+  
+  return {
+    success: true,
+    logo_url: record.logo_url ?? undefined,
+    status_code: statusCode,
+    status_message: message,
+    scraped_data_id: record.scraped_data_id,
+    social_media_handlers: {
+      facebook_handle: record.facebook_handle,
+      instagram_handle: record.instagram_handle,
+      youtube_handle: record.youtube_handle,
+    },
+    onpage_opptimization: {
       logo_url: record.logo_url ?? undefined,
-      status_code: statusCode,
-      status_message: message,
-      scraped_data_id: record.scraped_data_id,
-      social_media_handlers: {
-        facebook_handle: record.facebook_handle,
-        instagram_handle: record.instagram_handle,
-        youtube_handle: record.youtube_handle,
-        // linkedin_handle:record.linkedin_handle,
+      h1_text: h1Text,
+      metaDataWithoutRawHtml: {
+        homepage_alt_text_coverage: record.homepage_alt_text_coverage,
+        meta_description: record.meta_description,
+        meta_keywords: record.meta_keywords,
+        page_title: record.page_title,
+        ctr_loss_percent: record.ctr_loss_percent,
+        og_title: record.og_title,
+        og_description: record.og_description,
+        og_image: record.og_image,
       },
-      onpage_opptimization: {
-        logo_url: record.logo_url ?? undefined,
-        h1_text: h1Text,
-        metaDataWithoutRawHtml: {
-          homepage_alt_text_coverage: record.homepage_alt_text_coverage,
-          meta_description: record.meta_description,
-          meta_keywords: record.meta_keywords,
-          page_title: record.page_title,
-          ctr_loss_percent: record.ctr_loss_percent,
-          og_title: record.og_title,
-          og_description: record.og_description,
-          og_image: record.og_image,
-        },
-      },
-    };
-
-    // console.log("Returning result:", result); // Debug log
-    return result;
-  } catch (error: any) {
-    const result = {
-      success: false,
-      error: error.message,
-      status_code: statusCode,
-      status_message: message,
-      scraped_data_id: "null",
-    };
-    console.log("Error result:", result, "report_id", report_id); // Debug log
-    return result;
-  }
+    },
+  };
 }

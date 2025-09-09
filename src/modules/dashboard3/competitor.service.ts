@@ -101,7 +101,7 @@ function createLimiter(concurrency: number) {
   };
 }
 function normalizeSchemaStatus(url: string, schemaAnalysis: any): SchemaMarkupStatus {
-  console.log("schemaAnalysis for", url, schemaAnalysis);
+  // console.log("schemaAnalysis for", url, schemaAnalysis);
 
   const summary = schemaAnalysis?.schemas?.summary;
 
@@ -128,7 +128,6 @@ function normalizeSchemaStatus(url: string, schemaAnalysis: any): SchemaMarkupSt
 export class CompetitorService {
   static async brandprofile(user_id: string, website_id: string, report_id: string): Promise<Record<string, any>> {
     const t0 = performance.now();
-    // console.log(`[brandprofile] Starting brand profile generation for report id=${report_id}`);
 
     if (!user_id || !website_id || !report_id) {
       throw new Error("user_id, report_id and website_id are required");
@@ -139,14 +138,12 @@ export class CompetitorService {
     if (!website_url) {
       throw new Error(`[brandprofile] No website URL found for website_id=${website_id}`);
     }
-    // console.log(`[brandprofile] Found main website URL: ${website_url}`);
 
     // --- Load report + scraped data ---
     const report = await prisma.report.findUnique({
       where: { report_id },
       select: { scraped_data_id: true },
     });
-    // console.log(`[brandprofile] Report scraped_data_id: ${report?.scraped_data_id}`);
 
     const [user, scrapedMain, userRequirementRaw] = await Promise.all([
       prisma.user_websites.findUnique({
@@ -162,7 +159,6 @@ export class CompetitorService {
       throw new Error(`[brandprofile] No scraped data found for report_id=${report_id}`);
     }
 
-    // console.log(`[brandprofile] Loaded scraped main website data (id=${scrapedMain.scraped_data_id})`);
 
     const userRequirement: UserRequirement = {
       industry: userRequirementRaw?.industry ?? "Unknown",
@@ -173,7 +169,6 @@ export class CompetitorService {
       competitor_urls: Array.isArray(userRequirementRaw?.competitor_urls) ? userRequirementRaw.competitor_urls.filter((url): url is string => typeof url === "string") : [],
     };
 
-    // console.log(`[brandprofile] Parsed user requirements: ${JSON.stringify(userRequirement)}`);
 
     const MAX_COMPETITORS = 3;
     const competitorResults: ProcessedResult[] = [];
@@ -223,31 +218,20 @@ export class CompetitorService {
           const result = await isValidCompetitorUrl(originalUrl, undefined, browser);
           let end = Date.now();
 
-          // console.log(`[brandprofile]  Validation result for ${originalUrl}: ${JSON.stringify(result)} (took ${(end - start) / 1000}s)`);
 
           if (result.isValid && result.preferredUrl && !processedUrls.has(result.preferredUrl)) {
             preferredUrl = result.preferredUrl;
-            // start = Date.now();
             scraped = await scrapeWebsiteCompetitors(preferredUrl);
-            // end = Date.now();
-            // console.log(`[brandprofile] Scraped data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
-            // start = Date.now();
+            
 
             competitorData = await extractCompetitorDataFromLLM(scraped);
-            // end = Date.now();
-            // console.log(`[brandprofile] Extracted competitor data for ${preferredUrl} (took ${(end - start) / 1000}s)`);
           } else {
-            // start = Date.now();
             competitorData = await extractCompetitorDataFromLLM(scraped);
-            // end = Date.now();
-            // console.log(`[brandprofile] Fallback to competitor data extraction for ${originalUrl} (took ${(end - start) / 1000}s)`);
           }
-          // start = Date.now();
           name = competitorData?.name || scraped?.website_name || originalUrl;
 
          
           if (processedNames.has(name)) {
-            // console.log(`[brandprofile] Duplicate competitor skipped: ${name}`);
             continue;
           }
 
@@ -277,7 +261,6 @@ export class CompetitorService {
 
       // --- Fetch additional competitors from LLM if fewer than MAX_COMPETITORS ---
       while (competitorResults.length < MAX_COMPETITORS) {
-        console.log(`[brandprofile] Fetching remaining competitors from LLM...`);
 
         let parsed: any[] = [];
         let attempts = 0;
@@ -289,12 +272,9 @@ export class CompetitorService {
           try {
             let startn = Date.now();
             const aiResponse = await fetchCompetitorsFromLLM(scrapedMain, userRequirement, Array.from(processedUrls), Array.from(processedNames));
-            let endn = Date.now();
-            console.log(`[brandprofile] LLM competitors fetched in ${(endn - startn) / 1000}s`);
-            startn = Date.now();
+            
             parsed = parseCompetitorData(aiResponse) || [];
-            endn = Date.now();
-            console.log(`[brandprofile] LLM competitors parsed in ${(endn - startn) / 1000}s`);
+         
             if (parsed.length === 0) {
               console.warn(`[brandprofile] LLM returned no competitors (attempt ${attempts})`);
             }
@@ -304,24 +284,21 @@ export class CompetitorService {
         }
 
         if (parsed.length === 0) {
-          console.warn(`[brandprofile] No valid competitors fetched after ${maxRetries} attempts`);
           break;
         }
 
-        let start = Date.now();
+      
         for (const comp of parsed) {
           if (competitorResults.length >= MAX_COMPETITORS) break;
 
           const name = comp.name || `Competitor ${competitorResults.length + 1}`;
           const url = comp.website_url;
           if (!url || processedUrls.has(url) || processedNames.has(name)) continue;
-          let end = Date.now();
-          console.log(`[brandprofile] Processing LLM competitor: ${name} (${url}) (took ${(end - start) / 1000}s)`);
+      
           try {
-            start = Date.now();
+           
             const { isValid, preferredUrl } = await isValidCompetitorUrl(url, undefined, browser);
-            end = Date.now();
-            console.log(`[brandprofile] Validation result for: ${name} (${url}) (took ${(end - start) / 1000}s)`);
+           
             if (!isValid || !preferredUrl) continue;
 
             competitorResults.push({
@@ -339,7 +316,6 @@ export class CompetitorService {
             processedUrls.add(preferredUrl);
             processedNames.add(name);
 
-            console.log(`[brandprofile] Processed LLM competitor: ${name} (${preferredUrl})`);
           } catch (err) {
             console.error(`[brandprofile] Error processing LLM competitor ${url}:`, err);
           }
@@ -352,7 +328,6 @@ export class CompetitorService {
 
       // --- Save competitors to database only if we have 3 competitors ---
       if (competitorResults.length === MAX_COMPETITORS) {
-        console.log(`[brandprofile] Saving ${competitorResults.length} competitors to database...`);
         for (const result of competitorResults) {
           const start = Date.now();
           await prisma.competitor_details.create({
@@ -369,8 +344,6 @@ export class CompetitorService {
               order_index: orderIndex++,
             },
           });
-          const end = Date.now();
-          console.log(`[brandprofile] Saved competitor ${result.brand_profile.title} (${result.brand_profile.website_url}) to database (took ${(end - start) / 1000}s)`);
         }
       } else {
         console.warn(`[brandprofile] Not enough competitors (${competitorResults.length}/${MAX_COMPETITORS}), skipping database save`);
@@ -382,8 +355,6 @@ export class CompetitorService {
       }
     }
 
-    const t1 = performance.now();
-    console.log(`[brandprofile] Finished brandprofile in ${(t1 - t0).toFixed(2)}ms`);
 
     return {
       mainWebsite: {
@@ -952,148 +923,8 @@ static async website_audit(user_id: string, website_id: string, report_id: strin
   return dashboarddata;
 }
 
-
-
-//   static async social_media(user_id: string, website_id: string, report_id: string) {
-//   if (!website_id || !user_id || !report_id) {
-//     throw new Error("website_id, report_id, and user_id are required");
-//   }
-
-//   console.log(`Fetching website URL for user_id ${user_id}, website_id: ${website_id}`);
-//   const website_url = await getWebsiteUrlById(user_id, website_id);
-//   if (!website_url) {
-//     throw new Error(`No website URL found for user_id: ${user_id} and website_id: ${website_id}`);
-//   }
-
-//   const report = await prisma.report.findUnique({
-//     where: { report_id },
-//     select: { scraped_data_id: true },
-//   });
-
-//   const websiteScraped = await prisma.website_scraped_data.findUnique({
-//     where: { scraped_data_id: report?.scraped_data_id ?? undefined },
-//     select: {
-//       facebook_handle: true,
-//       instagram_handle: true,
-//       youtube_handle: true,
-//       linkedin_handle: true,
-//       website_name: true,
-//       logo_url: true,
-//     },
-//   });
-
-//   // console.log("main_website handles", websiteScraped);
-
-//   const main_website_social = await fetchSocialMediaData(
-//     websiteScraped?.facebook_handle,
-//     websiteScraped?.instagram_handle,
-//     websiteScraped?.youtube_handle,
-//     websiteScraped?.linkedin_handle,
-//     website_url
-//   );
-
-//   const main_website = {
-//     website_name: websiteScraped?.website_name ?? null,
-//     logo_url: websiteScraped?.logo_url ?? null,
-//     social_media: main_website_social,
-//   };
-
-//   const competitors = await prisma.competitor_details.findMany({
-//     where: { report_id },
-//     orderBy: { order_index: "asc" },
-//     take: 7,
-//     select: {
-//       competitor_id: true,
-//       facebook_handle: true,
-//       instagram_handle: true,
-//       youtube_handle: true,
-//       linkedin_handle: true,
-//       competitor_website_url: true,
-//       website_name: true,
-//       logo_url: true,
-//     },
-//   });
-
-//   console.log(`Fetched ${competitors.length} competitors.`);
-
-//   const processedUrls = new Set<string>([website_url]);
-//   const limit = createLimiter(7);
-
-//   const competitorResults = await Promise.all(
-//     competitors.map((competitor) =>
-//       limit(async () => {
-//         const {
-//           competitor_id,
-//           facebook_handle,
-//           instagram_handle,
-//           youtube_handle,
-//           linkedin_handle,
-//           competitor_website_url,
-//           website_name,
-//           logo_url,
-//         } = competitor;
-
-//         if (!competitor_website_url || processedUrls.has(competitor_website_url)) {
-//           console.log(`Skipping competitor ${competitor_id} due to duplicate URL.`);
-//           return { competitor_id, website_name, logo_url, social_media: null };
-//         }
-
-//         processedUrls.add(competitor_website_url);
-
-//         try {
-//           const social_media = await fetchSocialMediaData(
-//             facebook_handle,
-//             instagram_handle,
-//             youtube_handle,
-//             linkedin_handle,
-//             competitor_website_url
-//           );
-
-//           await prisma.competitor_details.update({
-//             where: { competitor_id },
-//             data: { social_media_data: social_media },
-//           });
-
-//           return { competitor_id, website_name, logo_url, ...social_media };
-//         } catch (error) {
-//           console.error(`Error fetching social data for ${competitor_id}`, error);
-//           return { competitor_id, website_name, logo_url, social_media: null };
-//         }
-//       })
-//     )
-//   );
-
-//   const competitorsData: Record<string, any> = {};
-//   for (const item of competitorResults) {
-//     if (item?.competitor_id) {
-//       competitorsData[item.competitor_id] = {
-//         website_name: item.website_name,
-//         logo_url: item.logo_url,
-//         social_media: item.social_media,
-//       };
-//     }
-//   }
-
-//   const competitor_social_media_data = {
-//     main_website,
-//     competitors: competitorsData,
-//   };
-
-//   await prisma.report.upsert({
-//     where: { report_id },
-//     update: { dashboard3_socialmedia: competitor_social_media_data },
-//     create: {
-//       website_id,
-//       report_id,
-//       dashboard3_socialmedia: competitor_social_media_data,
-//     },
-//   });
-
-//   return { competitor_social_media_data };
-// }
-
-  
-  static async social_media(user_id: string, website_id: string, report_id: string) {
+ 
+static async social_media(user_id: string, website_id: string, report_id: string) {
   if (!website_id || !user_id || !report_id) {
     throw new Error("website_id, report_id, and user_id are required");
   }
