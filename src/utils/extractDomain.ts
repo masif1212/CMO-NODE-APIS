@@ -55,7 +55,7 @@ export async function fetchSocialLinksFromDom(url: string) {
   };
 
   try {
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 80000 });
 
     const hrefs = await page.evaluate(() =>
       Array.from(document.querySelectorAll("a"))

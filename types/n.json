@@ -7166,8 +7166,8 @@
                         "resourceSize": 457042,
                         "resourceType": "Script",
                         "transferSize": 149388,
-                        "networkEndTime": 609.2030000686646,
-                        "rendererStartTime": 567.2300000190735,
+                        "networkEndTime": 609.2080000686646,
+                        "rendererStartTime": 567.2800000190735,
                         "sessionTargetType": "page",
                         "networkRequestTime": 568.75,
                         "experimentalFromMainFrame": true
@@ -7782,7 +7782,7 @@
                         "networkEndTime": 1017.554999828339,
                         "rendererStartTime": 575.2980003356934,
                         "sessionTargetType": "page",
-                        "networkRequestTime": 579.933000087738,
+                        "networkRequestTime": 579.938000087738,
                         "experimentalFromMainFrame": true
                     },
                     {
@@ -8209,7 +8209,7 @@
                         "resourceSize": 3204,
                         "resourceType": "Image",
                         "transferSize": 0,
-                        "networkEndTime": 607.5130000114441,
+                        "networkEndTime": 607.5180000114441,
                         "rendererStartTime": 607.2109999656677,
                         "sessionTargetType": "page",
                         "networkRequestTime": 607.2109999656677,

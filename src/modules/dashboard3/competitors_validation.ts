@@ -192,7 +192,7 @@ async function checkLandingHomepage(
   try {
     page = await browser.newPage();
     await page.setUserAgent("Mozilla/5.0");
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 80000 });
 
     let finalUrl = page.url();
 

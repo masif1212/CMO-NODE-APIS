@@ -7,7 +7,7 @@ import { BrokenLinkResult } from "../../../types/express";
 
 const prisma = new PrismaClient(); 
 
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 80000;
 
 const excludedDomains = [
   "mailto:",
@@ -60,7 +60,7 @@ async function fetchWithTimeout(url: string, timeout = TIMEOUT_MS): Promise<{ st
 
 async function extractLinks(pageUrl: string, browser: Browser): Promise<string[]> {
   const page = await browser.newPage();
-  await page.goto(pageUrl, { waitUntil: "networkidle2", timeout: 30000 });
+  await page.goto(pageUrl, { waitUntil: "networkidle2", timeout: 80000 });
   const links = await page.$$eval("a[href]", (anchors) => anchors.map((a) => a.href).filter((href) => href && !href.startsWith("javascript:") && !href.startsWith("#")));
   await page.close();
   return [...new Set(links)];

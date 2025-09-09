@@ -336,7 +336,7 @@ async function fetchFullHtml(url: string): Promise<{ html: string; status: numbe
 
   let status = 0;
   try {
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout:80000 });
     status = response?.status() || 0;
 
     const html = await page.content();
