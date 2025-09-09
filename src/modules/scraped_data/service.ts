@@ -221,60 +221,113 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
   return website.website_url;
 }
 
+// export function getStatusMessage(code: number): string {
+//   const messages: Record<number, string> = {
+//     200: "Webiste is up",
+//     201: "Webiste is up",
+//     202: "Webiste is up",
+//     400: "Bad Request",
+//     401: "Unauthorized - Authentication required",
+//     402: "Payment Required",
+//     405: "Method Not Allowed",
+//     406: "Not Acceptable",
+//     407: "Proxy Authentication Required",
+//     408: "Request Timeout",
+//     409: "Conflict",
+//     410: "Gone",
+//     411: "Length Required",
+//     412: "Precondition Failed",
+//     413: "Payload Too Large",
+//     414: "URI Too Long",
+//     415: "Unsupported Media Type",
+//     416: "Range Not Satisfiable",
+//     417: "Expectation Failed",
+//     418: "I'm a teapot 🍵",
+//     421: "Misdirected Request",
+//     422: "Unprocessable Entity",
+//     423: "Locked",
+//     424: "Failed Dependency",
+//     425: "Too Early",
+//     426: "Upgrade Required",
+//     428: "Precondition Required",
+//     431: "Request Header Fields Too Large",
+//     451: "Unavailable For Legal Reasons",
+//     403: "Access denied",
+//     404: "Page not found",
+//     429: "Scraping blocked",
+//     500: "Internal Server Error",
+//     501: "Not Implemented",
+//     502: "Bad Gateway",
+//     503: "Service Unavailable",
+//     504: "Gateway Timeout",
+//     505: "HTTP Version Not Supported",
+//     506: "Variant Also Negotiates",
+//     507: "Insufficient Storage",
+//     508: "Loop Detected",
+//     510: "Not Extended",
+//     511: "Network Authentication Required",
+//     521: "Web server is down",
+//     522: "Webside is down",
+//     523: "Origin is unreachable",
+//     524: "A timeout occurred",
+//     525: "SSL handshake failed",
+//     526: "Invalid SSL certificate",
+//   };
+//   if (messages[code]) return messages[code];
+//   if (code >= 500 && code <= 599) return `Server error (${code})`;
+//   if (code >= 400 && code <= 499) return `Client error (${code})`;
+//   return `status code (${code})`;
+// }
+
+
 export function getStatusMessage(code: number): string {
   const messages: Record<number, string> = {
-    400: "Bad Request",
-    401: "Unauthorized - Authentication required",
-    402: "Payment Required",
-    405: "Method Not Allowed",
-    406: "Not Acceptable",
-    407: "Proxy Authentication Required",
-    408: "Request Timeout",
-    409: "Conflict",
-    410: "Gone",
-    411: "Length Required",
-    412: "Precondition Failed",
-    413: "Payload Too Large",
-    414: "URI Too Long",
-    415: "Unsupported Media Type",
-    416: "Range Not Satisfiable",
-    417: "Expectation Failed",
-    418: "I'm a teapot 🍵",
-    421: "Misdirected Request",
-    422: "Unprocessable Entity",
-    423: "Locked",
-    424: "Failed Dependency",
-    425: "Too Early",
-    426: "Upgrade Required",
-    428: "Precondition Required",
-    431: "Request Header Fields Too Large",
-    451: "Unavailable For Legal Reasons",
-    403: "Access denied",
-    404: "Page not found",
-    429: "Scraping blocked",
-    500: "Internal Server Error",
-    501: "Not Implemented",
-    502: "Bad Gateway",
-    503: "Service Unavailable",
-    504: "Gateway Timeout",
-    505: "HTTP Version Not Supported",
-    506: "Variant Also Negotiates",
-    507: "Insufficient Storage",
-    508: "Loop Detected",
-    510: "Not Extended",
-    511: "Network Authentication Required",
-    521: "Web server is down",
-    522: "Webside is down",
-    523: "Origin is unreachable",
-    524: "A timeout occurred",
-    525: "SSL handshake failed",
-    526: "Invalid SSL certificate",
+    // ✅ Success
+    200: "Website is working normally",
+    201: "Website is working — something was created successfully",
+    202: "Website accepted the request — still processing",
+    204: "Website is working but returned no content",
+
+    // 🔄 Redirects
+    301: "Page has moved permanently — try the new link",
+    302: "Page has moved temporarily — try again later",
+    304: "Page hasn’t changed — showing saved version",
+
+    // ❌ Client Errors (your side)
+    400: "Bad request — the link or request is incorrect",
+    401: "Unauthorized — login or access key required",
+    402: "Payment required — access is restricted",
+    403: "Access denied — you don’t have permission",
+    404: "Page not found — the link is broken or removed",
+    408: "Request timed out — the website took too long to respond",
+    409: "Conflict — resource already exists or is in use",
+    410: "Page has been removed permanently",
+    418: "I’m a teapot 🍵 — just a fun error code",
+    429: "Too many requests from your side — please slow down",
+
+    // 💥 Server Errors (website side)
+    500: "Server error — something went wrong on the website",
+    502: "Bad gateway — server got an invalid response",
+    503: "Service unavailable — website is overloaded or down",
+    504: "Gateway timeout — website didn’t respond in time",
+
+    // 🌐 Cloudflare & SSL
+    521: "Website’s server is down",
+    522: "Connection timed out — website is unreachable",
+    523: "Website’s server can’t be reached",
+    524: "Website took too long to respond",
+    525: "Secure connection failed (SSL handshake error)",
+    526: "Invalid security certificate — website not trusted",
   };
+
   if (messages[code]) return messages[code];
-  if (code >= 500 && code <= 599) return `Server error (${code})`;
-  if (code >= 400 && code <= 499) return `Client error (${code})`;
-  return `status code (${code})`;
+  if (code >= 500 && code <= 599) return `Website error (${code}) — problem on the website’s side`;
+  if (code >= 400 && code <= 499) return `Request error (${code}) — problem with the link or access`;
+  if (code >= 300 && code <= 399) return `Redirect (${code}) — page has moved`;
+  if (code >= 200 && code <= 299) return `Success (${code}) — website is working`;
+  return `Unknown status code (${code})`;
 }
+
 
 /** ✅ Always return { html, status } */
 async function fetchFullHtml(url: string): Promise<{ html: string; status: number }> {
@@ -626,7 +679,7 @@ export async function scrapeWebsite(
     });
   }
 
-    await prisma.user_requirements.upsert({
+await prisma.user_requirements.upsert({
       where: {
         website_id,
       },
