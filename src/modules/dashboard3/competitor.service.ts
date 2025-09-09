@@ -6,7 +6,7 @@ import { parseCompetitorData } from "./parser";
 import { getPageSpeedData, getWebsiteUrlById } from "../dashboard1/website_audit/service";
 import OpenAI from "openai";
 import "dotenv/config";
-import { performance } from "perf_hooks";
+// import { performance } from "perf_hooks";
 import puppeteer from "puppeteer";
 import { fetchSocialMediaData } from "./social_media_anaylsis";
 import { SchemaMarkupStatus, SeoAudit, SeoAuditResponse, BrandProfile_logo } from "./seo_audit_interface";

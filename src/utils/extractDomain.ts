@@ -12,7 +12,7 @@ export const getDomainRoot = (url: string): string => {
 
 export async function fetchSocialLinksFromDom(url: string) {
   let browser: any;
-  const mode = process.env.MODE;
+  const mode = process.env.MODE || "production";
 
   if (mode === "production") {
     console.log("[brandprofile] Running in production mode (Cloud Run).");
@@ -34,8 +34,7 @@ export async function fetchSocialLinksFromDom(url: string) {
     browser = await puppeteer.launch(localLaunchOptions);
   } else {
     console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
-    throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
-  }
+ throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);  }
 
   console.log("[brandprofile] Puppeteer browser launched successfully for dynamic scrapping.");
 

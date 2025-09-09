@@ -5,7 +5,6 @@ import { PrismaClient } from "@prisma/client";
 import { parseStringPromise } from "xml2js";
 import { validateComprehensiveSchema, SchemaOutput } from "./schema_validation";
 import { getDomainRoot,fetchSocialLinksFromDom } from "../../utils/extractDomain"
-import puppeteer from "puppeteer";
 // const mode = process.env.MODE;
 
 const prisma = new PrismaClient();
@@ -221,64 +220,6 @@ export async function getWebsiteUrlById(user_id: string, website_id: string): Pr
   return website.website_url;
 }
 
-// export function getStatusMessage(code: number): string {
-//   const messages: Record<number, string> = {
-//     200: "Webiste is up",
-//     201: "Webiste is up",
-//     202: "Webiste is up",
-//     400: "Bad Request",
-//     401: "Unauthorized - Authentication required",
-//     402: "Payment Required",
-//     405: "Method Not Allowed",
-//     406: "Not Acceptable",
-//     407: "Proxy Authentication Required",
-//     408: "Request Timeout",
-//     409: "Conflict",
-//     410: "Gone",
-//     411: "Length Required",
-//     412: "Precondition Failed",
-//     413: "Payload Too Large",
-//     414: "URI Too Long",
-//     415: "Unsupported Media Type",
-//     416: "Range Not Satisfiable",
-//     417: "Expectation Failed",
-//     418: "I'm a teapot 🍵",
-//     421: "Misdirected Request",
-//     422: "Unprocessable Entity",
-//     423: "Locked",
-//     424: "Failed Dependency",
-//     425: "Too Early",
-//     426: "Upgrade Required",
-//     428: "Precondition Required",
-//     431: "Request Header Fields Too Large",
-//     451: "Unavailable For Legal Reasons",
-//     403: "Access denied",
-//     404: "Page not found",
-//     429: "Scraping blocked",
-//     500: "Internal Server Error",
-//     501: "Not Implemented",
-//     502: "Bad Gateway",
-//     503: "Service Unavailable",
-//     504: "Gateway Timeout",
-//     505: "HTTP Version Not Supported",
-//     506: "Variant Also Negotiates",
-//     507: "Insufficient Storage",
-//     508: "Loop Detected",
-//     510: "Not Extended",
-//     511: "Network Authentication Required",
-//     521: "Web server is down",
-//     522: "Webside is down",
-//     523: "Origin is unreachable",
-//     524: "A timeout occurred",
-//     525: "SSL handshake failed",
-//     526: "Invalid SSL certificate",
-//   };
-//   if (messages[code]) return messages[code];
-//   if (code >= 500 && code <= 599) return `Server error (${code})`;
-//   if (code >= 400 && code <= 499) return `Client error (${code})`;
-//   return `status code (${code})`;
-// }
-
 
 export function getStatusMessage(code: number): string {
   const messages: Record<number, string> = {
@@ -330,91 +271,77 @@ export function getStatusMessage(code: number): string {
 
 
 /** ✅ Always return { html, status } */
-async function fetchFullHtml(url: string): Promise<{ html: string; status: number }> {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+// async function fetchFullHtml(url: string): Promise<{ html: string; status: number }> {
+//   const browser = await puppeteer.launch({ headless: true });
+//   const page = await browser.newPage();
 
-  let status = 0;
-  try {
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout:80000 });
-    status = response?.status() || 0;
+//   let status = 0;
+//   try {
+//     const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout:80000 });
+//     status = response?.status() || 0;
 
-    const html = await page.content();
-    return { html: html || "", status };
-  } catch {
-    return { html: "", status: 500 };
-  } finally {
-    await browser.close();
-  }
-}
+//     const html = await page.content();
+//     return { html: html || "", status };
+//   } catch {
+//     return { html: "", status: 500 };
+//   } finally {
+//     await browser.close();
+//   }
+// }
 
 export async function scrapeWebsite(
   user_id: string,
   website_id: string,
   report_id: string
 ): Promise<any> {
-  const start = Date.now();
+   const start = Date.now();
   const website_url = await getWebsiteUrlById(user_id, website_id);
-  const domain = getDomainRoot(website_url);
+  const domain = new URL(website_url).hostname;
   const website_name = domain.split(".")[0];
+  console.log("domain", domain);
 
-  console.log("website_name", website_name);
+  let statusCode: number = 0;
+  let ipAddress: string = "N/A";
+  let html: string = "";
+  let message: string = "Unknown error";
 
-  let statusCode = 0;
-  let ipAddress = "N/A";
-  let html = "";
-  let message = "Unknown error";
+
 
   try {
-    // Puppeteer fetch
-    const { html: fetchedHtml, status: fetchedStatus } = await fetchFullHtml(website_url);
+    const response = await axios.get(website_url);
+    console.log("Response received from website:", response.status);
 
-    html = typeof fetchedHtml === "string" ? fetchedHtml : "";
-    statusCode = fetchedStatus || 200;
-    message = getStatusMessage(statusCode);
+    html = response.data;
+    statusCode = response.status;
+    message = statusCode >= 200 && statusCode < 400
+      ? "Website is up"
+      : getStatusMessage(statusCode);
+    console.log("statusCode:", statusCode, "message:", message); // Debug log
 
-    // DNS lookup
-    try {
-      const dnsResult = await dns.lookup(domain);
-      ipAddress = dnsResult.address;
-    } catch {
-      ipAddress = "N/A";
-    }
+    const dnsResult = await dns.lookup(domain);
+    ipAddress = dnsResult.address;
+
   } catch (error: any) {
-    statusCode = error?.statusCode || error?.response?.status || 500;
-    html = "";
+    statusCode = error?.response?.status || 500;
+    const raw = error?.response?.data || "";
+    html = typeof raw === "string" ? raw : "";
     message = getStatusMessage(statusCode);
-
-    console.error("Error fetching website:", {
-      url: website_url,
-      statusCode,
-      message,
-      error: error.message || error.toString(),
-    });
+    console.log("Error case - statusCode:", statusCode, "message:", message); // Debug log
   }
 
   const responseTimeMs = Date.now() - start;
-
-  // 🔧 Always give cheerio a safe string
-  if (typeof html !== "string") html = "";
-  const $ = cheerio.load(html || "");
-
-  /** ============ ANALYSIS SECTION ============ */
-
+  const $ = cheerio.load(html);
   const headingAnalysis = evaluateHeadingHierarchy($);
 
-  function extractTitleTags() {
+  function extractTitleTags(): object {
     const titles = $("title")
       .map((_, el) => $(el).text().trim())
       .get()
       .filter(Boolean);
-
     const status = titles.length === 0 ? "not found" : titles.length === 1 ? "ok" : "multiple";
-    const message =
-      titles.length > 1
-        ? `${titles.join(" || ")} - needs attention - multiple title tags found`
-        : titles[0] || "not found";
-
+    const message = titles.length > 1
+      ? `${titles.join(" || ")} - needs attention - multiple title tags found`
+      : titles[0] || "not found";
     return { status, titles, message };
   }
 
