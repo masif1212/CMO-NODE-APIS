@@ -1,8 +1,6 @@
 import { parse } from 'tldts'; // For root domain extraction
 
 import puppeteer from "puppeteer";
-const mode = process.env.MODE;
-console.log(`[brandprofile] extractDomain.ts - MODE: ${mode}`);
 export const getDomainRoot = (url: string): string => {
   try {
     const parsed = parse(url);
@@ -14,6 +12,7 @@ export const getDomainRoot = (url: string): string => {
 
 export async function fetchSocialLinksFromDom(url: string) {
   let browser: any;
+  const mode = process.env.MODE;
 
   if (mode === "production") {
     console.log("[brandprofile] Running in production mode (Cloud Run).");
