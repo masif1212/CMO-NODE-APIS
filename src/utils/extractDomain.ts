@@ -2,7 +2,7 @@ import { parse } from 'tldts'; // For root domain extraction
 
 import puppeteer from "puppeteer";
 const mode = process.env.MODE;
-
+console.log(`[brandprofile] extractDomain.ts - MODE: ${mode}`);
 export const getDomainRoot = (url: string): string => {
   try {
     const parsed = parse(url);
@@ -12,36 +12,33 @@ export const getDomainRoot = (url: string): string => {
   }
 };
 
-
-
-
 export async function fetchSocialLinksFromDom(url: string) {
-  // const browser = await puppeteer.launch({ headless: true });
-   let browser : any;
+  let browser: any;
 
-      if (mode === "production") {
-        const launchOptions = {
-          executablePath: "/usr/bin/google-chrome-stable",
-          headless: "new" as any,
-          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-        };
+  if (mode === "production") {
+    console.log("[brandprofile] Running in production mode (Cloud Run).");
+    const launchOptions = {
+      executablePath: "/usr/bin/google-chrome-stable",
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
 
-        console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
-        browser = await puppeteer.launch(launchOptions);
-      } else if (mode === "development") {
-        const localLaunchOptions = {
-          headless: "new" as any,
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        };
+    console.log("[brandprofile] Launching Puppeteer with full browser for Cloud Run...");
+    browser = await puppeteer.launch(launchOptions);
+  } else if (mode === "development") {
+    const localLaunchOptions = {
+      headless: "new" as any,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    };
 
-        console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
-        browser = await puppeteer.launch(localLaunchOptions);
-      } else {
-        console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
-        throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
-      }
+    console.log("[brandprofile] Launching Puppeteer in headless mode for local environment...");
+    browser = await puppeteer.launch(localLaunchOptions);
+  } else {
+    console.error(`[brandprofile] ERROR: Invalid MODE '${mode}'. Expected 'production' or 'development'.`);
+    throw new Error(`Invalid MODE: ${mode}. Expected 'cloud' or 'development'.`);
+  }
 
-      console.log("[brandprofile] Puppeteer browser launched successfully.");
+  console.log("[brandprofile] Puppeteer browser launched successfully for dynamic scrapping.");
 
   const page = await browser.newPage();
 

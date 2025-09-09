@@ -127,7 +127,7 @@ function normalizeSchemaStatus(url: string, schemaAnalysis: any): SchemaMarkupSt
 
 export class CompetitorService {
   static async brandprofile(user_id: string, website_id: string, report_id: string): Promise<Record<string, any>> {
-    const t0 = performance.now();
+    // const t0 = performance.now();
 
     if (!user_id || !website_id || !report_id) {
       throw new Error("user_id, report_id and website_id are required");
@@ -180,7 +180,6 @@ export class CompetitorService {
     const mode = process.env.MODE;
     try {
       // --- Puppeteer Launch ---
-      const startLaunch = Date.now();
       console.log(`[brandprofile]  Puppeteer launch MODE: ${mode}`);
 
       if (mode === "production") {
@@ -189,19 +188,15 @@ export class CompetitorService {
           headless: "new" as any,
           args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
         });
-        // console.log("[brandprofile] Launching Puppeteer in production (Cloud Run)...");
       } else if (mode === "development") {
         browser = await puppeteer.launch({
           headless: "new" as any,
           args: ["--no-sandbox", "--disable-setuid-sandbox"],
         });
-        // console.log("[brandprofile]  Launching Puppeteer in development (local headless)...");
       } else {
         throw new Error(`Invalid MODE: ${mode}. Expected 'production' or 'development'.`);
       }
 
-      const endLaunch = Date.now();
-      // console.log(`[brandprofile] Puppeteer browser launched in ${(endLaunch - startLaunch) / 1000}s`);
 
       // --- Process user-provided competitors ---
       for (const originalUrl of userRequirement.competitor_urls) {
